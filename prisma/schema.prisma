@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model SiteSettings {
+  id                   Int     @id @default(1)
+  displayName          String  @default("Иллюстратор")
+  tagline              String  @default("")
+  bio                  String  @default("")
+  aboutMarkdown        String  @default("")
+  avatarMediaPath      String?
+  socialLinksJson      String  @default("[]")
+  telegramChannelUser  String  @default("")
+  defaultLocale        String  @default("ru")
+  siteUrl              String  @default("http://localhost:3000")
+  plausibleDomain      String  @default("")
+  gaMeasurementId      String  @default("")
+  updatedAt            DateTime @updatedAt
+}
+
+model Post {
+  id                 String      @id @default(cuid())
+  slug               String      @unique
+  title              String
+  body               String      @default("")
+  displayMode        String      @default("GRID")
+  status             String      @default("DRAFT")
+  publishedAt        DateTime?
+  pinned             Boolean     @default(false)
+  metaTitle          String      @default("")
+  metaDescription    String      @default("")
+  telegramSourceUrl  String?
+  locale             String      @default("ru")
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  images             PostImage[]
+
+  @@index([status, publishedAt])
+}
+
+model PostImage {
+  id          String   @id @default(cuid())
+  postId      String
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  sortOrder   Int      @default(0)
+  caption     String   @default("")
+  alt         String   @default("")
+  originalExt String   @default("jpg")
+  width       Int?
+  height      Int?
+  variantsJson String  @default("{}")
+  createdAt   DateTime @default(now())
+
+  @@index([postId, sortOrder])
+}

@@ -2,6 +2,12 @@
 
 # dependencies
 /node_modules
+prisma/dev.db
+prisma/dev.db-journal
+# случайная вложенная папка при file:./prisma/dev.db из неверного cwd
+prisma/prisma/
+storage/
+public/media/
 /.pnp
 .pnp.*
 .yarn/*
@@ -30,8 +36,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files (секреты не в git; шаблон — да)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # vercel
 .vercel
