@@ -222,10 +222,12 @@ function renderImageFill(
       className="absolute inset-0 h-full w-full object-cover"
     />
   ) : (
-    <div className="absolute inset-0 bg-stone-200" />
+    <div className="absolute inset-0 min-h-[80px] bg-stone-200" />
   );
 
-  const shell = "relative block h-full min-h-0 min-w-0 overflow-hidden bg-stone-100";
+  /** Ячейка grid задаёт высоту (ряд с aspect-ratio); внутри — absolute cover. */
+  const shell =
+    "relative block h-full min-h-0 w-full min-w-0 overflow-hidden bg-stone-100";
 
   if (clickable && onImageClick) {
     return (
@@ -274,7 +276,7 @@ export function MediaGrid({
     const [a, b, c, d] = layout.indices;
     body = (
       <div
-        className="grid w-full min-w-0 gap-px bg-stone-200/90 [aspect-ratio:3/4] sm:[aspect-ratio:4/5]"
+        className="grid min-h-[200px] w-full min-w-0 gap-px bg-stone-200/90 [aspect-ratio:3/4] sm:min-h-[240px] sm:[aspect-ratio:4/5]"
         style={
           {
             gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr)",
@@ -301,28 +303,32 @@ export function MediaGrid({
       <div className="flex w-full min-w-0 flex-col gap-px bg-stone-200/90">
         {layout.rows.map((row, ri) => {
           const aspect = aspectForRow(row.indices, images);
+          const cols = row.flex
+            .map((w) => `minmax(0,${w}fr)`)
+            .join(" ");
           return (
             <div
               key={ri}
-              className={`flex w-full min-h-0 gap-px ${aspect}`}
+              className={`grid w-full min-h-0 gap-px ${aspect}`}
+              style={
+                {
+                  gridTemplateColumns: cols,
+                } as CSSProperties
+              }
             >
-              {row.indices.map((imgIdx, ci) => {
-                const flexGrow = row.flex[ci] ?? 1;
-                return (
-                  <div
-                    key={images[imgIdx].id}
-                    className="min-h-0 min-w-0"
-                    style={{ flex: `${flexGrow} 1 0%` }}
-                  >
-                    {renderImageFill(
-                      images[imgIdx],
-                      imgIdx,
-                      clickable,
-                      onImageClick,
-                    )}
-                  </div>
-                );
-              })}
+              {row.indices.map((imgIdx) => (
+                <div
+                  key={images[imgIdx].id}
+                  className="min-h-0 min-w-0"
+                >
+                  {renderImageFill(
+                    images[imgIdx],
+                    imgIdx,
+                    clickable,
+                    onImageClick,
+                  )}
+                </div>
+              ))}
             </div>
           );
         })}
