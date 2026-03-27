@@ -6,123 +6,219 @@ const USER_AGENTS = [
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
 ];
 
-function pageHeaders(attempt: number): Record<string, string> {
-  const ua = USER_AGENTS[attempt % USER_AGENTS.length];
-  return {
-    "User-Agent": ua,
-    Accept:
-      "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
-    "Cache-Control": "no-cache",
-    "Upgrade-Insecure-Requests": "1",
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "none",
-    "Sec-Fetch-User": "?1",
-  };
-}
-
-function mediaHeaders(attempt: number): Record<string, string> {
-  const ua = USER_AGENTS[attempt % USER_AGENTS.length];
-  return {
-    "User-Agent": ua,
-    Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-    "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
-    Referer: "https://t.me/",
-  };
+function pickUA(idx: number): string {
+  return USER_AGENTS[idx % USER_AGENTS.length];
 }
 
 function proxyHint(): string {
   return isTelegramProxyConfigured()
     ? ""
-    : " На продакшене с IP датацентра (например Vercel) задайте TELEGRAM_OUTBOUND_PROXY — см. .env.example.";
+    : " Также можно задать TELEGRAM_OUTBOUND_PROXY — см. .env.example.";
 }
 
-function shouldRetryHttpStatus(status: number): boolean {
+function shouldRetry(status: number): boolean {
   return status === 403 || status === 429 || status >= 500;
 }
 
-function looksLikeBotChallenge(html: string): boolean {
-  return /cf-browser-verification|challenge-platform|Just a moment|AccessDenied/i.test(
-    html,
+// ---------------------------------------------------------------------------
+// Стратегии получения HTML с постами канала
+// ---------------------------------------------------------------------------
+
+type FetchResult =
+  | { ok: true; html: string; nextBefore: string | null }
+  | { ok: false; reason: string };
+
+/**
+ * Стратегия 1: AJAX-запрос.
+ * Telegram отдаёт JSON `{"html":"<div class='tgme_channel_history'>…</div>"}`,
+ * если послать `X-Requested-With: XMLHttpRequest`. Этот эндпоинт используется
+ * скроллом на странице канала и предназначен для программных запросов —
+ * менее агрессивно блокируется.
+ */
+async function fetchViaAjax(
+  user: string,
+  before: string | null,
+  attempt: number,
+): Promise<FetchResult> {
+  const base = `https://t.me/s/${encodeURIComponent(user)}`;
+  const url = before ? `${base}?before=${encodeURIComponent(before)}` : base;
+  const ua = pickUA(attempt);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const res = await telegramFetch(url, {
+      cache: "no-store",
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        "User-Agent": ua,
+        Accept: "application/json, text/javascript, */*; q=0.01",
+        "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+        Referer: `https://t.me/s/${encodeURIComponent(user)}`,
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    });
+    clearTimeout(timer);
+
+    if (res.status === 404) return { ok: false, reason: "404" };
+    if (!res.ok) return { ok: false, reason: `HTTP ${res.status}` };
+
+    const contentType = res.headers.get("content-type") ?? "";
+    const text = await res.text();
+
+    let html: string;
+    if (contentType.includes("json") || text.trimStart().startsWith("{")) {
+      try {
+        const json = JSON.parse(text) as Record<string, unknown>;
+        html = typeof json.html === "string" ? json.html : "";
+      } catch {
+        return { ok: false, reason: "Невалидный JSON" };
+      }
+    } else {
+      html = text;
+    }
+
+    if (!html.includes("tgme_widget_message")) {
+      return { ok: false, reason: "Нет постов в AJAX-ответе" };
+    }
+
+    const $ = cheerio.load(html);
+    const prevHref = $('link[rel="prev"]').attr("href") ?? "";
+    const nextBefore =
+      prevHref.match(/[?&]before=(\d+)/)?.[1] ??
+      prevHref.match(/before=(\d+)/)?.[1] ??
+      null;
+
+    return { ok: true, html, nextBefore };
+  } catch (e) {
+    clearTimeout(timer);
+    const msg = e instanceof Error && e.name === "AbortError" ? "Таймаут (AJAX)" : String(e);
+    return { ok: false, reason: msg };
+  }
+}
+
+/**
+ * Стратегия 2/3: обычный GET на полную страницу.
+ * `domain` позволяет переключаться между t.me и telegram.me.
+ */
+async function fetchViaFullPage(
+  user: string,
+  before: string | null,
+  attempt: number,
+  domain: "t.me" | "telegram.me",
+): Promise<FetchResult> {
+  const base = `https://${domain}/s/${encodeURIComponent(user)}`;
+  const url = before ? `${base}?before=${encodeURIComponent(before)}` : base;
+  const ua = pickUA(attempt);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const res = await telegramFetch(url, {
+      cache: "no-store",
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        "User-Agent": ua,
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Cache-Control": "no-cache",
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+      },
+    });
+    clearTimeout(timer);
+
+    if (res.status === 404) return { ok: false, reason: "404" };
+    if (!res.ok) return { ok: false, reason: `HTTP ${res.status} (${domain})` };
+
+    const html = await res.text();
+
+    if (!html.includes("tgme_widget_message")) {
+      return { ok: false, reason: `Нет постов (${domain})` };
+    }
+
+    const $ = cheerio.load(html);
+    const prevHref = $('link[rel="prev"]').attr("href") ?? "";
+    const nextBefore =
+      prevHref.match(/[?&]before=(\d+)/)?.[1] ??
+      prevHref.match(/before=(\d+)/)?.[1] ??
+      null;
+
+    return { ok: true, html, nextBefore };
+  } catch (e) {
+    clearTimeout(timer);
+    const msg =
+      e instanceof Error && e.name === "AbortError"
+        ? `Таймаут (${domain})`
+        : String(e);
+    return { ok: false, reason: msg };
+  }
+}
+
+/**
+ * Пробует загрузить HTML с постами канала через несколько стратегий.
+ * Порядок: AJAX → full page t.me → full page telegram.me
+ */
+async function fetchChannelHtml(
+  user: string,
+  before: string | null,
+): Promise<{ html: string; nextBefore: string | null }> {
+  const errors: string[] = [];
+  let attempt = 0;
+
+  // --- 1. AJAX (2 попытки) ---
+  for (let i = 0; i < 2; i++) {
+    const r = await fetchViaAjax(user, before, attempt++);
+    if (r.ok) return { html: r.html, nextBefore: r.nextBefore };
+    if (r.reason === "404") {
+      throw new Error("Канал не найден (404). Проверьте username.");
+    }
+    errors.push(`AJAX[${i}]: ${r.reason}`);
+    if (i === 0) await pause(400);
+  }
+
+  // --- 2. Full page t.me (2 попытки) ---
+  for (let i = 0; i < 2; i++) {
+    const r = await fetchViaFullPage(user, before, attempt++, "t.me");
+    if (r.ok) return { html: r.html, nextBefore: r.nextBefore };
+    if (r.reason === "404") {
+      throw new Error("Канал не найден (404). Проверьте username.");
+    }
+    errors.push(`t.me[${i}]: ${r.reason}`);
+    if (i === 0) await pause(500);
+  }
+
+  // --- 3. Full page telegram.me (1 попытка) ---
+  {
+    const r = await fetchViaFullPage(user, before, attempt++, "telegram.me");
+    if (r.ok) return { html: r.html, nextBefore: r.nextBefore };
+    errors.push(`telegram.me: ${r.reason}`);
+  }
+
+  throw new Error(
+    `Не удалось загрузить канал @${user} ни одним способом ` +
+      `(${errors.join("; ")}).${proxyHint()}`,
   );
 }
 
-async function fetchTelegramChannelHtml(url: string): Promise<string> {
-  const attempts = 3;
-  const timeoutMs = 4500;
-  let lastFail = "";
-
-  for (let i = 0; i < attempts; i++) {
-    if (i > 0) {
-      await new Promise((r) => setTimeout(r, 350 + i * 350));
-    }
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const res = await telegramFetch(url, {
-        cache: "no-store",
-        redirect: "follow",
-        headers: pageHeaders(i),
-        signal: controller.signal,
-      });
-      clearTimeout(timer);
-
-      if (res.status === 404) {
-        throw new Error("Канал не найден (404). Проверьте username.");
-      }
-
-      if (!res.ok) {
-        lastFail = `Telegram вернул ${res.status}`;
-        if (shouldRetryHttpStatus(res.status) && i < attempts - 1) {
-          continue;
-        }
-        throw new Error(`${lastFail}.${proxyHint()}`);
-      }
-
-      const html = await res.text();
-
-      if (html.includes("tgme_widget_message")) {
-        return html;
-      }
-
-      lastFail = "Нет разметки постов на странице";
-      if (looksLikeBotChallenge(html) && i < attempts - 1) {
-        continue;
-      }
-      throw new Error(
-        `Не удалось разобрать страницу канала (возможна блокировка IP).${proxyHint()}`,
-      );
-    } catch (e) {
-      clearTimeout(timer);
-      if (e instanceof Error && e.message.startsWith("Канал не найден")) {
-        throw e;
-      }
-      if (
-        e instanceof Error &&
-        (e.message.includes("блокировка IP") ||
-          e.message.includes("Telegram вернул"))
-      ) {
-        throw e;
-      }
-      const aborted = e instanceof Error && e.name === "AbortError";
-      if (aborted) {
-        lastFail = "Таймаут";
-        if (i < attempts - 1) continue;
-        throw new Error(`Таймаут при обращении к t.me.${proxyHint()}`);
-      }
-      lastFail = e instanceof Error ? e.message : String(e);
-      if (i < attempts - 1) continue;
-      throw new Error(`${lastFail}${proxyHint()}`);
-    }
-  }
-
-  throw new Error((lastFail || "Не удалось загрузить канал") + proxyHint());
+function pause(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
 }
+
+// ---------------------------------------------------------------------------
+// Типы и парсинг
+// ---------------------------------------------------------------------------
 
 export type TelegramPublicMessage = {
   messageId: string;
@@ -142,7 +238,6 @@ function collectStyleUrls(
   root: cheerio.Cheerio<AnyNode>,
 ) {
   const urls: string[] = [];
-
   root
     .find(
       ".tgme_widget_message_photo_wrap, .tgme_widget_message_grouped_layer, .tgme_widget_message_grouped_layer_wrap",
@@ -150,11 +245,8 @@ function collectStyleUrls(
     .each((_, el) => {
       const style = $(el).attr("style") ?? "";
       const match = style.match(/url\(['"]?([^'")]+)['"]?\)/);
-      if (match?.[1]) {
-        urls.push(match[1]);
-      }
+      if (match?.[1]) urls.push(match[1]);
     });
-
   return urls;
 }
 
@@ -163,7 +255,6 @@ function collectImageTags(
   root: cheerio.Cheerio<AnyNode>,
 ) {
   const urls: string[] = [];
-
   root
     .find(
       ".tgme_widget_message_media_wrap img, .tgme_widget_message_photo_wrap img, .tgme_widget_message_grouped_layer img",
@@ -174,33 +265,16 @@ function collectImageTags(
       if (/emoji|sticker|avatar|userpic/i.test(src)) return;
       urls.push(src);
     });
-
   return urls;
 }
 
-/**
- * Парсинг публичной витрины канала https://t.me/s/username (без Bot API).
- * Работает только для открытых каналов. Несколько попыток, опциональный исходящий прокси.
- */
-export async function fetchPublicChannelMessages(
-  channelUser: string,
-  limit = 25,
-  before?: string | null,
-): Promise<TelegramPublicPage> {
-  const user = channelUser.replace(/^@/, "").trim();
-  if (!user) return { items: [], nextBefore: null };
-
-  const baseUrl = `https://t.me/s/${encodeURIComponent(user)}`;
-  const url = before ? `${baseUrl}?before=${encodeURIComponent(before)}` : baseUrl;
-
-  const html = await fetchTelegramChannelHtml(url);
+function parseMessages(
+  html: string,
+  user: string,
+  limit: number,
+): TelegramPublicMessage[] {
   const $ = cheerio.load(html);
   const out: TelegramPublicMessage[] = [];
-  const prevHref = $('link[rel="prev"]').attr("href") ?? "";
-  const nextBefore =
-    prevHref.match(/[?&]before=(\d+)/)?.[1] ??
-    prevHref.match(/before=(\d+)/)?.[1] ??
-    null;
 
   $(".tgme_widget_message").each((_, el) => {
     if (out.length >= limit) return false;
@@ -213,7 +287,6 @@ export async function fetchPublicChannelMessages(
     const datetime = timeEl.attr("datetime") ?? null;
 
     const text = $el.find(".tgme_widget_message_text").text().trim();
-
     const imageUrls = [
       ...collectStyleUrls($, $el),
       ...collectImageTags($, $el),
@@ -234,44 +307,69 @@ export async function fetchPublicChannelMessages(
     return;
   });
 
-  return { items: out, nextBefore };
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Публичный API
+// ---------------------------------------------------------------------------
+
+export async function fetchPublicChannelMessages(
+  channelUser: string,
+  limit = 25,
+  before?: string | null,
+): Promise<TelegramPublicPage> {
+  const user = channelUser.replace(/^@/, "").trim();
+  if (!user) return { items: [], nextBefore: null };
+
+  const { html, nextBefore } = await fetchChannelHtml(user, before ?? null);
+  const items = parseMessages(html, user, limit);
+
+  return { items, nextBefore };
 }
 
 export async function downloadTelegramImage(url: string): Promise<Buffer> {
-  const attempts = 2;
+  const attempts = 3;
   const timeoutMs = 20000;
 
   for (let i = 0; i < attempts; i++) {
-    if (i > 0) {
-      await new Promise((r) => setTimeout(r, 500));
-    }
+    if (i > 0) await pause(300 + i * 300);
+
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
       const res = await telegramFetch(url, {
         cache: "no-store",
         redirect: "follow",
-        headers: mediaHeaders(i),
         signal: controller.signal,
+        headers: {
+          "User-Agent": pickUA(i),
+          Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+          "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+          Referer: "https://t.me/",
+        },
       });
       clearTimeout(timer);
+
       if (!res.ok) {
-        if (shouldRetryHttpStatus(res.status) && i < attempts - 1) {
-          continue;
-        }
+        if (shouldRetry(res.status) && i < attempts - 1) continue;
         throw new Error(`Не удалось скачать изображение: ${res.status}`);
       }
       return Buffer.from(await res.arrayBuffer());
     } catch (e) {
       clearTimeout(timer);
-      const aborted = e instanceof Error && e.name === "AbortError";
-      if (aborted && i < attempts - 1) continue;
-      if (aborted) {
-        throw new Error(`Таймаут при скачивании изображения.${proxyHint()}`);
+      if (e instanceof Error && e.name === "AbortError" && i < attempts - 1) {
+        continue;
       }
-      throw e instanceof Error ? e : new Error(String(e));
+      if (e instanceof Error && e.name === "AbortError") {
+        throw new Error("Таймаут при скачивании изображения.");
+      }
+      if (i >= attempts - 1) {
+        throw e instanceof Error ? e : new Error(String(e));
+      }
     }
   }
 
-  throw new Error(`Не удалось скачать изображение.${proxyHint()}`);
+  throw new Error("Не удалось скачать изображение.");
 }
