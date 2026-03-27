@@ -5,10 +5,18 @@ import type { FeedPost } from "@/types/feed";
 
 const take = 8;
 
+function isNextProductionBuild(): boolean {
+  return process.env.NEXT_PHASE === "phase-production-build";
+}
+
 export async function getFeedPage(cursor?: string): Promise<{
   items: FeedPost[];
   nextCursor: string | null;
 }> {
+  if (isNextProductionBuild()) {
+    return { items: [], nextCursor: null };
+  }
+
   const posts = await prisma.post.findMany({
     where: { status: POST_STATUS.PUBLISHED },
     orderBy: [{ pinned: "desc" }, { publishedAt: "desc" }, { id: "desc" }],

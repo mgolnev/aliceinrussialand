@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ensureSiteSettings } from "@/lib/site";
 import {
   deleteAvatarMediaFiles,
   processAvatarUpload,
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
   }
 
   const json = JSON.stringify(variants);
+  await ensureSiteSettings();
   await prisma.siteSettings.update({
     where: { id: 1 },
     data: { avatarMediaPath: json },
@@ -52,6 +54,7 @@ export async function POST(req: Request) {
 
 export async function DELETE() {
   await deleteAvatarMediaFiles();
+  await ensureSiteSettings();
   await prisma.siteSettings.update({
     where: { id: 1 },
     data: { avatarMediaPath: null },

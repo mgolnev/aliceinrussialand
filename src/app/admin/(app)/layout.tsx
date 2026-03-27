@@ -2,6 +2,8 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { AdminLogout } from "./AdminLogout";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminAppLayout({
   children,
 }: {

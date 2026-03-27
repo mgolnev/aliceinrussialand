@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSiteSettings } from "@/lib/site";
+import { ensureSiteSettings, getSiteSettings } from "@/lib/site";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
@@ -47,6 +47,8 @@ export async function PATCH(req: Request) {
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "Нет полей" }, { status: 400 });
   }
+
+  await ensureSiteSettings();
 
   const updated = await prisma.siteSettings.update({
     where: { id: 1 },

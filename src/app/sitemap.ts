@@ -6,10 +6,17 @@ import { getSiteSettings } from "@/lib/site";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const settings = await getSiteSettings();
   const base =
-    settings.siteUrl ||
     process.env.NEXT_PUBLIC_SITE_URL ||
+    settings.siteUrl ||
     "http://localhost:3000";
   const origin = base.replace(/\/$/, "");
+
+  if (process.env.NEXT_PHASE === "phase-production-build") {
+    return [
+      { url: `${origin}/`, lastModified: new Date() },
+      { url: `${origin}/about`, lastModified: new Date() },
+    ];
+  }
 
   const posts = await prisma.post.findMany({
     where: { status: POST_STATUS.PUBLISHED },
