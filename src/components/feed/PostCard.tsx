@@ -14,6 +14,7 @@ import { ResponsiveImage } from "@/components/ui/ResponsiveImage";
 import { PostImpression } from "./PostImpression";
 import type { FeedPost } from "@/types/feed";
 import { MediaGrid } from "./MediaGrid";
+import { ImageLightbox } from "./ImageLightbox";
 import { FeedComposerPanel } from "@/components/feed/FeedComposerPanel";
 import { dispatchFeedRefreshMerge, dispatchFeedRefreshReplace } from "@/lib/feed-refresh";
 import { saveFeedScrollPosition } from "@/lib/feed-scroll";
@@ -92,15 +93,6 @@ export function PostCard({
     setEditBody(post.body);
     setEditImages(post.images);
   }, [post]);
-
-  useEffect(() => {
-    if (viewerIndex === null) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [viewerIndex]);
 
   function updateMenuPosition() {
     const el = menuTriggerRef.current;
@@ -529,107 +521,17 @@ export function PostCard({
         )}
       </article>
 
-      {viewerImage?.src ? (
-        <div
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center overscroll-none bg-black/95 p-4 backdrop-blur-md animate-in fade-in duration-200"
-          onClick={() => setViewerIndex(null)}
-          role="presentation"
-        >
-          <div
-            className="absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 border-b border-white/15 bg-black/75 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="flex items-center gap-2 rounded-full px-3 py-2.5 text-[15px] font-semibold text-white transition active:bg-white/15"
-              onClick={() => setViewerIndex(null)}
-            >
-              <X size={20} strokeWidth={2.25} aria-hidden />
-              Закрыть
-            </button>
-            {imageList.length > 1 ? (
-              <span className="shrink-0 text-sm tabular-nums text-white/65">
-                {viewerIndex !== null ? viewerIndex + 1 : 1} / {imageList.length}
-              </span>
-            ) : null}
-          </div>
-
-          <div
-            className="relative flex h-full w-full max-h-[85dvh] touch-pan-y items-center justify-center pt-14"
-            onClick={(event) => event.stopPropagation()}
-            onTouchStart={(e) => {
-              swipeStartX.current = e.touches[0]?.clientX ?? null;
-            }}
-            onTouchEnd={(e) => {
-              if (
-                imageList.length < 2 ||
-                swipeStartX.current == null ||
-                viewerIndex === null
-              ) {
-                swipeStartX.current = null;
-                return;
-              }
-              const x = e.changedTouches[0]?.clientX;
-              if (x == null) {
-                swipeStartX.current = null;
-                return;
-              }
-              const dx = x - swipeStartX.current;
-              swipeStartX.current = null;
-              if (dx > 56) {
-                setViewerIndex((cur) =>
-                  cur === null
-                    ? 0
-                    : (cur - 1 + imageList.length) % imageList.length,
-                );
-              } else if (dx < -56) {
-                setViewerIndex((cur) =>
-                  cur === null ? 0 : (cur + 1) % imageList.length,
-                );
-              }
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={viewerImage.src}
-              alt={viewerImage.alt || post.title}
-              className="max-h-full max-w-full select-none rounded-lg object-contain shadow-2xl"
-              draggable={false}
-            />
-          </div>
-
-          {viewerImage.caption ? (
-            <div className="pointer-events-none absolute bottom-safe-offset-8 left-4 right-4 mx-auto max-w-2xl">
-              <p className="rounded-2xl bg-black/40 p-4 text-center text-[15px] leading-relaxed text-white/90 backdrop-blur-md">
-                {viewerImage.caption}
-              </p>
-            </div>
-          ) : null}
-
-          {imageList.length > 1 ? (
-            <div
-              className="absolute bottom-4 z-10 flex items-center justify-center gap-2"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {imageList.map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  aria-label={`Фото ${i + 1} из ${imageList.length}`}
-                  aria-current={i === viewerIndex ? "true" : undefined}
-                  className="flex h-10 min-w-10 items-center justify-center p-2"
-                  onClick={() => setViewerIndex(i)}
-                >
-                  <span
-                    className={`block h-1.5 rounded-full transition-all duration-300 ${
-                      i === viewerIndex ? "w-4 bg-white" : "w-1.5 bg-white/30"
-                    }`}
-                  />
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
+      {viewerIndex !== null && viewerImage?.src ? (
+        <ImageLightbox
+          slides={imageList.map((im) => ({
+            src: im.src ?? "",
+            alt: im.alt || post.title,
+            caption: im.caption || undefined,
+          }))}
+          index={viewerIndex}
+          onClose={() => setViewerIndex(null)}
+          onIndexChange={setViewerIndex}
+        />
       ) : null}
     </>
   );
