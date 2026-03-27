@@ -1,5 +1,6 @@
 import {
   getSiteSettings,
+  parseAboutPhotoUrl,
   parseAvatarUrl,
   parseSocialLinks,
 } from "@/lib/site";
@@ -32,6 +33,7 @@ export default async function AdminSettingsPage() {
           defaultLocale: s.defaultLocale,
           social,
           avatarPreviewUrl: parseAvatarUrl(s.avatarMediaPath),
+          aboutPhotoPreviewUrl: parseAboutPhotoUrl(s.aboutPhotoPath),
         }}
       />
     </div>

@@ -22,6 +22,7 @@ function defaultSiteSettings(): SiteSettingsRow {
     bio: "",
     aboutMarkdown: "",
     avatarMediaPath: null,
+    aboutPhotoPath: null,
     socialLinksJson: "[]",
     telegramChannelUser: "",
     contactsLabel: "Контакты",
@@ -60,6 +61,20 @@ export function parseAvatarUrl(
     const pick = (k: string) =>
       typeof v[k] === "string" ? (v[k] as string) : null;
     return pick("w256") ?? pick("w512") ?? pick("w128") ?? pick("w640") ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function parseAboutPhotoUrl(
+  aboutPhotoPath: string | null | undefined,
+): string | null {
+  if (!aboutPhotoPath?.trim()) return null;
+  try {
+    const v = JSON.parse(aboutPhotoPath) as Record<string, unknown>;
+    const pick = (k: string) =>
+      typeof v[k] === "string" ? (v[k] as string) : null;
+    return pick("w1280") ?? pick("w960") ?? pick("w640") ?? null;
   } catch {
     return null;
   }

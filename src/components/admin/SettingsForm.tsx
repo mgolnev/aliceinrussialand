@@ -18,6 +18,7 @@ type Props = {
     defaultLocale: string;
     social: SocialLink[];
     avatarPreviewUrl: string | null;
+    aboutPhotoPreviewUrl: string | null;
   };
 };
 
@@ -30,6 +31,13 @@ export function SettingsForm({ initial }: Props) {
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const [aboutPhotoUrl, setAboutPhotoUrl] = useState(
+    initial.aboutPhotoPreviewUrl,
+  );
+  const [aboutPhotoBusy, setAboutPhotoBusy] = useState(false);
+  const [aboutPhotoError, setAboutPhotoError] = useState<string | null>(null);
+  const aboutPhotoInputRef = useRef<HTMLInputElement>(null);
 
   async function save() {
     setMessage(null);
@@ -113,6 +121,41 @@ export function SettingsForm({ initial }: Props) {
     setMessage("Аватар удалён");
   }
 
+  async function uploadAboutPhoto(file: File) {
+    setAboutPhotoError(null);
+    setAboutPhotoBusy(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/admin/about-photo", {
+      method: "POST",
+      body: fd,
+    });
+    setAboutPhotoBusy(false);
+    if (!res.ok) {
+      const j = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      setAboutPhotoError(j?.error ?? "Не удалось загрузить");
+      return;
+    }
+    const data = (await res.json()) as { previewUrl?: string };
+    if (data.previewUrl) setAboutPhotoUrl(data.previewUrl);
+    setMessage("Фото «Обо мне» обновлено");
+  }
+
+  async function removeAboutPhoto() {
+    setAboutPhotoError(null);
+    setAboutPhotoBusy(true);
+    const res = await fetch("/api/admin/about-photo", { method: "DELETE" });
+    setAboutPhotoBusy(false);
+    if (!res.ok) {
+      setAboutPhotoError("Не удалось удалить");
+      return;
+    }
+    setAboutPhotoUrl(null);
+    setMessage("Фото «Обо мне» удалено");
+  }
+
   return (
     <div className="space-y-6 rounded-[28px] border border-stone-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-40px_rgba(60,44,29,0.35)]">
       <div className="flex flex-col gap-4 rounded-2xl border border-stone-200 bg-stone-50/80 p-4 sm:flex-row sm:items-center">
@@ -173,6 +216,61 @@ export function SettingsForm({ initial }: Props) {
       {avatarError ? (
         <p className="text-sm text-red-600">{avatarError}</p>
       ) : null}
+
+      <div className="flex flex-col gap-4 rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
+        <div className="flex items-start gap-4">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-stone-900">
+              Фото на странице «Обо мне»
+            </p>
+            <p className="mt-0.5 text-xs text-stone-500">
+              JPEG, PNG или WebP, до 20 МБ. Отобразится на странице /about.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <input
+              ref={aboutPhotoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) void uploadAboutPhoto(f);
+              }}
+            />
+            <button
+              type="button"
+              disabled={aboutPhotoBusy}
+              className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-800 shadow-sm hover:bg-stone-50 disabled:opacity-50"
+              onClick={() => aboutPhotoInputRef.current?.click()}
+            >
+              {aboutPhotoBusy ? "Загрузка…" : "Загрузить"}
+            </button>
+            {aboutPhotoUrl ? (
+              <button
+                type="button"
+                disabled={aboutPhotoBusy}
+                className="rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 disabled:opacity-50"
+                onClick={() => void removeAboutPhoto()}
+              >
+                Убрать
+              </button>
+            ) : null}
+          </div>
+        </div>
+        {aboutPhotoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={aboutPhotoUrl}
+            alt=""
+            className="w-full max-h-64 rounded-xl object-cover"
+          />
+        ) : null}
+        {aboutPhotoError ? (
+          <p className="text-sm text-red-600">{aboutPhotoError}</p>
+        ) : null}
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm font-medium sm:col-span-2">

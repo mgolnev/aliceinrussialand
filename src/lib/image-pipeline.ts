@@ -8,6 +8,7 @@ import {
   getPublicMediaDir,
 } from "./paths";
 import {
+  deleteSupabaseAboutPhotoFiles,
   deleteSupabaseAvatarFiles,
   deleteSupabaseImageFolder,
   isSupabaseMediaEnabled,
@@ -203,6 +204,73 @@ export async function processAvatarUpload(params: {
   }
 
   return { variants };
+}
+
+const ABOUT_PHOTO_SUBDIR = "about-photo";
+const ABOUT_PHOTO_VARIANTS = [640, 960, 1280] as const;
+const ABOUT_PHOTO_MAX_WIDTH = 2560;
+
+export async function processAboutPhotoUpload(params: {
+  buffer: Buffer;
+  mime: string;
+}): Promise<{ variants: VariantsMap }> {
+  const { buffer, mime } = params;
+  if (!["image/jpeg", "image/png", "image/webp"].includes(mime)) {
+    throw new Error("Недопустимый тип файла");
+  }
+
+  const meta = await sharp(buffer).rotate().metadata();
+  let work = buffer;
+  if ((meta.width ?? 0) > ABOUT_PHOTO_MAX_WIDTH) {
+    const resized = await sharp(buffer)
+      .rotate()
+      .resize({ width: ABOUT_PHOTO_MAX_WIDTH, withoutEnlargement: true })
+      .toBuffer({ resolveWithObject: true });
+    work = resized.data;
+  }
+
+  const variants: VariantsMap = {};
+
+  if (isSupabaseMediaEnabled()) {
+    const publicBase = supabasePublicMediaBase();
+    for (const w of ABOUT_PHOTO_VARIANTS) {
+      const fname = `w${w}.webp`;
+      const objectPath = `${ABOUT_PHOTO_SUBDIR}/${fname}`;
+      const webpBuf = await sharp(work)
+        .rotate()
+        .resize({ width: w, withoutEnlargement: true })
+        .webp({ quality: 85, effort: 4 })
+        .toBuffer();
+      await uploadSupabaseFile(objectPath, webpBuf, "image/webp");
+      variants[`w${w}`] = `${publicBase}/${objectPath}`;
+    }
+    return { variants };
+  }
+
+  const outDir = path.join(getProjectRoot(), "public", "media", ABOUT_PHOTO_SUBDIR);
+  await ensureDir(outDir);
+
+  for (const w of ABOUT_PHOTO_VARIANTS) {
+    const fname = `w${w}.webp`;
+    const fpath = path.join(outDir, fname);
+    await sharp(work)
+      .rotate()
+      .resize({ width: w, withoutEnlargement: true })
+      .webp({ quality: 85, effort: 4 })
+      .toFile(fpath);
+    variants[`w${w}`] = `/media/${ABOUT_PHOTO_SUBDIR}/${fname}`;
+  }
+
+  return { variants };
+}
+
+export async function deleteAboutPhotoFiles() {
+  if (isSupabaseMediaEnabled()) {
+    await deleteSupabaseAboutPhotoFiles();
+    return;
+  }
+  const dir = path.join(getProjectRoot(), "public", "media", ABOUT_PHOTO_SUBDIR);
+  await fs.rm(dir, { recursive: true, force: true });
 }
 
 export async function deleteAvatarMediaFiles() {

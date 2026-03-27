@@ -74,3 +74,12 @@ export async function deleteSupabaseAvatarFiles() {
   const paths = AVATAR_OBJECT_NAMES.map((n) => `avatar/${n}`);
   await sb.storage.from(getBucket()).remove(paths);
 }
+
+const ABOUT_PHOTO_NAMES = ["w640.webp", "w960.webp", "w1280.webp"] as const;
+
+export async function deleteSupabaseAboutPhotoFiles() {
+  const sb = getClient();
+  if (!sb) return;
+  const paths = ABOUT_PHOTO_NAMES.map((n) => `about-photo/${n}`);
+  await sb.storage.from(getBucket()).remove(paths);
+}
