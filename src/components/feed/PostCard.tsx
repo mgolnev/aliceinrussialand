@@ -494,6 +494,7 @@ export function PostCard({
                 <MediaGrid
                   fullBleed
                   flushCardBottom
+                  layoutSeed={post.id}
                   images={imageList.map((image) => ({
                     id: image.id,
                     src: image.src,
