@@ -97,7 +97,7 @@ export function FeedClient({
   }
 
   return (
-    <div className="space-y-4 sm:space-y-7">
+    <div className="min-w-0 space-y-4 sm:space-y-7">
       {items.map((post) => (
         <PostCard
           key={post.id}

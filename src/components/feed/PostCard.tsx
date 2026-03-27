@@ -14,7 +14,8 @@ import { ResponsiveImage } from "@/components/ui/ResponsiveImage";
 import { PostImpression } from "./PostImpression";
 import type { FeedPost } from "@/types/feed";
 import { MediaGrid } from "./MediaGrid";
-import { dispatchFeedRefreshReplace } from "@/lib/feed-refresh";
+import { FeedComposerPanel } from "@/components/feed/FeedComposerPanel";
+import { dispatchFeedRefreshMerge, dispatchFeedRefreshReplace } from "@/lib/feed-refresh";
 import { saveFeedScrollPosition } from "@/lib/feed-scroll";
 import {
   MoreHorizontal,
@@ -25,8 +26,6 @@ import {
   Trash2,
   X,
   ArrowLeft,
-  Plus,
-  Loader2,
 } from "lucide-react";
 
 export type { FeedPost };
@@ -71,6 +70,7 @@ export function PostCard({
   const [editMode, setEditMode] = useState(false);
   const [editBody, setEditBody] = useState(post.body);
   const [editImages, setEditImages] = useState(post.images);
+  const [editMessage, setEditMessage] = useState<string | null>(null);
   const swipeStartX = useRef<number | null>(null);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const menuPanelRef = useRef<HTMLDivElement>(null);
@@ -194,28 +194,45 @@ export function PostCard({
     }
   }
 
-  async function saveInline() {
+  function cancelEdit() {
+    setEditMode(false);
+    setEditMessage(null);
+    setEditBody(post.body);
+    setEditImages(post.images);
+  }
+
+  async function saveEdit(status: "DRAFT" | "PUBLISHED") {
     setWorking(true);
+    setEditMessage(null);
+    const payload: Record<string, unknown> = {
+      title: "",
+      body: editBody,
+      displayMode: "GRID",
+      status,
+    };
+    if (editImages.length > 0) {
+      payload.images = editImages.map((image, index) => ({
+        id: image.id,
+        sortOrder: index,
+        caption: image.caption,
+        alt: image.alt,
+      }));
+    }
     const res = await fetch(`/api/admin/posts/${post.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: "",
-        body: editBody,
-        displayMode: "GRID",
-        images: editImages.map((image, index) => ({
-          id: image.id,
-          sortOrder: index,
-          caption: image.caption,
-          alt: image.alt,
-        })),
-      }),
+      body: JSON.stringify(payload),
     });
+    const data = (await res.json().catch(() => null)) as { error?: string } | null;
     setWorking(false);
     if (res.ok) {
       setEditMode(false);
       setMenuOpen(false);
+      setEditMessage(null);
+      dispatchFeedRefreshMerge();
       router.refresh();
+    } else {
+      setEditMessage(data?.error ?? "Не удалось сохранить");
     }
   }
 
@@ -265,7 +282,7 @@ export function PostCard({
 
   return (
     <>
-      <article className="relative scroll-mt-24 overflow-hidden rounded-[24px] border border-stone-200/80 bg-white/95 p-4 shadow-[0_8px_30px_-10px_rgba(60,44,29,0.15)] backdrop-blur-sm sm:rounded-[30px] sm:p-7">
+      <article className="relative min-w-0 scroll-mt-24 overflow-hidden rounded-[24px] border border-stone-200/80 bg-white/95 p-4 shadow-[0_8px_30px_-10px_rgba(60,44,29,0.15)] backdrop-blur-sm sm:rounded-[30px] sm:p-7">
         {plausibleDomain || yandexMetrikaId?.trim() ? (
           <PostImpression
             slug={post.slug}
@@ -356,6 +373,7 @@ export function PostCard({
                             className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100"
                             role="menuitem"
                             onClick={() => {
+                              setEditMessage(null);
                               setEditMode(true);
                               setMenuOpen(false);
                             }}
@@ -393,137 +411,87 @@ export function PostCard({
           </div>
         </header>
 
-        {post.body ? (
-          <div className="mb-5 whitespace-pre-wrap text-[15px] leading-relaxed text-stone-800 sm:text-[16px] sm:leading-8">
-            {post.body}
-          </div>
-        ) : null}
-
-        {!standalone && post.images.length > 0 ? (
-          <MediaGrid
-            images={imageList.map((image) => ({
-              id: image.id,
-              src: image.src,
-              alt: image.alt || post.title,
-            }))}
-            onImageClick={(index) => setViewerIndex(index)}
-          />
-        ) : (
-          <div className="space-y-3 sm:space-y-4">
-            {post.images.map((im, i) => (
-              <button
-                key={im.id}
-                type="button"
-                className="block w-full overflow-hidden rounded-2xl text-left transition active:scale-[0.98]"
-                onClick={() => setViewerIndex(i)}
-              >
-                <ResponsiveImage
-                  variants={im.variants}
-                  alt={im.alt || post.title}
-                  caption={im.caption}
-                  priority={i === 0}
-                  className="rounded-2xl sm:rounded-[22px]"
-                />
-              </button>
-            ))}
-          </div>
-        )}
-
         {canManage && editMode ? (
-          <div className="mt-5 space-y-4 rounded-2xl border border-stone-200 bg-stone-50/80 p-4 sm:rounded-[24px]">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-bold text-stone-900 uppercase tracking-tight">
-                Редактирование
-              </h3>
+          <FeedComposerPanel
+            className="mt-2"
+            headerLeft="Редактирование"
+            headerRight={
               <button
                 type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-stone-400 hover:bg-stone-200 active:scale-90"
-                onClick={() => setEditMode(false)}
+                aria-label="Закрыть редактирование"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-stone-400 transition hover:bg-stone-200 hover:text-stone-700 active:scale-90"
+                onClick={() => cancelEdit()}
               >
                 <X size={18} />
               </button>
-            </div>
-            <textarea
-              value={editBody}
-              onChange={(e) => setEditBody(e.target.value)}
-              className="min-h-[140px] w-full resize-none rounded-xl border border-stone-200 bg-white px-4 py-3 text-[15px] leading-relaxed outline-none focus:border-stone-400 focus:ring-1 focus:ring-stone-400"
-              placeholder="Текст поста"
-            />
-            
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={working}
-                onClick={() => {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.multiple = true;
-                  input.accept = 'image/*';
-                  input.onchange = (e) => {
-                    const files = (e.target as HTMLInputElement).files;
-                    void uploadInline(files);
-                  };
-                  input.click();
-                }}
-                className="flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition active:scale-95 disabled:opacity-50"
-              >
-                {working ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                Добавить фото
-              </button>
-            </div>
-
-            {editImages.length ? (
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {editImages.map((image) => {
-                  const src =
-                    image.variants.w640 ??
-                    image.variants.w960 ??
-                    image.variants.w1280;
-                  return (
-                    <div
-                      key={image.id}
-                      className="group relative aspect-square overflow-hidden rounded-xl border border-stone-200 bg-white"
-                    >
-                      {src ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={src}
-                          alt={image.alt || post.title}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : null}
-                      <button
-                        type="button"
-                        className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-red-600 shadow-sm transition active:scale-90"
-                        onClick={() => void removeInlineImage(image.id)}
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  );
-                })}
+            }
+            body={editBody}
+            onBodyChange={setEditBody}
+            images={editImages}
+            onImagesChange={(next) =>
+              setEditImages(
+                next.map((im) => ({
+                  id: im.id,
+                  variants: im.variants,
+                  width: im.width ?? null,
+                  height: im.height ?? null,
+                  caption: im.caption ?? "",
+                  alt: im.alt ?? "",
+                })),
+              )
+            }
+            onRemoveImage={(id) => void removeInlineImage(id)}
+            uploadFiles={(files) => void uploadInline(files)}
+            working={working}
+            message={editMessage}
+            onSubmitDraft={() => void saveEdit("DRAFT")}
+            onSubmitPublish={() => void saveEdit("PUBLISHED")}
+            canSubmit={
+              editBody.trim().length > 0 || editImages.length > 0
+            }
+            publishLabel={post.publishedAt ? "Сохранить" : "Опубликовать"}
+          />
+        ) : (
+          <>
+            {post.body ? (
+              <div className="mb-5 min-w-0 whitespace-pre-wrap text-[15px] leading-relaxed text-stone-800 sm:text-[16px] sm:leading-8">
+                {post.body}
               </div>
             ) : null}
 
-            <div className="flex flex-wrap gap-2 pt-2">
-              <button
-                type="button"
-                disabled={working}
-                className="flex-1 rounded-full bg-stone-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-95 disabled:opacity-50"
-                onClick={() => void saveInline()}
-              >
-                {working ? "..." : "Сохранить"}
-              </button>
-              <button
-                type="button"
-                className="flex-1 rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition active:scale-95"
-                onClick={() => setEditMode(false)}
-              >
-                Отмена
-              </button>
-            </div>
-          </div>
-        ) : null}
+            {!standalone && post.images.length > 0 ? (
+              <div className="min-w-0">
+                <MediaGrid
+                  images={imageList.map((image) => ({
+                    id: image.id,
+                    src: image.src,
+                    alt: image.alt || post.title,
+                  }))}
+                  onImageClick={(index) => setViewerIndex(index)}
+                />
+              </div>
+            ) : (
+              <div className="min-w-0 space-y-3 sm:space-y-4">
+                {post.images.map((im, i) => (
+                  <button
+                    key={im.id}
+                    type="button"
+                    className="block w-full min-w-0 overflow-hidden rounded-2xl text-left transition active:scale-[0.98]"
+                    onClick={() => setViewerIndex(i)}
+                  >
+                    <ResponsiveImage
+                      variants={im.variants}
+                      alt={im.alt || post.title}
+                      caption={im.caption}
+                      priority={i === 0}
+                      className="rounded-2xl sm:rounded-[22px]"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </article>
 
       {viewerImage?.src ? (

@@ -22,7 +22,7 @@ export function ResponsiveImage({
   if (!fallback) return null;
 
   return (
-    <figure className="space-y-2">
+    <figure className="min-w-0 space-y-2">
       <picture>
         {w1280 ? (
           <source
@@ -41,7 +41,7 @@ export function ResponsiveImage({
         <img
           src={w640 ?? w960 ?? w1280}
           alt={alt}
-          className={`w-full rounded-[22px] bg-[#f4efe8] object-contain shadow-[0_14px_34px_-26px_rgba(64,48,32,0.45)] ring-1 ring-stone-200/70 ${className}`}
+          className={`max-w-full min-w-0 w-full rounded-[22px] bg-[#f4efe8] object-contain shadow-[0_14px_34px_-26px_rgba(64,48,32,0.45)] ring-1 ring-stone-200/70 ${className}`}
           loading={priority ? "eager" : "lazy"}
           decoding="async"
           sizes="(max-width: 640px) 100vw, (max-width: 1100px) 92vw, 720px"

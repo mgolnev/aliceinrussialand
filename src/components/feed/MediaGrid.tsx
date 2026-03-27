@@ -38,10 +38,10 @@ export function MediaGrid({ images, onImageClick }: Props) {
   const extra = Math.max(images.length - visible.length, 0);
 
   return (
-    <div className="grid grid-cols-6 gap-2">
+    <div className="grid w-full min-w-0 grid-cols-6 gap-2">
       {visible.map((image, index) => {
         const clickable = typeof onImageClick === "function";
-        const className = `relative overflow-hidden rounded-[22px] border border-stone-200 bg-stone-50 text-left shadow-sm ${itemClass(
+        const className = `relative min-w-0 overflow-hidden rounded-[22px] border border-stone-200 bg-stone-50 text-left shadow-sm ${itemClass(
           index,
           visible.length,
         )}`;
@@ -52,7 +52,7 @@ export function MediaGrid({ images, onImageClick }: Props) {
               <img
                 src={image.src}
                 alt={image.alt}
-                className={`w-full object-cover ${aspectClass(index, visible.length)}`}
+                className={`max-h-full w-full min-w-0 object-cover ${aspectClass(index, visible.length)}`}
               />
             ) : (
               <div

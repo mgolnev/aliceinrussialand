@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
 import { getSiteSettings } from "@/lib/site";
@@ -9,6 +9,11 @@ const sans = Manrope({
   subsets: ["latin", "cyrillic"],
   variable: "--font-body",
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSiteSettings();
