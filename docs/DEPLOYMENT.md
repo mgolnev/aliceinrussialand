@@ -42,11 +42,7 @@ git push -u origin main
 
 1. **Import** репозитория из GitHub.
 2. **Framework Preset:** Next.js.
-3. **Build Command** (рекомендуется):
-
-   ```bash
-   prisma migrate deploy && prisma generate && next build
-   ```
+3. **Build Command:** в репозитории задан [`vercel.json`](../vercel.json) → `npm run vercel-build` (миграции + сборка). Скрипт перед `migrate deploy` снимает маркер **failed** у миграции `20260327220000_yandex_metrika`, чтобы не застревать на **P3009** после сбоя. Если в панели Vercel вручную указан другой Build Command, он **перекрывает** `vercel.json` — задайте там тоже `npm run vercel-build` или удалите override.
 
 4. **Install Command:** `npm install` (по умолчанию).
 
