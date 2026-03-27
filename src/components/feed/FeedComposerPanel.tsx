@@ -214,6 +214,8 @@ export function FeedComposerPanel({
                     image.variants.w960 ??
                     image.variants.w1280,
                   alt: image.alt ?? "",
+                  width: image.width,
+                  height: image.height,
                 }))}
               />
             </div>

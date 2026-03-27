@@ -499,6 +499,8 @@ export function PostCard({
                     id: image.id,
                     src: image.src,
                     alt: image.alt || post.title,
+                    width: image.width,
+                    height: image.height,
                   }))}
                   onImageClick={(index) => setViewerIndex(index)}
                 />
