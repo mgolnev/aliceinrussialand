@@ -1,8 +1,4 @@
-import {
-  getSiteSettings,
-  parseAvatarUrl,
-  parseSocialLinks,
-} from "@/lib/site";
+import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { getFeedPage } from "@/lib/feed-server";
 import { SiteChrome, SiteFooter } from "@/components/site/SiteChrome";
 import { FeedClient } from "@/components/feed/FeedClient";
@@ -13,7 +9,6 @@ import { cookies } from "next/headers";
 
 export default async function HomePage() {
   const settings = await getSiteSettings();
-  const social = parseSocialLinks(settings.socialLinksJson);
   const { items, nextCursor } = await getFeedPage();
   const siteUrl =
     settings.siteUrl ||
@@ -35,8 +30,8 @@ export default async function HomePage() {
       <SiteChrome
         displayName={settings.displayName}
         tagline={settings.tagline}
-        social={social}
         avatarUrl={parseAvatarUrl(settings.avatarMediaPath)}
+        contactsLabel={settings.contactsLabel}
       />
       <div className="mx-auto min-w-0 max-w-3xl px-3 py-4 sm:px-5 sm:py-10">
         {isAdmin ? <QuickComposer /> : null}

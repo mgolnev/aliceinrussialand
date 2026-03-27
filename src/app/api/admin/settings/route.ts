@@ -32,6 +32,9 @@ export async function PATCH(req: Request) {
   if (str("telegramChannelUser") !== undefined) {
     data.telegramChannelUser = str("telegramChannelUser")?.replace(/^@/, "");
   }
+  if (str("contactsLabel") !== undefined) {
+    data.contactsLabel = str("contactsLabel") ?? "";
+  }
   if (str("defaultLocale") !== undefined) {
     data.defaultLocale = str("defaultLocale");
   }

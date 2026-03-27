@@ -17,6 +17,8 @@ model SiteSettings {
   avatarMediaPath      String?
   socialLinksJson      String  @default("[]")
   telegramChannelUser  String  @default("")
+  /// Подпись ссылки на /about в шапке и заголовок блока соцсетей на странице «Обо мне».
+  contactsLabel        String  @default("Контакты")
   defaultLocale        String  @default("ru")
   siteUrl              String  @default("http://localhost:3000")
   plausibleDomain      String  @default("")

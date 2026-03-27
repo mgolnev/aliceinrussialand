@@ -11,6 +11,7 @@ type Props = {
     bio: string;
     aboutMarkdown: string;
     telegramChannelUser: string;
+    contactsLabel: string;
     siteUrl: string;
     plausibleDomain: string;
     yandexMetrikaId: string;
@@ -41,6 +42,7 @@ export function SettingsForm({ initial }: Props) {
         bio: form.bio,
         aboutMarkdown: form.aboutMarkdown,
         telegramChannelUser: form.telegramChannelUser,
+        contactsLabel: form.contactsLabel,
         siteUrl: form.siteUrl,
         plausibleDomain: form.plausibleDomain,
         yandexMetrikaId: form.yandexMetrikaId,
@@ -189,6 +191,17 @@ export function SettingsForm({ initial }: Props) {
             className="mt-1 w-full rounded-2xl border border-stone-300 px-3 py-2.5 outline-none focus:border-stone-400"
             value={form.tagline}
             onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))}
+          />
+        </label>
+        <label className="block text-sm font-medium sm:col-span-2">
+          Название ссылки «Контакты» (шапка и блок соцсетей на странице «Обо мне»)
+          <input
+            className="mt-1 w-full rounded-2xl border border-stone-300 px-3 py-2.5 outline-none focus:border-stone-400"
+            placeholder="Контакты"
+            value={form.contactsLabel}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, contactsLabel: e.target.value }))
+            }
           />
         </label>
         <label className="block text-sm font-medium sm:col-span-2">

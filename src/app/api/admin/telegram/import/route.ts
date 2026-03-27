@@ -8,6 +8,7 @@ import { downloadTelegramImage } from "@/lib/telegram-public";
 import { derivePostTitle } from "@/lib/post-text";
 
 export const runtime = "nodejs";
+export const maxDuration = 120;
 
 type Item = {
   href: string;

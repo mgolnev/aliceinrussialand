@@ -25,6 +25,7 @@ export default async function AdminSettingsPage() {
           bio: s.bio,
           aboutMarkdown: s.aboutMarkdown,
           telegramChannelUser: s.telegramChannelUser,
+          contactsLabel: s.contactsLabel,
           siteUrl: s.siteUrl,
           plausibleDomain: s.plausibleDomain,
           yandexMetrikaId: s.yandexMetrikaId,

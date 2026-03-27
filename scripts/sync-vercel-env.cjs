@@ -99,6 +99,7 @@ function main() {
       "SUPABASE_STORAGE_BUCKET",
       "NEXT_PUBLIC_PLAUSIBLE_DOMAIN",
       "NEXT_PUBLIC_YANDEX_METRIKA_ID",
+      "TELEGRAM_OUTBOUND_PROXY",
     ];
     let any = false;
     for (const k of optional) {
@@ -163,6 +164,7 @@ function main() {
     "SUPABASE_STORAGE_BUCKET",
     "NEXT_PUBLIC_PLAUSIBLE_DOMAIN",
     "NEXT_PUBLIC_YANDEX_METRIKA_ID",
+    "TELEGRAM_OUTBOUND_PROXY",
   ];
   for (const k of optional) {
     const v = env[k];

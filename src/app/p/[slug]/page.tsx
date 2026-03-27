@@ -6,11 +6,7 @@ import {
   getPublishedPostBySlug,
   parseVariants,
 } from "@/lib/posts-query";
-import {
-  getSiteSettings,
-  parseAvatarUrl,
-  parseSocialLinks,
-} from "@/lib/site";
+import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { absoluteUrl } from "@/lib/absolute-url";
 import { SiteChrome, SiteFooter } from "@/components/site/SiteChrome";
 import { PostCard } from "@/components/feed/PostCard";
@@ -64,7 +60,6 @@ export default async function PostPage({ params }: PageProps) {
   if (!post) notFound();
 
   const settings = await getSiteSettings();
-  const social = parseSocialLinks(settings.socialLinksJson);
   const siteUrl =
     settings.siteUrl ||
     process.env.NEXT_PUBLIC_SITE_URL ||
@@ -116,8 +111,8 @@ export default async function PostPage({ params }: PageProps) {
       <SiteChrome
         displayName={settings.displayName}
         tagline={settings.tagline}
-        social={social}
         avatarUrl={parseAvatarUrl(settings.avatarMediaPath)}
+        contactsLabel={settings.contactsLabel}
       />
       <div className="mx-auto max-w-3xl px-3 py-8 sm:px-5 sm:py-10">
         <nav className="mb-6 text-sm text-stone-600">

@@ -24,6 +24,7 @@ function defaultSiteSettings(): SiteSettingsRow {
     avatarMediaPath: null,
     socialLinksJson: "[]",
     telegramChannelUser: "",
+    contactsLabel: "Контакты",
     defaultLocale: "ru",
     siteUrl: "http://localhost:3000",
     plausibleDomain: "",

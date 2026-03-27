@@ -6,6 +6,7 @@ import {
   parseSocialLinks,
 } from "@/lib/site";
 import { SiteChrome, SiteFooter } from "@/components/site/SiteChrome";
+import { SocialLinksSection } from "@/components/site/SocialLinksSection";
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSiteSettings();
@@ -25,10 +26,9 @@ export default async function AboutPage() {
       <SiteChrome
         displayName={s.displayName}
         tagline={s.tagline}
-        social={social}
         avatarUrl={parseAvatarUrl(s.avatarMediaPath)}
       />
-      <article className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
+      <article className="mx-auto max-w-2xl px-3 py-10 sm:px-5 sm:py-12">
         <nav className="mb-8 text-sm text-stone-600">
           <Link href="/" className="hover:text-stone-900 hover:underline">
             ← Лента
@@ -43,6 +43,7 @@ export default async function AboutPage() {
         <div className="mt-8 whitespace-pre-wrap text-[1.05rem] leading-relaxed text-stone-800">
           {s.aboutMarkdown || "Текст можно задать в админке → Настройки."}
         </div>
+        <SocialLinksSection social={social} contactsLabel={s.contactsLabel} />
       </article>
       <SiteFooter />
     </>

@@ -4,6 +4,8 @@ import { getSiteSettings } from "@/lib/site";
 import { DEFAULT_TELEGRAM_CHANNEL } from "@/lib/telegram-default";
 
 export const runtime = "nodejs";
+/** Ретраи к t.me; на Pro можно до 60s, на Hobby Vercel усечёт по плану. */
+export const maxDuration = 45;
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as {
