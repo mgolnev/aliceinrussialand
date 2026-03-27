@@ -280,9 +280,19 @@ export function PostCard({
     setWorking(false);
   }
 
+  const feedMediaGrid = !standalone && post.images.length > 0;
+  const articlePad =
+    canManage && editMode
+      ? "p-0"
+      : feedMediaGrid
+        ? "px-3 sm:px-5 pt-3 pb-0 sm:pt-4"
+        : "px-3 sm:px-5 py-3 sm:py-5";
+
   return (
     <>
-      <article className="relative min-w-0 scroll-mt-24 overflow-hidden rounded-[24px] border border-stone-200/80 bg-white/95 p-4 shadow-[0_8px_30px_-10px_rgba(60,44,29,0.15)] backdrop-blur-sm sm:rounded-[30px] sm:p-7">
+      <article
+        className={`relative min-w-0 scroll-mt-24 overflow-hidden rounded-[24px] border border-stone-200/80 bg-white/95 shadow-[0_8px_30px_-10px_rgba(60,44,29,0.15)] backdrop-blur-sm sm:rounded-[30px] ${articlePad}`}
+      >
         {plausibleDomain || yandexMetrikaId?.trim() ? (
           <PostImpression
             slug={post.slug}
@@ -291,9 +301,17 @@ export function PostCard({
           />
         ) : null}
 
-        <header className="relative mb-4 flex items-start justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-[13px] font-medium text-stone-400">
+        <header
+          className={`relative flex items-start justify-between gap-3 ${
+            canManage && editMode
+              ? "border-b border-stone-100 px-3 pb-2.5 pt-3 sm:px-5 sm:pb-3 sm:pt-4"
+              : feedMediaGrid
+                ? "mb-2 sm:mb-3"
+                : "mb-4"
+          }`}
+        >
+          <div className="min-w-0 flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2 text-[13px] font-medium text-stone-400">
               {post.publishedAt ? (
                 <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
               ) : (
@@ -306,9 +324,14 @@ export function PostCard({
                 <span className="text-amber-700">Закреплено</span>
               ) : null}
             </div>
+            {canManage && editMode ? (
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+                Редактирование
+              </span>
+            ) : null}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1.5">
             {standalone ? (
               <Link
                 href="/"
@@ -317,6 +340,16 @@ export function PostCard({
                 <ArrowLeft size={18} />
               </Link>
             ) : null}
+            {canManage && editMode ? (
+              <button
+                type="button"
+                aria-label="Закрыть редактирование"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90"
+                onClick={() => cancelEdit()}
+              >
+                <X size={18} />
+              </button>
+            ) : (
             <div className="relative">
               <button
                 ref={menuTriggerRef}
@@ -408,23 +441,15 @@ export function PostCard({
                   )
                 : null}
             </div>
+            )}
           </div>
         </header>
 
         {canManage && editMode ? (
+          <div className="px-3 pb-2 pt-2 sm:px-5 sm:pb-2 sm:pt-3">
           <FeedComposerPanel
-            className="mt-2"
-            headerLeft="Редактирование"
-            headerRight={
-              <button
-                type="button"
-                aria-label="Закрыть редактирование"
-                className="flex h-9 w-9 items-center justify-center rounded-full text-stone-400 transition hover:bg-stone-200 hover:text-stone-700 active:scale-90"
-                onClick={() => cancelEdit()}
-              >
-                <X size={18} />
-              </button>
-            }
+            variant="embedded"
+            headerLeft=""
             body={editBody}
             onBodyChange={setEditBody}
             images={editImages}
@@ -451,10 +476,15 @@ export function PostCard({
             }
             publishLabel={post.publishedAt ? "Сохранить" : "Опубликовать"}
           />
+          </div>
         ) : (
           <>
             {post.body ? (
-              <div className="mb-5 min-w-0 whitespace-pre-wrap text-[15px] leading-relaxed text-stone-800 sm:text-[16px] sm:leading-8">
+              <div
+                className={`min-w-0 whitespace-pre-wrap text-[15px] leading-relaxed text-stone-800 sm:text-[16px] sm:leading-8 ${
+                  feedMediaGrid ? "mb-2 sm:mb-2.5" : "mb-3 sm:mb-5"
+                }`}
+              >
                 {post.body}
               </div>
             ) : null}
@@ -462,6 +492,8 @@ export function PostCard({
             {!standalone && post.images.length > 0 ? (
               <div className="min-w-0">
                 <MediaGrid
+                  fullBleed
+                  flushCardBottom
                   images={imageList.map((image) => ({
                     id: image.id,
                     src: image.src,
@@ -484,7 +516,7 @@ export function PostCard({
                       alt={im.alt || post.title}
                       caption={im.caption}
                       priority={i === 0}
-                      className="rounded-2xl sm:rounded-[22px]"
+                      className="rounded-xl sm:rounded-[14px]"
                     />
                   </button>
                 ))}

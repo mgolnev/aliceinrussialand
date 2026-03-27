@@ -54,7 +54,7 @@ export function SiteChrome({
 }: Props) {
   return (
     <header className="sticky top-0 z-20 border-b border-stone-200/70 bg-[#fbfaf7]/90 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3 sm:px-6">
+      <div className="mx-auto flex max-w-3xl items-center justify-between px-3 py-3 sm:px-5">
         <Link href="/" className="group flex items-center gap-3 transition-transform active:scale-95">
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- внешний Supabase / произвольный origin

@@ -119,7 +119,7 @@ export default async function PostPage({ params }: PageProps) {
         social={social}
         avatarUrl={parseAvatarUrl(settings.avatarMediaPath)}
       />
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mx-auto max-w-3xl px-3 py-8 sm:px-5 sm:py-10">
         <nav className="mb-6 text-sm text-stone-600">
           <Link href="/" className="hover:text-stone-900 hover:underline">
             ← На главную ленту

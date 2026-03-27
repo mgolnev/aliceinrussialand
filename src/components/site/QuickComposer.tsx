@@ -9,10 +9,6 @@ import {
 } from "@/components/feed/FeedComposerPanel";
 import { dispatchFeedRefreshMerge } from "@/lib/feed-refresh";
 
-type Props = {
-  siteUrl: string;
-};
-
 async function ensureDraft(postId: string | null) {
   if (postId) return postId;
   const res = await fetch("/api/admin/posts", { method: "POST" });
@@ -20,14 +16,13 @@ async function ensureDraft(postId: string | null) {
   return data.id;
 }
 
-export function QuickComposer({ siteUrl }: Props) {
+export function QuickComposer() {
   const router = useRouter();
   const [postId, setPostId] = useState<string | null>(null);
   const [body, setBody] = useState("");
   const [images, setImages] = useState<FeedComposerImage[]>([]);
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
 
   const canSubmit = body.trim().length > 0 || images.length > 0;
 
@@ -97,12 +92,10 @@ export function QuickComposer({ siteUrl }: Props) {
       }
 
       if (status === "PUBLISHED" && data?.slug) {
-        const url = `${siteUrl.replace(/\/$/, "")}/p/${data.slug}`;
-        setPublishedUrl(url);
         setBody("");
         setImages([]);
         setPostId(null);
-        setMessage("Пост опубликован");
+        setMessage(null);
         dispatchFeedRefreshMerge();
         router.refresh();
       } else {
@@ -134,7 +127,6 @@ export function QuickComposer({ siteUrl }: Props) {
       uploadFiles={(files) => void uploadFiles(files)}
       working={working}
       message={message}
-      publishedUrl={publishedUrl}
       onSubmitDraft={() => void submit("DRAFT")}
       onSubmitPublish={() => void submit("PUBLISHED")}
       canSubmit={canSubmit}

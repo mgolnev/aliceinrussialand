@@ -83,6 +83,8 @@ function SortableThumb({
 
 type Props = {
   className?: string;
+  /** В карточке поста: без второй рамки и без шапки «Редактирование» */
+  variant?: "default" | "embedded";
   headerLeft: React.ReactNode;
   headerRight?: React.ReactNode;
   body: string;
@@ -104,6 +106,7 @@ type Props = {
 
 export function FeedComposerPanel({
   className = "",
+  variant = "default",
   headerLeft,
   headerRight,
   body,
@@ -136,20 +139,32 @@ export function FeedComposerPanel({
     onImagesChange(arrayMove(images, oldIndex, newIndex));
   }
 
-  return (
-    <section
-      className={`overflow-hidden rounded-[24px] border border-stone-200/80 bg-white shadow-[0_12px_40px_-12px_rgba(60,44,29,0.2)] sm:rounded-[30px] ${className}`}
-    >
-      <div className="flex items-center justify-between border-b border-stone-100 bg-stone-50/50 px-4 py-2.5 sm:px-6">
-        <div className="text-xs font-semibold uppercase tracking-wider text-stone-400">
-          {headerLeft}
-        </div>
-        {headerRight ? (
-          <div className="flex shrink-0 items-center gap-2">{headerRight}</div>
-        ) : null}
-      </div>
+  const isEmbedded = variant === "embedded";
 
-      <div className="min-w-0 p-4 sm:p-6">
+  const shellClass = isEmbedded
+    ? `min-w-0 ${className}`
+    : `overflow-hidden rounded-[24px] border border-stone-200/80 bg-white shadow-[0_12px_40px_-12px_rgba(60,44,29,0.2)] sm:rounded-[30px] ${className}`;
+
+  const innerClass = isEmbedded
+    ? "min-w-0"
+    : "min-w-0 px-3 pb-2 pt-4 sm:px-5 sm:pb-2.5 sm:pt-5";
+
+  const Shell = isEmbedded ? "div" : "section";
+
+  return (
+    <Shell className={shellClass}>
+      {!isEmbedded ? (
+        <div className="flex items-center justify-between border-b border-stone-100 bg-stone-50/50 px-3 py-2.5 sm:px-5">
+          <div className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+            {headerLeft}
+          </div>
+          {headerRight ? (
+            <div className="flex shrink-0 items-center gap-2">{headerRight}</div>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className={innerClass}>
         <textarea
           value={body}
           onChange={(e) => onBodyChange(e.target.value)}
@@ -158,7 +173,7 @@ export function FeedComposerPanel({
         />
 
         {images.length ? (
-          <div className="mt-4 min-w-0 space-y-4">
+          <div className="mt-3 min-w-0 space-y-2.5">
             <div className="min-w-0 rounded-2xl border border-stone-100 bg-stone-50/30 p-2">
               <DndContext
                 sensors={sensors}
@@ -191,6 +206,7 @@ export function FeedComposerPanel({
 
             <div className="min-w-0 opacity-60 grayscale-[0.5]">
               <MediaGrid
+                fullBleed
                 images={images.map((image) => ({
                   id: image.id,
                   src:
@@ -205,7 +221,7 @@ export function FeedComposerPanel({
         ) : null}
 
         {message ? (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-stone-50 px-4 py-2.5 text-sm text-stone-600">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-stone-50 px-3 py-2 text-sm text-stone-600 sm:px-4">
             <span>{message}</span>
             {publishedUrl ? (
               <a
@@ -218,36 +234,40 @@ export function FeedComposerPanel({
           </div>
         ) : null}
 
-        <div className="mt-4 flex min-w-0 flex-wrap items-center justify-between gap-3 border-t border-stone-50 pt-4">
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled={working}
-              onClick={() => fileInputRef.current?.click()}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 active:scale-90 disabled:opacity-50"
-            >
-              {working ? (
-                <Loader2 size={20} className="animate-spin" />
-              ) : (
-                <ImageIcon size={20} />
-              )}
-            </button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => void uploadFiles(e.target.files)}
-            />
-          </div>
+        <div
+          className={`flex w-full min-w-0 flex-nowrap items-center justify-between gap-2 border-t border-stone-100 ${
+            images.length
+              ? "mt-2 pt-2 sm:mt-2.5 sm:pt-2.5"
+              : "mt-3 pt-3 sm:mt-4 sm:pt-4"
+          }`}
+        >
+          <button
+            type="button"
+            disabled={working}
+            onClick={() => fileInputRef.current?.click()}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 active:scale-90 disabled:opacity-50"
+          >
+            {working ? (
+              <Loader2 size={20} className="animate-spin" />
+            ) : (
+              <ImageIcon size={20} />
+            )}
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => void uploadFiles(e.target.files)}
+          />
 
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <div className="flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={() => onSubmitDraft()}
               disabled={!canSubmit || working}
-              className="rounded-full px-4 py-2 text-sm font-medium text-stone-500 transition-colors hover:bg-stone-100 active:scale-95 disabled:opacity-50"
+              className="shrink-0 whitespace-nowrap rounded-full px-2.5 py-2 text-[13px] font-medium text-stone-500 transition-colors hover:bg-stone-100 active:scale-95 disabled:opacity-50 sm:px-4 sm:text-sm"
             >
               {draftLabel}
             </button>
@@ -255,14 +275,14 @@ export function FeedComposerPanel({
               type="button"
               onClick={() => onSubmitPublish()}
               disabled={!canSubmit || working}
-              className="flex items-center gap-2 rounded-full bg-stone-900 px-5 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-stone-900 px-3 py-2 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50 sm:gap-2 sm:px-5 sm:text-sm"
             >
               {working ? "..." : publishLabel}
-              <Send size={16} className="-rotate-12" />
+              <Send size={15} className="-rotate-12 sm:h-4 sm:w-4" />
             </button>
           </div>
         </div>
       </div>
-    </section>
+    </Shell>
   );
 }

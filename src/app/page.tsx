@@ -38,8 +38,8 @@ export default async function HomePage() {
         social={social}
         avatarUrl={parseAvatarUrl(settings.avatarMediaPath)}
       />
-      <div className="mx-auto min-w-0 max-w-3xl px-4 py-4 sm:px-6 sm:py-10">
-        {isAdmin ? <QuickComposer siteUrl={siteUrl} /> : null}
+      <div className="mx-auto min-w-0 max-w-3xl px-3 py-4 sm:px-5 sm:py-10">
+        {isAdmin ? <QuickComposer /> : null}
         <div className="mt-4 sm:mt-0">
           <FeedClient
             initialItems={items}
