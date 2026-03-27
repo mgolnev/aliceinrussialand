@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { SESSION_COOKIE_NAME } from "@/lib/session";
+import {
+  mergeResponseCookies,
+  updateSupabaseSession,
+} from "@/utils/supabase/proxy";
+import { isSupabaseBrowserAuthConfigured } from "@/utils/supabase/env";
 
 function getSecret() {
   const s = process.env.SESSION_SECRET;
@@ -25,24 +30,37 @@ async function isAdmin(request: NextRequest) {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  const sessionResponse = isSupabaseBrowserAuthConfigured()
+    ? await updateSupabaseSession(request)
+    : NextResponse.next({ request });
+
   if (pathname.startsWith("/admin/login")) {
-    return NextResponse.next();
+    return sessionResponse;
   }
 
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
     if (!(await isAdmin(request))) {
       if (pathname.startsWith("/api/admin")) {
-        return NextResponse.json({ error: "Нужна авторизация" }, { status: 401 });
+        return NextResponse.json(
+          { error: "Нужна авторизация" },
+          { status: 401 },
+        );
       }
       const login = new URL("/admin/login", request.url);
       login.searchParams.set("from", pathname);
-      return NextResponse.redirect(login);
+      const redirect = NextResponse.redirect(login);
+      return mergeResponseCookies(sessionResponse, redirect);
     }
   }
 
-  return NextResponse.next();
+  return sessionResponse;
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: [
+    /*
+     * Обход статики и типичных публичных файлов; остальное — Supabase session refresh + админка.
+     */
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+  ],
 };

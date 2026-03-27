@@ -23,7 +23,9 @@
 
 ### 1.3 Хранилище картинок (Storage)
 
-1. В меню слева → **Storage** → **New bucket**.
+> **Важно:** это делается в **[дашборде Supabase](https://supabase.com/dashboard)** (ваш проект), **не** на вкладке **Storage** у Vercel — там другой экран (маркетплейс).
+
+1. Supabase → выберите проект → в меню слева → **Storage** → **New bucket**.
 2. Имя, например: **`media`**.
 3. Включите **Public bucket** (чтобы картинки открывались по URL в ленте).  
    Если оставите приватным — понадобятся signed URLs (в текущем коде не реализовано).
@@ -55,55 +57,92 @@ npx prisma db seed
 
 ---
 
-## Шаг 2. Vercel
+## Supabase готов? Быстрая проверка
 
-### 2.1 Импорт проекта
+Перед Vercel убедитесь:
 
-1. [vercel.com](https://vercel.com) → **Add New…** → **Project**.
-2. **Import** репозиторий `mgolnev/aliceinrussialand` (подключите GitHub, если ещё не подключали).
+| # | Что | Как проверить |
+|---|-----|----------------|
+| 1 | Проект Supabase создан | Открывается дашборд проекта |
+| 2 | Postgres | **Table Editor** — после первого деплоя появятся таблицы `Post`, `SiteSettings`… Или до деплоя: локально `npx prisma migrate deploy` с вашими `DATABASE_URL` / `DIRECT_URL` |
+| 3 | **Storage** | Bucket **`media`** (или другое имя) существует и **публичный**, если нужны прямые URL картинок |
+| 4 | Строки подключения | Скопированы **pooler** (6543) и **direct** (5432) — см. §1.2 |
+| 5 | Секреты API | `SUPABASE_URL` = Project URL, **service_role** только для сервера |
+| 6 | Опционально Auth | Если используете Supabase Login в приложении: **anon** или **Publishable** ключ → `NEXT_PUBLIC_SUPABASE_ANON_KEY` или `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY`, плюс `NEXT_PUBLIC_SUPABASE_URL` (см. `.env.example`) |
 
-### 2.2 Сборка
+Если пункты 1–5 выполнены — можно идти на Vercel. Пункт 6 не обязателен для текущей админки (она на своём JWT).
 
-- **Framework Preset:** Next.js (определится сам).
-- **Build Command** (важно):
+---
+
+## Шаг 2. Vercel (пошагово)
+
+### Шаг 2.1 — Аккаунт и импорт
+
+1. Зайдите на [vercel.com](https://vercel.com), войдите (лучше через **GitHub**).
+2. **Add New…** → **Project**.
+3. Нажмите **Import** напротив репозитория **`mgolnev/aliceinrussialand`** (если списка нет — **Adjust GitHub App Permissions** и дайте доступ к репо).
+4. **Root Directory** оставьте `.` (корень), **Framework Preset** — **Next.js**.
+
+### Шаг 2.2 — Команда сборки (до первого Deploy)
+
+На экране настройки проекта раскройте **Build & Output Settings** и задайте:
+
+- **Build Command:**
 
   ```bash
   prisma migrate deploy && prisma generate && next build
   ```
 
 - **Install Command:** `npm install` (по умолчанию).
-- **Output:** по умолчанию для Next.js.
+- Остальное не трогайте, если Vercel сам подставил стандарт для Next.js.
 
-### 2.3 Переменные окружения (Settings → Environment Variables)
+### Шаг 2.3 — Переменные окружения (на том же экране или Settings → Environment Variables)
 
-Добавьте для **Production** (и при желании Preview):
+Добавьте для **Production** (галочка *Production*; для Preview — по желанию те же значения):
 
 | Имя | Значение |
 |-----|----------|
-| `DATABASE_URL` | Из Supabase (pooler) |
-| `DIRECT_URL` | Из Supabase (direct) |
-| `SESSION_SECRET` | Длинная случайная строка (≥ 32 символов) |
-| `ADMIN_PASSWORD_HASH` | bcrypt-хэш пароля админки (в строке экранируйте `$` как `\$`) |
-| `NEXT_PUBLIC_SITE_URL` | `https://ваш-проект.vercel.app` или ваш домен |
-| `SUPABASE_URL` | Из Supabase API |
-| `SUPABASE_SERVICE_ROLE_KEY` | service_role |
-| `SUPABASE_STORAGE_BUCKET` | `media` (или как назвали bucket) |
+| `DATABASE_URL` | Supabase → Database → **Transaction pooler** / URI, порт **6543** |
+| `DIRECT_URL` | Supabase → Database → **Direct**, порт **5432** |
+| `SESSION_SECRET` | Случайная строка **≥ 32** символов (сгенерируйте в любом генераторе) |
+| `ADMIN_PASSWORD_HASH` | bcrypt-хэш вашего пароля админки; в Vercel **не нужно** экранировать `$` как в локальном `.env` — вставляйте хэш как есть |
+| `NEXT_PUBLIC_SITE_URL` | Пока можно `https://ИМЯ-ПРОЕКТА.vercel.app` (после первого деплоя скопируйте точный URL из Vercel и при необходимости обновите переменную и **Настройки сайта** в админке) |
+| `SUPABASE_URL` | Тот же URL, что и Project URL (`https://xxx.supabase.co`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | **service_role** из Settings → API |
+| `SUPABASE_STORAGE_BUCKET` | Имя bucket, например `media` |
 
-Опционально: `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`, `NEXT_PUBLIC_GA_MEASUREMENT_ID`.
+Опционально:
 
-После сохранения — **Redeploy**, если деплой уже был без переменных.
+| Имя | Значение |
+|-----|----------|
+| `NEXT_PUBLIC_SUPABASE_URL` | = `SUPABASE_URL`, если нужен refresh сессии Supabase Auth в браузере |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` или `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` | Публичный ключ из Settings → API |
+| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`, `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Аналитика |
 
-### 2.4 Домен
+### Шаг 2.4 — Первый деплой
 
-**Settings → Domains** — при необходимости подключите свой домен.  
-В админке сайта (**Настройки**) укажите тот же URL в поле сайта, чтобы canonical и Open Graph совпадали с продакшеном.
+1. Нажмите **Deploy**.
+2. Дождитесь логов: этап `prisma migrate deploy` должен пройти без ошибок (создадутся таблицы).
+3. Если сборка упала на миграциях — чаще всего неверный `DATABASE_URL` / `DIRECT_URL` или БД недоступна с сети Vercel (у Supabase обычно ок).
 
-### 2.5 Первый вход
+### Шаг 2.5 — После успешного деплоя
 
-1. Откройте `https://…vercel.app/admin/login`.
-2. Войдите паролем, от которого считали `ADMIN_PASSWORD_HASH`.
-3. Если лента пуста и нет настроек — выполните **seed** (локально с вашими `DATABASE_URL` / `DIRECT_URL` или через Supabase SQL, если знаете как):  
-   `npx prisma db seed`
+1. Откройте выданный URL (`…vercel.app`).
+2. Зайдите в **`/admin/login`**, войдите паролем от `ADMIN_PASSWORD_HASH`.
+3. Если ошибка входа — проверьте, что хэш в Vercel совпадает с тем паролем, который вводите.
+4. Если нет строк в **Настройках** / пустая лента — один раз выполните с **своего компьютера** (подставьте строки из Supabase):
+
+   ```bash
+   DATABASE_URL="pooler-строка" DIRECT_URL="direct-строка" npx prisma db seed
+   ```
+
+5. В админке **Настройки** укажите **URL сайта** = ваш продакшен URL с Vercel (для canonical и OG).
+
+### Шаг 2.6 — Домен (по желанию)
+
+**Project → Settings → Domains** — добавьте свой домен и следуйте подсказкам DNS.
+
+Если добавили или сменили переменные окружения после деплоя — **Deployments → … → Redeploy**.
 
 ---
 

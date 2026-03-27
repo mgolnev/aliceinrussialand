@@ -12,9 +12,9 @@
 
 ## 2. Supabase: хранилище картинок
 
-На Vercel локальная файловая система не подходит для загрузок: используйте **Storage**.
+На Vercel локальная файловая система не подходит для загрузок: используйте **Supabase Storage** (в **[дашборде проекта Supabase](https://supabase.com/dashboard)**, не вкладка Storage на сайте Vercel).
 
-1. **Storage → New bucket**, имя например `media`.
+1. Supabase → ваш проект → **Storage → New bucket**, имя например `media`.
 2. Включите **Public bucket** (или настройте политики RLS под публичное чтение).
 3. **Settings → API**: скопируйте `Project URL` и `service_role` (только для сервера, не в клиент).
 
