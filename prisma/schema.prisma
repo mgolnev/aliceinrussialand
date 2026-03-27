@@ -20,7 +20,7 @@ model SiteSettings {
   defaultLocale        String  @default("ru")
   siteUrl              String  @default("http://localhost:3000")
   plausibleDomain      String  @default("")
-  gaMeasurementId      String  @default("")
+  yandexMetrikaId      String  @default("")
   updatedAt            DateTime @updatedAt
 }
 

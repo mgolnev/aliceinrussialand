@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getSiteSettings, parseSocialLinks } from "@/lib/site";
+import {
+  getSiteSettings,
+  parseAvatarUrl,
+  parseSocialLinks,
+} from "@/lib/site";
 import { SiteChrome, SiteFooter } from "@/components/site/SiteChrome";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -22,6 +26,7 @@ export default async function AboutPage() {
         displayName={s.displayName}
         tagline={s.tagline}
         social={social}
+        avatarUrl={parseAvatarUrl(s.avatarMediaPath)}
       />
       <article className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
         <nav className="mb-8 text-sm text-stone-600">

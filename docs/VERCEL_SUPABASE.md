@@ -2,6 +2,8 @@
 
 Репозиторий: [github.com/mgolnev/aliceinrussialand](https://github.com/mgolnev/aliceinrussialand)
 
+**Локальная разработка** (запуск у себя, затем коммит в GitHub и автоматический деплой на Vercel) описана в начале [README.md](../README.md).
+
 ---
 
 ## Шаг 1. Supabase (сначала база и хранилище)
@@ -15,9 +17,11 @@
 ### 1.2 Строки подключения к PostgreSQL
 
 1. **Project Settings** (шестерёнка) → **Database**.
-2. В блоке **Connection string**:
-   - Режим **Transaction pooler** (или **URI**, порт **6543**, часто с `?pgbouncer=true`) — скопируйте строку → это будет **`DATABASE_URL`** на Vercel.
-   - Режим **Direct connection** (порт **5432**) — скопируйте строку → это **`DIRECT_URL`** на Vercel.
+2. В блоке **Connection string** (кнопка **Connect** в дашборде):
+   - Режим **Transaction pooler** (порт **6543**, часто с `?pgbouncer=true`) — это **`DATABASE_URL`** на Vercel.
+   - Для **`DIRECT_URL`** (нужен Prisma для `migrate deploy` на этапе сборки): предпочтительно **Session pooler** (порт **5432** на хосте вида `*.pooler.supabase.com`, пользователь `postgres.[PROJECT_REF]`).  
+     **Почему не «Direct» `db.*.supabase.co:5432`:** у Supabase прямое подключение по умолчанию через **IPv6**; среда сборки Vercel часто **IPv4-only**, тогда `prisma migrate deploy` падает с **P1001** («Can't reach database server»). Session pooler поддерживает IPv4 и подходит для миграций.  
+     Локально при рабочем IPv6 можно взять строку **Direct** из дашборда.
 
 Подставьте реальный пароль вместо `[YOUR-PASSWORD]`, если в строке плейсхолдер.
 
@@ -42,8 +46,8 @@
 
 | Переменная | Где взять |
 |------------|-----------|
-| `DATABASE_URL` | Database → Connection string → **Pooler** / Transaction (6543) |
-| `DIRECT_URL` | Database → **Direct** (5432) |
+| `DATABASE_URL` | Connect → **Transaction pooler** (6543, `?pgbouncer=true`) |
+| `DIRECT_URL` | Connect → **Session pooler** (5432 на `*.pooler.supabase.com`); на Vercel не полагаться только на **Direct** `db.*` (IPv6) |
 | `SUPABASE_URL` | Settings → API → Project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Settings → API → service_role |
 | `SUPABASE_STORAGE_BUCKET` | Имя bucket, например `media` |
@@ -66,7 +70,7 @@ npx prisma db seed
 | 1 | Проект Supabase создан | Открывается дашборд проекта |
 | 2 | Postgres | **Table Editor** — после первого деплоя появятся таблицы `Post`, `SiteSettings`… Или до деплоя: локально `npx prisma migrate deploy` с вашими `DATABASE_URL` / `DIRECT_URL` |
 | 3 | **Storage** | Bucket **`media`** (или другое имя) существует и **публичный**, если нужны прямые URL картинок |
-| 4 | Строки подключения | Скопированы **pooler** (6543) и **direct** (5432) — см. §1.2 |
+| 4 | Строки подключения | **Transaction** pooler (6543) + **Session** pooler (5432 на `*.pooler.supabase.com`) для `DIRECT_URL` на Vercel — см. §1.2 |
 | 5 | Секреты API | `SUPABASE_URL` = Project URL, **service_role** только для сервера |
 | 6 | Опционально Auth | Если используете Supabase Login в приложении: **anon** или **Publishable** ключ → `NEXT_PUBLIC_SUPABASE_ANON_KEY` или `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY`, плюс `NEXT_PUBLIC_SUPABASE_URL` (см. `.env.example`) |
 
@@ -103,7 +107,7 @@ npx prisma db seed
 | Имя | Значение |
 |-----|----------|
 | `DATABASE_URL` | Supabase → Database → **Transaction pooler** / URI, порт **6543** |
-| `DIRECT_URL` | Supabase → Database → **Direct**, порт **5432** |
+| `DIRECT_URL` | Supabase → **Connect** → **Session pooler**, порт **5432** (не только Direct `db.*`, см. §1.2) |
 | `SESSION_SECRET` | Случайная строка **≥ 32** символов (сгенерируйте в любом генераторе) |
 | `ADMIN_PASSWORD_HASH` | bcrypt-хэш вашего пароля админки; в Vercel **не нужно** экранировать `$` как в локальном `.env` — вставляйте хэш как есть |
 | `NEXT_PUBLIC_SITE_URL` | Пока можно `https://ИМЯ-ПРОЕКТА.vercel.app` (после первого деплоя скопируйте точный URL из Vercel и при необходимости обновите переменную и **Настройки сайта** в админке) |
@@ -117,13 +121,35 @@ npx prisma db seed
 |-----|----------|
 | `NEXT_PUBLIC_SUPABASE_URL` | = `SUPABASE_URL`, если нужен refresh сессии Supabase Auth в браузере |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` или `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` | Публичный ключ из Settings → API |
-| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`, `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Аналитика |
+| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`, `NEXT_PUBLIC_YANDEX_METRIKA_ID` | Аналитика |
 
 ### Шаг 2.4 — Первый деплой
 
 1. Нажмите **Deploy**.
 2. Дождитесь логов: этап `prisma migrate deploy` должен пройти без ошибок (создадутся таблицы).
 3. Если сборка упала на миграциях — чаще всего неверный `DATABASE_URL` / `DIRECT_URL` или БД недоступна с сети Vercel (у Supabase обычно ок).
+
+#### Ошибка `P1013` (`invalid port number` / `scheme is not recognized`)
+
+Одна и та же причина: строка перестаёт быть валидным URL. Чаще всего **пароль** содержит `@ : / # ? & %` или **пробел** — без кодирования ломается разбор, и Prisma пишет либо про порт, либо про неизвестную схему.
+
+**Решение:** закодировать **только пароль** (не всю строку) через `encodeURIComponent`:
+
+```bash
+node -e "console.log(encodeURIComponent('ВАШ_СЫРОЙ_ПАРОЛЬ'))"
+```
+
+Подставьте результат в URI вместо сырого пароля:
+
+```text
+postgresql://postgres.caueiqbhtpveefzlfaiz:ЗАКОДИРОВАННЫЙ_ПАРОЛЬ@aws-1-eu-west-1.pooler.supabase.com:6543/postgres
+```
+
+То же для **`DIRECT_URL`** (session pooler или direct — пароль всегда закодирован). Обе переменные на Vercel — **одна строка** без переносов и без лишних кавычек внутри значения.
+
+### P1001 на Vercel при `prisma migrate deploy`
+
+Если в логах указан недоступный хост **`db.<ref>.supabase.co:5432`**, замените **`DIRECT_URL`** на строку **Session pooler** (порт **5432** на том же региональном `*.pooler.supabase.com`, что и transaction pooler), скопировав её из **Connect → Session mode**. Пересоберите деплой.
 
 ### Шаг 2.5 — После успешного деплоя
 
@@ -133,7 +159,7 @@ npx prisma db seed
 4. Если нет строк в **Настройках** / пустая лента — один раз выполните с **своего компьютера** (подставьте строки из Supabase):
 
    ```bash
-   DATABASE_URL="pooler-строка" DIRECT_URL="direct-строка" npx prisma db seed
+   DATABASE_URL="transaction-pooler" DIRECT_URL="session-pooler-или-direct" npx prisma db seed
    ```
 
 5. В админке **Настройки** укажите **URL сайта** = ваш продакшен URL с Vercel (для canonical и OG).
@@ -161,6 +187,65 @@ git push -u origin main
 git remote set-url origin https://github.com/mgolnev/aliceinrussialand.git
 git push -u origin main
 ```
+
+---
+
+## Переменные через Vercel CLI (с этой машины)
+
+1. **Один и тот же аккаунт**, что в браузере: `npx vercel login` (или `npx vercel switch`, если проект в другой команде).  
+   Проверка: `npx vercel whoami`. Список проектов: `npx vercel project ls` (команда **`project`**, не `projects`).  
+   Если пишет *No projects found*, задайте команду явно — slug из **Vercel → Team Settings** или из URL дашборда, либо `orgId` из `.vercel/project.json`:
+
+   ```bash
+   npx vercel project ls --scope SLUG_ВАШЕЙ_КОМАНДЫ
+   ```
+
+2. **Привязать папку репозитория к проекту** (в корне проекта):
+
+   ```bash
+   cd /путь/к/AliceInRussialand
+   npx vercel link --yes --project ИМЯ_ПРОЕКТА_КАК_В_VERCEL
+   ```
+
+   Имя смотрите в Vercel → **Project → Settings → General → Project Name**.  
+   Если проект в **команде (team)**, добавьте scope:
+
+   ```bash
+   npx vercel link --yes --scope SLUG_КОМАНДЫ --project ИМЯ_ПРОЕКТА
+   ```
+
+   После этого появится каталог `.vercel/` (его **не коммитьте** — обычно уже в `.gitignore`).
+
+3. **Добавить переменные в Production** (значение в кавычках — одна строка URL, без лишних пробелов в начале):
+
+   ```bash
+   npx vercel env add DATABASE_URL production --value 'postgresql://...' --yes --sensitive
+   npx vercel env add DIRECT_URL production --value 'postgresql://...' --yes --sensitive
+   npx vercel env add SESSION_SECRET production --value 'минимум-32-символа-случайная-строка' --yes --sensitive
+   npx vercel env add ADMIN_PASSWORD_HASH production --value '$2b$10$...' --yes --sensitive
+   npx vercel env add NEXT_PUBLIC_SITE_URL production --value 'https://ваш-проект.vercel.app' --yes
+   npx vercel env add SUPABASE_URL production --value 'https://xxx.supabase.co' --yes --sensitive
+   npx vercel env add SUPABASE_SERVICE_ROLE_KEY production --value 'eyJ...' --yes --sensitive
+   npx vercel env add SUPABASE_STORAGE_BUCKET production --value 'media' --yes
+   ```
+
+   Если переменная уже есть, добавьте **`--force`**, чтобы перезаписать:
+
+   ```bash
+   npx vercel env add DATABASE_URL production --value '...' --yes --sensitive --force
+   ```
+
+   Для **Preview** (опционально) повторите с `preview` вместо `production`.
+
+4. **Проверить**, что переменные ушли: `npx vercel env ls` (значения секретов могут быть скрыты).
+
+5. **Redeploy** в дашборде Vercel или: `npx vercel --prod` (если деплой с CLI).
+
+**Автоматически из `.env`:** после `vercel link` можно выполнить `npm run vercel:env:push` (скрипт `scripts/sync-vercel-env.cjs`) — подтянет `DATABASE_URL`, `DIRECT_URL`, `ADMIN_PASSWORD_HASH`, задаст продакшен-`NEXT_PUBLIC_SITE_URL` и при слабом локальном секрете — новый `SESSION_SECRET` на Vercel. При необходимости URL: `VERCEL_PRODUCTION_URL=https://... npm run vercel:env:push`.
+
+Только **Supabase / опциональные** переменные, **без** перезаписи ядра и `SESSION_SECRET`: `npm run vercel:env:push:optional`.
+
+**Замечание:** в `bash` символ **`$`** в хэше bcrypt для `--value` ломает строку — оберните в **одинарные** кавычки `'$2b$10$...'` или экранируйте `\$`.
 
 ---
 

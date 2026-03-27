@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import type { SocialLink } from "@/lib/site";
 
@@ -13,15 +13,22 @@ type Props = {
     telegramChannelUser: string;
     siteUrl: string;
     plausibleDomain: string;
-    gaMeasurementId: string;
+    yandexMetrikaId: string;
     defaultLocale: string;
     social: SocialLink[];
+    avatarPreviewUrl: string | null;
   };
 };
 
 export function SettingsForm({ initial }: Props) {
   const [form, setForm] = useState(initial);
   const [message, setMessage] = useState<string | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState(
+    initial.avatarPreviewUrl,
+  );
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   async function save() {
     setMessage(null);
@@ -36,7 +43,7 @@ export function SettingsForm({ initial }: Props) {
         telegramChannelUser: form.telegramChannelUser,
         siteUrl: form.siteUrl,
         plausibleDomain: form.plausibleDomain,
-        gaMeasurementId: form.gaMeasurementId,
+        yandexMetrikaId: form.yandexMetrikaId,
         defaultLocale: form.defaultLocale,
         socialLinksJson: JSON.stringify(form.social),
       }),
@@ -74,8 +81,97 @@ export function SettingsForm({ initial }: Props) {
     setForm((f) => ({ ...f, social: f.social.filter((s) => s.id !== id) }));
   }
 
+  async function uploadAvatar(file: File) {
+    setAvatarError(null);
+    setAvatarBusy(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/admin/avatar", { method: "POST", body: fd });
+    setAvatarBusy(false);
+    if (!res.ok) {
+      const j = (await res.json().catch(() => null)) as { error?: string } | null;
+      setAvatarError(j?.error ?? "Не удалось загрузить");
+      return;
+    }
+    const data = (await res.json()) as { previewUrl?: string };
+    if (data.previewUrl) setAvatarPreviewUrl(data.previewUrl);
+    setMessage("Аватар обновлён");
+  }
+
+  async function removeAvatar() {
+    setAvatarError(null);
+    setAvatarBusy(true);
+    const res = await fetch("/api/admin/avatar", { method: "DELETE" });
+    setAvatarBusy(false);
+    if (!res.ok) {
+      setAvatarError("Не удалось удалить");
+      return;
+    }
+    setAvatarPreviewUrl(null);
+    setMessage("Аватар удалён");
+  }
+
   return (
     <div className="space-y-6 rounded-[28px] border border-stone-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-40px_rgba(60,44,29,0.35)]">
+      <div className="flex flex-col gap-4 rounded-2xl border border-stone-200 bg-stone-50/80 p-4 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-4">
+          {avatarPreviewUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarPreviewUrl}
+              alt=""
+              width={72}
+              height={72}
+              className="h-[72px] w-[72px] rounded-full object-cover shadow-sm ring-2 ring-white"
+            />
+          ) : (
+            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-stone-800 text-lg font-bold uppercase tracking-tight text-white shadow-sm">
+              {form.displayName.slice(0, 2)}
+            </div>
+          )}
+          <div>
+            <p className="text-sm font-medium text-stone-900">Аватар в шапке</p>
+            <p className="mt-0.5 text-xs text-stone-500">
+              JPEG, PNG или WebP. Квадрат обрежется по центру.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 sm:ml-auto">
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              if (f) void uploadAvatar(f);
+            }}
+          />
+          <button
+            type="button"
+            disabled={avatarBusy}
+            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-800 shadow-sm hover:bg-stone-50 disabled:opacity-50"
+            onClick={() => avatarInputRef.current?.click()}
+          >
+            {avatarBusy ? "Загрузка…" : "Загрузить фото"}
+          </button>
+          {avatarPreviewUrl ? (
+            <button
+              type="button"
+              disabled={avatarBusy}
+              className="rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 disabled:opacity-50"
+              onClick={() => void removeAvatar()}
+            >
+              Убрать
+            </button>
+          ) : null}
+        </div>
+      </div>
+      {avatarError ? (
+        <p className="text-sm text-red-600">{avatarError}</p>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm font-medium sm:col-span-2">
           Имя / псевдоним
@@ -156,14 +252,33 @@ export function SettingsForm({ initial }: Props) {
           />
         </label>
         <label className="block text-sm font-medium">
-          Google Analytics (G-...)
+          Яндекс.Метрика — номер счётчика
           <input
             className="mt-1 w-full rounded-2xl border border-stone-300 px-3 py-2.5 font-mono text-sm outline-none focus:border-stone-400"
-            value={form.gaMeasurementId}
+            placeholder="например 12345678"
+            inputMode="numeric"
+            value={form.yandexMetrikaId}
             onChange={(e) =>
-              setForm((f) => ({ ...f, gaMeasurementId: e.target.value }))
+              setForm((f) => ({
+                ...f,
+                yandexMetrikaId: e.target.value.replace(/\D/g, ""),
+              }))
             }
           />
+          <span className="mt-1 block text-xs text-stone-500">
+            Создайте счётчик на{" "}
+            <a
+              href="https://metrika.yandex.ru/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-stone-700"
+            >
+              metrika.yandex.ru
+            </a>
+            , скопируйте только цифры. Либо задайте{" "}
+            <code className="rounded bg-stone-100 px-1">NEXT_PUBLIC_YANDEX_METRIKA_ID</code>{" "}
+            в .env / Vercel.
+          </span>
         </label>
       </div>
 

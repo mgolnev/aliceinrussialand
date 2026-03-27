@@ -18,14 +18,15 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { MediaGrid } from "@/components/feed/MediaGrid";
-import { 
-  Image as ImageIcon, 
-  Send, 
-  Settings, 
-  X, 
+import {
+  Image as ImageIcon,
+  Send,
+  Settings,
+  X,
   Plus,
-  Loader2
+  Loader2,
 } from "lucide-react";
+import { dispatchFeedRefreshMerge } from "@/lib/feed-refresh";
 
 type UploadedImage = {
   id: string;
@@ -193,6 +194,7 @@ export function QuickComposer({ siteUrl }: Props) {
         setImages([]);
         setPostId(null);
         setMessage("Пост опубликован");
+        dispatchFeedRefreshMerge();
         router.refresh();
       } else {
         setMessage("Черновик сохранён");

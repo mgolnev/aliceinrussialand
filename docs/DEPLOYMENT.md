@@ -2,12 +2,14 @@
 
 Краткий чеклист для выкладки в продакшен.
 
+**Повседневная работа:** код меняют **локально** — как запустить проект у себя, см. в начале [README.md](../README.md). Затем коммит и `git push` в GitHub; при привязанном к репозиторию проекте **Vercel** сам запускает сборку и деплой. Ниже — что нужно один раз настроить (Supabase, переменные, домен).
+
 ## 1. Supabase: база данных
 
 1. Создайте проект в [Supabase](https://supabase.com).
-2. **Settings → Database** скопируйте:
-   - **Connection string** с режимом **Transaction pooler** (URI) → это `DATABASE_URL` для Vercel.
-   - **Connection string** с режимом **Direct** (URI) → это `DIRECT_URL` для миграций Prisma.
+2. В дашборде **Connect** скопируйте строки:
+   - **Transaction pooler** (6543) → `DATABASE_URL` на Vercel.
+   - **Session pooler** (5432 на `*.pooler.supabase.com`) → `DIRECT_URL` для `prisma migrate deploy` на сборке (Vercel часто не достучится до **Direct** `db.*:5432` из‑за IPv6). Подробнее: [VERCEL_SUPABASE.md](./VERCEL_SUPABASE.md).
 3. В **SQL Editor** можно один раз применить схему вручную, либо использовать миграции (шаг 4).
 
 ## 2. Supabase: хранилище картинок
@@ -53,14 +55,14 @@ git push -u origin main
    | Переменная | Где взять |
    |------------|-----------|
    | `DATABASE_URL` | Supabase, pooler |
-   | `DIRECT_URL` | Supabase, direct |
+   | `DIRECT_URL` | Supabase, session pooler (или direct локально) |
    | `SESSION_SECRET` | Случайная строка ≥ 32 символов |
    | `ADMIN_PASSWORD_HASH` | bcrypt-хэш пароля админки |
    | `NEXT_PUBLIC_SITE_URL` | `https://ваш-проект.vercel.app` или свой домен |
    | `SUPABASE_URL` | Supabase API |
    | `SUPABASE_SERVICE_ROLE_KEY` | Supabase (service_role) |
    | `SUPABASE_STORAGE_BUCKET` | Имя bucket, например `media` |
-   | Опционально | `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`, `NEXT_PUBLIC_GA_MEASUREMENT_ID` |
+   | Опционально | `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`, `NEXT_PUBLIC_YANDEX_METRIKA_ID` |
 
 6. После первого деплоя выполните **seed** один раз (с машины с доступом к БД):
 

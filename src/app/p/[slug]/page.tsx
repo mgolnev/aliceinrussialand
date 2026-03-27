@@ -6,7 +6,11 @@ import {
   getPublishedPostBySlug,
   parseVariants,
 } from "@/lib/posts-query";
-import { getSiteSettings, parseSocialLinks } from "@/lib/site";
+import {
+  getSiteSettings,
+  parseAvatarUrl,
+  parseSocialLinks,
+} from "@/lib/site";
 import { absoluteUrl } from "@/lib/absolute-url";
 import { SiteChrome, SiteFooter } from "@/components/site/SiteChrome";
 import { PostCard } from "@/components/feed/PostCard";
@@ -67,6 +71,10 @@ export default async function PostPage({ params }: PageProps) {
     "http://localhost:3000";
   const plausible =
     settings.plausibleDomain || process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || "";
+  const yandexMetrikaId =
+    settings.yandexMetrikaId?.trim() ||
+    process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID?.trim() ||
+    "";
   const cookieStore = await cookies();
   const session = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   const isAdmin = session ? await verifySessionToken(session) : false;
@@ -109,6 +117,7 @@ export default async function PostPage({ params }: PageProps) {
         displayName={settings.displayName}
         tagline={settings.tagline}
         social={social}
+        avatarUrl={parseAvatarUrl(settings.avatarMediaPath)}
       />
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
         <nav className="mb-6 text-sm text-stone-600">
@@ -119,6 +128,7 @@ export default async function PostPage({ params }: PageProps) {
         <PostCard
           post={feedPost}
           plausibleDomain={plausible}
+          yandexMetrikaId={yandexMetrikaId}
           siteUrl={siteUrl}
           canManage={isAdmin}
           standalone

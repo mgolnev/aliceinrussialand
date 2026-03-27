@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { ymReachGoal } from "@/lib/yandex-metrika";
 
 declare global {
   interface Window {
@@ -11,13 +12,16 @@ declare global {
   }
 }
 
-type Props = { plausibleDomain?: string };
+type Props = {
+  plausibleDomain?: string;
+  yandexMetrikaId?: string;
+};
 
-export function ScrollMetrics({ plausibleDomain }: Props) {
+export function ScrollMetrics({ plausibleDomain, yandexMetrikaId }: Props) {
   const sent = useRef(false);
 
   useEffect(() => {
-    if (!plausibleDomain) return;
+    if (!plausibleDomain && !yandexMetrikaId?.trim()) return;
 
     const onScroll = () => {
       if (sent.current) return;
@@ -28,6 +32,7 @@ export function ScrollMetrics({ plausibleDomain }: Props) {
       if (ratio >= 0.65) {
         sent.current = true;
         window.plausible?.("ScrollDepth", { props: { depth: "65" } });
+        ymReachGoal(yandexMetrikaId, "scroll_depth", { depth: "65" });
         window.removeEventListener("scroll", onScroll);
       }
     };
@@ -35,7 +40,7 @@ export function ScrollMetrics({ plausibleDomain }: Props) {
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
-  }, [plausibleDomain]);
+  }, [plausibleDomain, yandexMetrikaId]);
 
   return null;
 }

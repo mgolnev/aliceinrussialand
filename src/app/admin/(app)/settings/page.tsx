@@ -1,4 +1,8 @@
-import { getSiteSettings, parseSocialLinks } from "@/lib/site";
+import {
+  getSiteSettings,
+  parseAvatarUrl,
+  parseSocialLinks,
+} from "@/lib/site";
 import { SettingsForm } from "@/components/admin/SettingsForm";
 
 export default async function AdminSettingsPage() {
@@ -23,9 +27,10 @@ export default async function AdminSettingsPage() {
           telegramChannelUser: s.telegramChannelUser,
           siteUrl: s.siteUrl,
           plausibleDomain: s.plausibleDomain,
-          gaMeasurementId: s.gaMeasurementId,
+          yandexMetrikaId: s.yandexMetrikaId,
           defaultLocale: s.defaultLocale,
           social,
+          avatarPreviewUrl: parseAvatarUrl(s.avatarMediaPath),
         }}
       />
     </div>

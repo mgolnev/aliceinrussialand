@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { ymReachGoal } from "@/lib/yandex-metrika";
 
 declare global {
   interface Window {
@@ -14,14 +15,19 @@ declare global {
 type Props = {
   slug: string;
   plausibleDomain?: string;
+  yandexMetrikaId?: string;
 };
 
-export function PostImpression({ slug, plausibleDomain }: Props) {
+export function PostImpression({
+  slug,
+  plausibleDomain,
+  yandexMetrikaId,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const fired = useRef(false);
 
   useEffect(() => {
-    if (!plausibleDomain || fired.current) return;
+    if ((!plausibleDomain && !yandexMetrikaId?.trim()) || fired.current) return;
     const el = ref.current;
     if (!el) return;
 
@@ -31,6 +37,7 @@ export function PostImpression({ slug, plausibleDomain }: Props) {
           if (e.isIntersecting && e.intersectionRatio >= 0.45) {
             fired.current = true;
             window.plausible?.("PostView", { props: { slug } });
+            ymReachGoal(yandexMetrikaId, "post_feed_view", { slug });
             io.disconnect();
           }
         }
@@ -40,7 +47,7 @@ export function PostImpression({ slug, plausibleDomain }: Props) {
 
     io.observe(el);
     return () => io.disconnect();
-  }, [slug, plausibleDomain]);
+  }, [slug, plausibleDomain, yandexMetrikaId]);
 
   return <div ref={ref} className="absolute inset-0 pointer-events-none" aria-hidden />;
 }

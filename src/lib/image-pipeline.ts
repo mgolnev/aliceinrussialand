@@ -1,8 +1,14 @@
 import sharp from "sharp";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { ensureDir, getOriginalsRoot, getPublicMediaDir } from "./paths";
 import {
+  ensureDir,
+  getOriginalsRoot,
+  getProjectRoot,
+  getPublicMediaDir,
+} from "./paths";
+import {
+  deleteSupabaseAvatarFiles,
   deleteSupabaseImageFolder,
   isSupabaseMediaEnabled,
   supabasePublicMediaBase,
@@ -11,6 +17,10 @@ import {
 
 const MAX_ORIGINAL_WIDTH = 2560;
 const VARIANTS = [640, 960, 1280] as const;
+
+const AVATAR_MAX_SIDE = 1024;
+const AVATAR_VARIANTS = [128, 256, 512] as const;
+const AVATAR_PUBLIC_SUBDIR = "avatar";
 
 export type VariantsMap = Record<string, string>;
 
@@ -27,8 +37,8 @@ async function buildFinalBuffer(buffer: Buffer): Promise<{
   height: number;
 }> {
   const meta = await sharp(buffer).rotate().metadata();
-  let width = meta.width ?? 0;
-  let height = meta.height ?? 0;
+  const width = meta.width ?? 0;
+  const height = meta.height ?? 0;
 
   if (width > MAX_ORIGINAL_WIDTH) {
     const resized = await sharp(buffer)
@@ -117,6 +127,96 @@ export async function processUpload(params: {
   }
 
   return { originalExt, width, height, variants };
+}
+
+/** Квадратные WebP пресеты для аватарки в шапке (ключи w128 / w256 / w512). */
+export async function processAvatarUpload(params: {
+  buffer: Buffer;
+  mime: string;
+}): Promise<{ variants: VariantsMap }> {
+  const { buffer, mime } = params;
+  if (!["image/jpeg", "image/png", "image/webp"].includes(mime)) {
+    throw new Error("Недопустимый тип файла");
+  }
+
+  const meta = await sharp(buffer).rotate().metadata();
+  let work = buffer;
+  const w0 = meta.width ?? 0;
+  const h0 = meta.height ?? 0;
+  const maxSide = Math.max(w0, h0);
+  if (maxSide > AVATAR_MAX_SIDE) {
+    const resized = await sharp(buffer)
+      .rotate()
+      .resize({
+        width: AVATAR_MAX_SIDE,
+        height: AVATAR_MAX_SIDE,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .toBuffer({ resolveWithObject: true });
+    work = resized.data;
+  }
+
+  const variants: VariantsMap = {};
+
+  if (isSupabaseMediaEnabled()) {
+    const publicBase = supabasePublicMediaBase();
+    for (const side of AVATAR_VARIANTS) {
+      const fname = `w${side}.webp`;
+      const objectPath = `${AVATAR_PUBLIC_SUBDIR}/${fname}`;
+      const webpBuf = await sharp(work)
+        .rotate()
+        .resize({
+          width: side,
+          height: side,
+          fit: "cover",
+        })
+        .webp({ quality: 85, effort: 4 })
+        .toBuffer();
+      await uploadSupabaseFile(objectPath, webpBuf, "image/webp");
+      variants[`w${side}`] = `${publicBase}/${objectPath}`;
+    }
+    return { variants };
+  }
+
+  const outDir = path.join(
+    getProjectRoot(),
+    "public",
+    "media",
+    AVATAR_PUBLIC_SUBDIR,
+  );
+  await ensureDir(outDir);
+
+  for (const side of AVATAR_VARIANTS) {
+    const fname = `w${side}.webp`;
+    const fpath = path.join(outDir, fname);
+    await sharp(work)
+      .rotate()
+      .resize({
+        width: side,
+        height: side,
+        fit: "cover",
+      })
+      .webp({ quality: 85, effort: 4 })
+      .toFile(fpath);
+    variants[`w${side}`] = `/media/${AVATAR_PUBLIC_SUBDIR}/${fname}`;
+  }
+
+  return { variants };
+}
+
+export async function deleteAvatarMediaFiles() {
+  if (isSupabaseMediaEnabled()) {
+    await deleteSupabaseAvatarFiles();
+    return;
+  }
+  const dir = path.join(
+    getProjectRoot(),
+    "public",
+    "media",
+    AVATAR_PUBLIC_SUBDIR,
+  );
+  await fs.rm(dir, { recursive: true, force: true });
 }
 
 export async function deleteImageFiles(postId: string, imageId: string) {

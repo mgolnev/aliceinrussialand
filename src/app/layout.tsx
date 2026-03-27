@@ -39,14 +39,23 @@ export default async function RootLayout({
   const s = await getSiteSettings();
   const plausible =
     s.plausibleDomain || process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || "";
-  const ga = s.gaMeasurementId || process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "";
+  const yandexMetrikaId =
+    s.yandexMetrikaId?.trim() ||
+    process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID?.trim() ||
+    "";
   const lang = s.defaultLocale === "en" ? "en" : "ru";
 
   return (
     <html lang={lang} className={`${sans.variable} h-full antialiased`}>
       <body className="min-h-full bg-[#faf8f5] font-[family-name:var(--font-body)] text-stone-900">
-        <Analytics plausibleDomain={plausible} gaMeasurementId={ga} />
-        <ScrollMetrics plausibleDomain={plausible} />
+        <Analytics
+          plausibleDomain={plausible}
+          yandexMetrikaId={yandexMetrikaId}
+        />
+        <ScrollMetrics
+          plausibleDomain={plausible}
+          yandexMetrikaId={yandexMetrikaId}
+        />
         {children}
       </body>
     </html>

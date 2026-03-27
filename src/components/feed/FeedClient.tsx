@@ -3,11 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PostCard } from "./PostCard";
 import type { FeedPost } from "@/types/feed";
+import {
+  ALICE_FEED_REFRESH,
+  type FeedRefreshDetail,
+} from "@/lib/feed-refresh";
 
 type Props = {
   initialItems: FeedPost[];
   initialNext: string | null;
   plausibleDomain?: string;
+  yandexMetrikaId?: string;
   siteUrl: string;
   canManage?: boolean;
 };
@@ -16,6 +21,7 @@ export function FeedClient({
   initialItems,
   initialNext,
   plausibleDomain,
+  yandexMetrikaId,
   siteUrl,
   canManage = false,
 }: Props) {
@@ -57,6 +63,31 @@ export function FeedClient({
     return () => observer.disconnect();
   }, [loadMore, next]);
 
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const mode =
+        (ev as CustomEvent<FeedRefreshDetail>).detail?.mode ?? "merge";
+      void fetch("/api/feed")
+        .then((r) => r.json())
+        .then((data: { items: FeedPost[]; nextCursor: string | null }) => {
+          if (mode === "replace") {
+            setItems(data.items);
+            setNext(data.nextCursor);
+            return;
+          }
+          setItems((prev) => {
+            const fresh = data.items;
+            const freshIds = new Set(fresh.map((p) => p.id));
+            const tail = prev.filter((p) => !freshIds.has(p.id));
+            return [...fresh, ...tail];
+          });
+          setNext(data.nextCursor);
+        });
+    };
+    window.addEventListener(ALICE_FEED_REFRESH, handler);
+    return () => window.removeEventListener(ALICE_FEED_REFRESH, handler);
+  }, []);
+
   if (!items.length && !next) {
     return (
       <p className="rounded-2xl border border-dashed border-stone-300 bg-white/60 px-6 py-12 text-center text-stone-600">
@@ -72,6 +103,7 @@ export function FeedClient({
           key={post.id}
           post={post}
           plausibleDomain={plausibleDomain}
+          yandexMetrikaId={yandexMetrikaId}
           siteUrl={siteUrl}
           canManage={canManage}
         />

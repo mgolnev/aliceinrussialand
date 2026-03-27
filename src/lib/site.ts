@@ -8,13 +8,26 @@ export type SocialLink = {
 };
 
 export async function getSiteSettings() {
-  let s = await prisma.siteSettings.findUnique({ where: { id: 1 } });
-  if (!s) {
-    s = await prisma.siteSettings.create({
-      data: { id: 1 },
-    });
+  return prisma.siteSettings.upsert({
+    where: { id: 1 },
+    create: { id: 1 },
+    update: {},
+  });
+}
+
+/** URL превью аватарки из JSON в `SiteSettings.avatarMediaPath` (ключи w128 / w256 / w512). */
+export function parseAvatarUrl(
+  avatarMediaPath: string | null | undefined,
+): string | null {
+  if (!avatarMediaPath?.trim()) return null;
+  try {
+    const v = JSON.parse(avatarMediaPath) as Record<string, unknown>;
+    const pick = (k: string) =>
+      typeof v[k] === "string" ? (v[k] as string) : null;
+    return pick("w256") ?? pick("w512") ?? pick("w128") ?? pick("w640") ?? null;
+  } catch {
+    return null;
   }
-  return s;
 }
 
 export function parseSocialLinks(json: string): SocialLink[] {

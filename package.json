@@ -11,7 +11,9 @@
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "vercel:env:push": "node scripts/sync-vercel-env.cjs",
+    "vercel:env:push:optional": "node scripts/sync-vercel-env.cjs --optional-only"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

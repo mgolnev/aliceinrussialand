@@ -64,3 +64,13 @@ export async function deleteSupabaseImageFolder(postId: string, imageId: string)
   const paths = list.map((f) => `${folder}/${f.name}`);
   await sb.storage.from(getBucket()).remove(paths);
 }
+
+const AVATAR_OBJECT_NAMES = ["w128.webp", "w256.webp", "w512.webp"] as const;
+
+/** Удаляет файлы аватарки в bucket (префикс avatar/). */
+export async function deleteSupabaseAvatarFiles() {
+  const sb = getClient();
+  if (!sb) return;
+  const paths = AVATAR_OBJECT_NAMES.map((n) => `avatar/${n}`);
+  await sb.storage.from(getBucket()).remove(paths);
+}

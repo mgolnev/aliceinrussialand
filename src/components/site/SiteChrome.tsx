@@ -12,6 +12,8 @@ type Props = {
   displayName: string;
   tagline: string;
   social: SocialLink[];
+  /** Публичный URL превью аватарки (WebP), иначе — инициалы из displayName */
+  avatarUrl?: string | null;
 };
 
 function SocialIcon({ kind, className }: { kind: SocialLink["kind"]; className?: string }) {
@@ -44,16 +46,32 @@ function SocialIcon({ kind, className }: { kind: SocialLink["kind"]; className?:
   }
 }
 
-export function SiteChrome({ displayName, tagline, social }: Props) {
+export function SiteChrome({
+  displayName,
+  tagline,
+  social,
+  avatarUrl,
+}: Props) {
   return (
     <header className="sticky top-0 z-20 border-b border-stone-200/70 bg-[#fbfaf7]/90 backdrop-blur-xl">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3 sm:px-6">
         <Link href="/" className="group flex items-center gap-3 transition-transform active:scale-95">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-stone-900 text-white shadow-sm group-hover:bg-stone-800">
-            <span className="text-sm font-bold uppercase tracking-tighter">
-              {displayName.slice(0, 2)}
-            </span>
-          </div>
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- внешний Supabase / произвольный origin
+            <img
+              src={avatarUrl}
+              alt=""
+              width={40}
+              height={40}
+              className="h-10 w-10 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-stone-200/80 group-hover:ring-stone-300"
+            />
+          ) : (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-stone-900 text-white shadow-sm group-hover:bg-stone-800">
+              <span className="text-sm font-bold uppercase tracking-tighter">
+                {displayName.slice(0, 2)}
+              </span>
+            </div>
+          )}
           <div className="min-w-0">
             <h1 className="truncate text-lg font-bold tracking-tight text-stone-900 sm:text-xl">
               {displayName}

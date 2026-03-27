@@ -39,8 +39,9 @@ export async function PATCH(req: Request) {
   if (str("plausibleDomain") !== undefined) {
     data.plausibleDomain = str("plausibleDomain");
   }
-  if (str("gaMeasurementId") !== undefined) {
-    data.gaMeasurementId = str("gaMeasurementId");
+  if (str("yandexMetrikaId") !== undefined) {
+    const raw = str("yandexMetrikaId") ?? "";
+    data.yandexMetrikaId = raw.replace(/\D/g, "");
   }
 
   if (Object.keys(data).length === 0) {

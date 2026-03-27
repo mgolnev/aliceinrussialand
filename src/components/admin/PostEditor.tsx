@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { dispatchFeedRefreshMerge } from "@/lib/feed-refresh";
 import slugify from "slugify";
 import {
   DndContext,
@@ -172,6 +174,7 @@ function SortableRow({
 }
 
 export function PostEditor({ initial, siteUrl }: Props) {
+  const router = useRouter();
   const [post, setPost] = useState(initial);
   const [images, setImages] = useState(
     [...initial.images].sort((a, b) => a.sortOrder - b.sortOrder),
@@ -409,7 +412,11 @@ export function PostEditor({ initial, siteUrl }: Props) {
                     : "Пост опубликован",
                 },
               ).then((ok) => {
-                if (ok) setPost((p) => ({ ...p, status: POST_STATUS.PUBLISHED }));
+                if (ok) {
+                  setPost((p) => ({ ...p, status: POST_STATUS.PUBLISHED }));
+                  dispatchFeedRefreshMerge();
+                  router.refresh();
+                }
               })
             }
           >

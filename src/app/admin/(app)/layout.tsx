@@ -1,11 +1,14 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { AdminLogout } from "./AdminLogout";
 
-export default function AdminAppLayout({
+export default async function AdminAppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  await connection();
+
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#fffdf8_0%,#f6f0e8_100%)] text-stone-900">
       <header className="sticky top-0 z-20 border-b border-stone-200/70 bg-[#fffdf9]/88 backdrop-blur-xl">
