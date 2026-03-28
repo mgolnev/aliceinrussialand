@@ -21,6 +21,8 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const DOUBLE_TAP_SCALE = 2.5;
 const SWIPE_PX = 56;
+/** Закрытие свайпом вниз при scale≈1; только если вертикаль доминирует над горизонталью. */
+const SWIPE_DOWN_CLOSE_PX = 96;
 
 function touchDistance(
   a: { clientX: number; clientY: number },
@@ -58,7 +60,8 @@ export function ImageLightbox({
     originPanX: number;
     originPanY: number;
   } | null>(null);
-  const swipeRef = useRef<{ x: number } | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [overlayPullY, setOverlayPullY] = useState(0);
   const tapRef = useRef<{ t: number; x: number; y: number } | null>(null);
   const [shareHint, setShareHint] = useState<string | null>(null);
   const [shareBusy, setShareBusy] = useState(false);
@@ -71,7 +74,7 @@ export function ImageLightbox({
     setPanY(0);
     pinchRef.current = null;
     panRef.current = null;
-    swipeRef.current = null;
+    swipeStartRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -187,7 +190,7 @@ export function ImageLightbox({
     }
   }, [index, shareBusy, slide]);
 
-  /** React помечает touchmove/wheel как passive — preventDefault не останавливает скролл фона. */
+  /** Нативный non-passive touchmove: iOS иначе может тянуть страницу под оверлеем. */
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
@@ -195,6 +198,16 @@ export function ImageLightbox({
       if (e.touches.length >= 2) e.preventDefault();
       else if (e.touches.length === 1 && scaleRef.current > 1.01) {
         e.preventDefault();
+      } else if (
+        e.touches.length === 1 &&
+        scaleRef.current <= 1.01 &&
+        swipeStartRef.current
+      ) {
+        const t = e.touches[0];
+        const s = swipeStartRef.current;
+        const dx = t.clientX - s.x;
+        const dy = t.clientY - s.y;
+        if (dy > 12 && dy > Math.abs(dx)) e.preventDefault();
       }
     };
     const onWheel = (e: WheelEvent) => {
@@ -210,7 +223,8 @@ export function ImageLightbox({
 
   const onTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 2) {
-      swipeRef.current = null;
+      swipeStartRef.current = null;
+      setOverlayPullY(0);
       panRef.current = null;
       pinchRef.current = {
         startDist: touchDistance(e.touches[0], e.touches[1]),
@@ -228,10 +242,12 @@ export function ImageLightbox({
           originPanX: panX,
           originPanY: panY,
         };
-        swipeRef.current = null;
+        swipeStartRef.current = null;
+        setOverlayPullY(0);
       } else {
         panRef.current = null;
-        swipeRef.current = { x: t.clientX };
+        swipeStartRef.current = { x: t.clientX, y: t.clientY };
+        setOverlayPullY(0);
       }
     }
   };
@@ -262,6 +278,23 @@ export function ImageLightbox({
       setPanY(
         panRef.current.originPanY + (t.clientY - panRef.current.startY),
       );
+      return;
+    }
+    if (
+      e.touches.length === 1 &&
+      scaleRef.current <= 1.01 &&
+      swipeStartRef.current
+    ) {
+      const t = e.touches[0];
+      const s = swipeStartRef.current;
+      const dx = t.clientX - s.x;
+      const dy = t.clientY - s.y;
+      if (dy > 12 && dy > Math.abs(dx)) {
+        e.preventDefault();
+        setOverlayPullY(Math.min(dy, 360));
+      } else if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 12) {
+        setOverlayPullY(0);
+      }
     }
   };
 
@@ -284,24 +317,36 @@ export function ImageLightbox({
 
     const t = e.changedTouches[0];
     if (!t) {
-      swipeRef.current = null;
+      swipeStartRef.current = null;
+      setOverlayPullY(0);
       return;
     }
 
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    setOverlayPullY(0);
+
+    if (start && scaleRef.current <= 1.01) {
+      const dx = t.clientX - start.x;
+      const dy = t.clientY - start.y;
+      if (dy > SWIPE_DOWN_CLOSE_PX && dy > Math.abs(dx)) {
+        onClose();
+        return;
+      }
+    }
+
     const swipeOk = slides.length > 1 && scaleRef.current <= 1.01;
-    if (swipeOk && swipeRef.current) {
-      const dx = t.clientX - swipeRef.current.x;
-      swipeRef.current = null;
-      if (dx > SWIPE_PX) {
+    if (swipeOk && start) {
+      const dx = t.clientX - start.x;
+      const dy = t.clientY - start.y;
+      if (Math.abs(dx) > Math.abs(dy) && dx > SWIPE_PX) {
         onIndexChange((index - 1 + slides.length) % slides.length);
         return;
       }
-      if (dx < -SWIPE_PX) {
+      if (Math.abs(dx) > Math.abs(dy) && dx < -SWIPE_PX) {
         onIndexChange((index + 1) % slides.length);
         return;
       }
-    } else {
-      swipeRef.current = null;
     }
 
     const now = Date.now();
@@ -342,7 +387,15 @@ export function ImageLightbox({
   const ui = (
     <div
       className="fixed inset-0 z-[200] flex flex-col bg-black/95 backdrop-blur-md animate-in fade-in duration-200"
-      style={{ overscrollBehavior: "none", touchAction: "none" }}
+      style={{
+        overscrollBehavior: "none",
+        touchAction: "none",
+        transform: overlayPullY > 0 ? `translateY(${overlayPullY}px)` : undefined,
+        opacity:
+          overlayPullY > 0
+            ? Math.max(0.4, 1 - overlayPullY / 480)
+            : undefined,
+      }}
       onClick={onClose}
       role="presentation"
     >
@@ -350,7 +403,7 @@ export function ImageLightbox({
         className="absolute inset-x-0 top-0 z-20 border-b border-white/15 bg-black/75 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md"
         onClick={(ev) => ev.stopPropagation()}
       >
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             className="flex min-w-0 items-center gap-2 rounded-full px-3 py-2.5 text-[15px] font-semibold text-white transition active:bg-white/15"
@@ -359,11 +412,6 @@ export function ImageLightbox({
             <X size={20} strokeWidth={2.25} aria-hidden />
             <span className="hidden sm:inline">Закрыть</span>
           </button>
-          {slides.length > 1 ? (
-            <span className="shrink-0 text-sm tabular-nums text-white/65">
-              {index + 1} / {slides.length}
-            </span>
-          ) : null}
         </div>
       </div>
 
@@ -427,25 +475,10 @@ export function ImageLightbox({
 
       {slides.length > 1 ? (
         <div
-          className="absolute bottom-4 z-10 flex items-center justify-center gap-2"
-          onClick={(ev) => ev.stopPropagation()}
+          className="pointer-events-none absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-30 -translate-x-1/2 rounded-full bg-black/45 px-3 py-1.5 text-sm tabular-nums text-white/85 backdrop-blur-md"
+          aria-live="polite"
         >
-          {slides.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              aria-label={`Фото ${i + 1} из ${slides.length}`}
-              aria-current={i === index ? "true" : undefined}
-              className="flex h-10 min-w-10 items-center justify-center p-2"
-              onClick={() => onIndexChange(i)}
-            >
-              <span
-                className={`block h-1.5 rounded-full transition-all duration-300 ${
-                  i === index ? "w-4 bg-white" : "w-1.5 bg-white/30"
-                }`}
-              />
-            </button>
-          ))}
+          {index + 1} / {slides.length}
         </div>
       ) : null}
     </div>
