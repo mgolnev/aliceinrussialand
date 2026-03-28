@@ -23,6 +23,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { POST_STATUS } from "@/lib/constants";
+import { MediaGrid } from "@/components/feed/MediaGrid";
 
 export type EditorImage = {
   id: string;
@@ -30,6 +31,8 @@ export type EditorImage = {
   caption: string;
   alt: string;
   variants: Record<string, string>;
+  width?: number | null;
+  height?: number | null;
 };
 
 export type EditorPost = {
@@ -123,26 +126,27 @@ function SortableRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex flex-col gap-3 rounded-[24px] border border-stone-200 bg-white p-3 shadow-sm sm:flex-row"
+      className="flex gap-3 rounded-2xl border border-stone-200 bg-white p-3 shadow-sm"
     >
       <button
         type="button"
-        className="flex h-24 w-full shrink-0 cursor-grab items-center justify-center rounded-2xl border border-dashed border-stone-300 bg-stone-50 text-stone-400 sm:h-28 sm:w-28"
+        className="flex h-11 w-9 shrink-0 cursor-grab items-center justify-center rounded-xl border border-dashed border-stone-300 bg-stone-50 text-stone-500"
         {...attributes}
         {...listeners}
         aria-label="Перетащить"
       >
-        {src ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={src}
-            alt=""
-            className="max-h-full max-w-full rounded-lg object-contain"
-          />
-        ) : (
-          "⋮⋮"
-        )}
+        ⋮⋮
       </button>
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt=""
+          className="h-14 w-14 shrink-0 rounded-xl object-cover ring-1 ring-stone-200"
+        />
+      ) : (
+        <div className="h-14 w-14 shrink-0 rounded-xl bg-stone-100 ring-1 ring-stone-200" />
+      )}
       <div className="min-w-0 flex-1 space-y-2">
         <input
           className="w-full rounded-xl border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-400"
@@ -371,25 +375,6 @@ export function PostEditor({ initial, siteUrl }: Props) {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-stone-800"
-            onClick={() =>
-              void savePost({
-                title: post.title,
-                body: post.body,
-                slug: post.slug,
-                displayMode: post.displayMode,
-                metaTitle: post.metaTitle,
-                metaDescription: post.metaDescription,
-                telegramSourceUrl: post.telegramSourceUrl,
-                pinned: post.pinned,
-                locale: post.locale,
-              }, undefined, { successMessage: "Черновик сохранён" })
-            }
-          >
-            Сохранить
-          </button>
-          <button
-            type="button"
             className="rounded-full bg-emerald-700 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-800"
             onClick={() =>
               void savePost(
@@ -479,16 +464,10 @@ export function PostEditor({ initial, siteUrl }: Props) {
               onChange={(e) => setPost((p) => ({ ...p, body: e.target.value }))}
             />
           </label>
-          <div className="rounded-[24px] border border-dashed border-stone-300 bg-stone-50/70 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-base font-semibold text-stone-900">Фотографии</h2>
-                <p className="text-sm text-stone-500">
-                  Добавляйте сразу несколько фото. После загрузки их можно
-                  перетаскивать мышью.
-                </p>
-              </div>
-              <label className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-stone-800">
+
+          <div className="rounded-[24px] border border-stone-200 bg-stone-50/90 p-4 shadow-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="cursor-pointer rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-stone-800">
                 {uploading ? "Загружаем…" : "Добавить фото"}
                 <input
                   type="file"
@@ -499,72 +478,144 @@ export function PostEditor({ initial, siteUrl }: Props) {
                   onChange={(e) => void onUpload(e.target.files)}
                 />
               </label>
+              <button
+                type="button"
+                className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-stone-800"
+                onClick={() =>
+                  void savePost(
+                    {
+                      title: post.title,
+                      body: post.body,
+                      slug: post.slug,
+                      displayMode: post.displayMode,
+                      metaTitle: post.metaTitle,
+                      metaDescription: post.metaDescription,
+                      telegramSourceUrl: post.telegramSourceUrl,
+                      pinned: post.pinned,
+                      locale: post.locale,
+                    },
+                    undefined,
+                    { successMessage: "Черновик сохранён" },
+                  )
+                }
+              >
+                Сохранить
+              </button>
+              {isPublished ? (
+                <button
+                  type="button"
+                  className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-800 shadow-sm hover:bg-stone-50"
+                  onClick={() =>
+                    void savePost(
+                      {
+                        status: POST_STATUS.DRAFT,
+                        title: post.title,
+                        body: post.body,
+                        slug: post.slug,
+                        displayMode: post.displayMode,
+                        metaTitle: post.metaTitle,
+                        metaDescription: post.metaDescription,
+                        telegramSourceUrl: post.telegramSourceUrl,
+                        pinned: post.pinned,
+                        locale: post.locale,
+                      },
+                      undefined,
+                      { successMessage: "Пост сохранён как черновик" },
+                    ).then((ok) => {
+                      if (ok) {
+                        setPost((p) => ({ ...p, status: POST_STATUS.DRAFT }));
+                      }
+                    })
+                  }
+                >
+                  В черновик
+                </button>
+              ) : null}
             </div>
-            <p className="mt-3 text-sm text-stone-500">
-              В ленте фото показываются плиткой, а внутри отдельного поста —
-              последовательно друг за другом.
+            <p className="mt-3 text-xs leading-relaxed text-stone-500">
+              Ниже — такая же раскладка, как в ленте на сайте. Порядок кадров и
+              подписи меняются в списке под превью (перетаскивание строк).
             </p>
           </div>
+
           {uploading ? (
             <p className="text-sm text-stone-500">Загрузка…</p>
           ) : null}
 
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold">Лента фотографий</h2>
-              <span className="text-sm text-stone-500">{images.length} шт.</span>
-            </div>
-            {images.length ? (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={onDragEnd}
-              >
-                <SortableContext
-                  items={images.map((i) => i.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-3">
-                    {images.map((im) => (
-                      <SortableRow
-                        key={im.id}
-                        image={im}
-                        onCaption={(v) =>
-                          setImages((prev) =>
-                            prev.map((x) =>
-                              x.id === im.id ? { ...x, caption: v } : x,
-                            ),
-                          )
-                        }
-                        onAlt={(v) =>
-                          setImages((prev) =>
-                            prev.map((x) =>
-                              x.id === im.id ? { ...x, alt: v } : x,
-                            ),
-                          )
-                        }
-                        onDelete={async () => {
-                          await fetch(`/api/admin/images/${im.id}`, {
-                            method: "DELETE",
-                          });
-                          const next = images.filter((x) => x.id !== im.id);
-                          setImages(next);
-                          void savePost({}, next, {
-                            successMessage: "Фото удалено",
-                          });
-                        }}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            ) : (
-              <div className="rounded-[24px] border border-dashed border-stone-300 bg-stone-50/60 px-4 py-10 text-center text-sm text-stone-500">
-                Пока нет фото. Добавьте изображения выше, и они появятся в
-                будущей публикации.
+          {images.length ? (
+            <div className="space-y-5">
+              <div className="min-w-0 overflow-hidden rounded-[16px] ring-1 ring-stone-200/90">
+                <MediaGrid
+                  layoutSeed={post.id}
+                  images={images.map((im) => ({
+                    id: im.id,
+                    src:
+                      im.variants.w1280 ??
+                      im.variants.w960 ??
+                      im.variants.w640 ??
+                      "",
+                    alt: im.alt || "Фото",
+                    width: im.width ?? null,
+                    height: im.height ?? null,
+                  }))}
+                />
               </div>
-            )}
-          </div>
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-lg font-semibold">Подписи и порядок</h2>
+                  <span className="text-sm text-stone-500">{images.length} шт.</span>
+                </div>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={onDragEnd}
+                >
+                  <SortableContext
+                    items={images.map((i) => i.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {images.map((im) => (
+                        <SortableRow
+                          key={im.id}
+                          image={im}
+                          onCaption={(v) =>
+                            setImages((prev) =>
+                              prev.map((x) =>
+                                x.id === im.id ? { ...x, caption: v } : x,
+                              ),
+                            )
+                          }
+                          onAlt={(v) =>
+                            setImages((prev) =>
+                              prev.map((x) =>
+                                x.id === im.id ? { ...x, alt: v } : x,
+                              ),
+                            )
+                          }
+                          onDelete={async () => {
+                            await fetch(`/api/admin/images/${im.id}`, {
+                              method: "DELETE",
+                            });
+                            const next = images.filter((x) => x.id !== im.id);
+                            setImages(next);
+                            void savePost({}, next, {
+                              successMessage: "Фото удалено",
+                            });
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-[24px] border border-dashed border-stone-300 bg-stone-50/60 px-4 py-10 text-center text-sm text-stone-500">
+              Пока нет фото. Нажмите «Добавить фото» выше — изображения появятся
+              здесь в той же сетке, что и в ленте.
+            </div>
+          )}
         </div>
 
         <div className="space-y-5 xl:sticky xl:top-24 xl:self-start">
@@ -581,34 +632,6 @@ export function PostEditor({ initial, siteUrl }: Props) {
                 />
                 Закрепить вверху ленты
               </label>
-              <button
-                type="button"
-                className="w-full rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 shadow-sm"
-                onClick={() =>
-                  void savePost(
-                    {
-                      status: POST_STATUS.DRAFT,
-                      title: post.title,
-                      body: post.body,
-                      slug: post.slug,
-                      displayMode: post.displayMode,
-                      metaTitle: post.metaTitle,
-                      metaDescription: post.metaDescription,
-                      telegramSourceUrl: post.telegramSourceUrl,
-                      pinned: post.pinned,
-                      locale: post.locale,
-                    },
-                    undefined,
-                    { successMessage: "Пост сохранён как черновик" },
-                  ).then((ok) => {
-                    if (ok) {
-                      setPost((p) => ({ ...p, status: POST_STATUS.DRAFT }));
-                    }
-                  })
-                }
-              >
-                Снять с публикации
-              </button>
               <a
                 href={publicUrl}
                 target="_blank"

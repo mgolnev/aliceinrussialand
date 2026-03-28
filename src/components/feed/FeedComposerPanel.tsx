@@ -172,6 +172,63 @@ export function FeedComposerPanel({
           className="min-h-[120px] w-full min-w-0 resize-none border-none bg-transparent p-0 text-[16px] leading-relaxed text-stone-900 outline-none placeholder:text-stone-400 sm:min-h-[160px]"
         />
 
+        <div className="mt-3 flex w-full min-w-0 flex-nowrap items-center justify-between gap-2 border-t border-stone-100 pt-3 sm:mt-4 sm:pt-3.5">
+          <button
+            type="button"
+            disabled={working}
+            onClick={() => fileInputRef.current?.click()}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 active:scale-90 disabled:opacity-50"
+          >
+            {working ? (
+              <Loader2 size={20} className="animate-spin" />
+            ) : (
+              <ImageIcon size={20} />
+            )}
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => void uploadFiles(e.target.files)}
+          />
+
+          <div className="flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={() => onSubmitDraft()}
+              disabled={!canSubmit || working}
+              className="shrink-0 whitespace-nowrap rounded-full px-2.5 py-2 text-[13px] font-medium text-stone-500 transition-colors hover:bg-stone-100 active:scale-95 disabled:opacity-50 sm:px-4 sm:text-sm"
+            >
+              {draftLabel}
+            </button>
+            <button
+              type="button"
+              onClick={() => onSubmitPublish()}
+              disabled={!canSubmit || working}
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-stone-900 px-3 py-2 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50 sm:gap-2 sm:px-5 sm:text-sm"
+            >
+              {working ? "..." : publishLabel}
+              <Send size={15} className="-rotate-12 sm:h-4 sm:w-4" />
+            </button>
+          </div>
+        </div>
+
+        {message ? (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-stone-50 px-3 py-2 text-sm text-stone-600 sm:px-4">
+            <span>{message}</span>
+            {publishedUrl ? (
+              <a
+                className="font-medium text-stone-900 underline underline-offset-2"
+                href={publishedUrl}
+              >
+                Открыть
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+
         {images.length ? (
           <div className="mt-3 min-w-0 space-y-2.5">
             <div className="min-w-0 rounded-2xl border border-stone-100 bg-stone-50/30 p-2">
@@ -221,69 +278,6 @@ export function FeedComposerPanel({
             </div>
           </div>
         ) : null}
-
-        {message ? (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-stone-50 px-3 py-2 text-sm text-stone-600 sm:px-4">
-            <span>{message}</span>
-            {publishedUrl ? (
-              <a
-                className="font-medium text-stone-900 underline underline-offset-2"
-                href={publishedUrl}
-              >
-                Открыть
-              </a>
-            ) : null}
-          </div>
-        ) : null}
-
-        <div
-          className={`flex w-full min-w-0 flex-nowrap items-center justify-between gap-2 border-t border-stone-100 ${
-            images.length
-              ? "mt-2 pt-2 sm:mt-2.5 sm:pt-2.5"
-              : "mt-3 pt-3 sm:mt-4 sm:pt-4"
-          }`}
-        >
-          <button
-            type="button"
-            disabled={working}
-            onClick={() => fileInputRef.current?.click()}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 active:scale-90 disabled:opacity-50"
-          >
-            {working ? (
-              <Loader2 size={20} className="animate-spin" />
-            ) : (
-              <ImageIcon size={20} />
-            )}
-          </button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={(e) => void uploadFiles(e.target.files)}
-          />
-
-          <div className="flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-1.5 sm:gap-2">
-            <button
-              type="button"
-              onClick={() => onSubmitDraft()}
-              disabled={!canSubmit || working}
-              className="shrink-0 whitespace-nowrap rounded-full px-2.5 py-2 text-[13px] font-medium text-stone-500 transition-colors hover:bg-stone-100 active:scale-95 disabled:opacity-50 sm:px-4 sm:text-sm"
-            >
-              {draftLabel}
-            </button>
-            <button
-              type="button"
-              onClick={() => onSubmitPublish()}
-              disabled={!canSubmit || working}
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-stone-900 px-3 py-2 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50 sm:gap-2 sm:px-5 sm:text-sm"
-            >
-              {working ? "..." : publishLabel}
-              <Send size={15} className="-rotate-12 sm:h-4 sm:w-4" />
-            </button>
-          </div>
-        </div>
       </div>
     </Shell>
   );
