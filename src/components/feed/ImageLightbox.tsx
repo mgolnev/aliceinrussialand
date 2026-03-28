@@ -124,11 +124,26 @@ export function ImageLightbox({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (slides.length < 2) return;
+      /* При зуме стрелки не листают — как горизонтальный свайп только при scale≈1 */
+      if (scaleRef.current > 1.01) return;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        onIndexChange((index - 1 + slides.length) % slides.length);
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        onIndexChange((index + 1) % slides.length);
+      }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, onIndexChange, slides.length, index]);
 
   const shareCurrentPhoto = useCallback(async () => {
     const src = slide?.src;
