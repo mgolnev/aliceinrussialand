@@ -71,11 +71,8 @@ function mapPostToCarouselItem(p: {
   const variants = im ? parseVariants(im.variantsJson) : {};
   const title = derivePostTitle(p.title, p.body);
   const normalizedBody = p.body.replace(/\s+/g, " ").trim();
-  const explicit = p.title?.trim();
-  /** Текст для карусели: полный текст (до лимита), визуальная обрезка — в CSS line-clamp. */
-  const preview = explicit
-    ? `${explicit}${normalizedBody ? ` ${normalizedBody}` : ""}`.trim()
-    : normalizedBody || title;
+  /** В карусели только тело поста (без отдельного заголовка), чтобы не дублировать первую строку. */
+  const preview = normalizedBody || title;
   const previewCapped = preview.slice(0, 900);
   return {
     slug: p.slug,
