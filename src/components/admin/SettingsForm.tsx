@@ -157,7 +157,8 @@ export function SettingsForm({ initial }: Props) {
   }
 
   return (
-    <div className="space-y-6 rounded-[28px] border border-stone-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-40px_rgba(60,44,29,0.35)]">
+    <>
+    <div className="space-y-6 rounded-[28px] border border-stone-200/80 bg-white/90 p-6 pb-24 shadow-[0_20px_50px_-40px_rgba(60,44,29,0.35)] sm:pb-28">
       <div className="flex flex-col gap-4 rounded-2xl border border-stone-200 bg-stone-50/80 p-4 sm:flex-row sm:items-center">
         <div className="flex items-center gap-4">
           {avatarPreviewUrl ? (
@@ -450,16 +451,29 @@ export function SettingsForm({ initial }: Props) {
           ))}
         </ul>
       </div>
-
-      {message ? <p className="text-sm text-stone-600">{message}</p> : null}
-
-      <button
-        type="button"
-        className="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-stone-800"
-        onClick={() => void save()}
-      >
-        Сохранить настройки
-      </button>
     </div>
+
+    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200/80 bg-[#fffdf9]/95 shadow-[0_-10px_40px_-16px_rgba(60,44,29,0.14)] backdrop-blur-xl supports-[backdrop-filter]:bg-[#fffdf9]/88">
+      <div className="mx-auto flex max-w-5xl flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-3.5">
+        <p
+          className={`min-h-[1.25rem] text-sm sm:flex-1 ${message ? "text-stone-600" : "text-transparent"}`}
+          aria-live="polite"
+        >
+          {message ?? "\u00a0"}
+        </p>
+        <button
+          type="button"
+          className="w-full shrink-0 rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-stone-800 active:scale-[0.99] sm:w-auto"
+          onClick={() => void save()}
+        >
+          Сохранить настройки
+        </button>
+      </div>
+      <div
+        className="h-[env(safe-area-inset-bottom,0px)] shrink-0 bg-[#fffdf9]/95 supports-[backdrop-filter]:bg-[#fffdf9]/88"
+        aria-hidden
+      />
+    </div>
+    </>
   );
 }
