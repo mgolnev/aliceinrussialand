@@ -23,6 +23,10 @@ import {
 } from "@/lib/feed-refresh";
 import { feedPostFromAdminPatchJson } from "@/lib/feed-post-from-admin-patch";
 import {
+  adminCredentials,
+  readAdminResponseJson,
+} from "@/lib/admin-fetch";
+import {
   MoreHorizontal,
   Share2,
   ExternalLink,
@@ -186,52 +190,94 @@ export function PostCard({
 
   async function setDraft() {
     setWorking(true);
-    await fetch(`/api/admin/posts/${post.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "DRAFT" }),
-    });
-    setWorking(false);
-    setMenuOpen(false);
-    if (standalone) {
-      router.push("/");
-    } else {
-      dispatchFeedRefreshReplace();
-      router.refresh();
+    try {
+      const res = await fetch(`/api/admin/posts/${post.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "DRAFT" }),
+        ...adminCredentials,
+      });
+      const data = await readAdminResponseJson(res);
+      if (!res.ok) {
+        const msg =
+          data &&
+          typeof data === "object" &&
+          typeof (data as { error?: string }).error === "string"
+            ? (data as { error: string }).error
+            : `Ошибка ${res.status}`;
+        window.alert(msg);
+        return;
+      }
+      setMenuOpen(false);
+      if (standalone) {
+        router.push("/");
+      } else {
+        dispatchFeedRefreshReplace();
+        router.refresh();
+      }
+    } catch {
+      window.alert("Нет сети или сервер не ответил. Попробуйте снова.");
+    } finally {
+      setWorking(false);
     }
   }
 
   async function deletePost() {
     if (!window.confirm("Удалить пост?")) return;
     setWorking(true);
-    await fetch(`/api/admin/posts/${post.id}`, { method: "DELETE" });
-    setWorking(false);
-    setMenuOpen(false);
-    if (standalone) {
-      router.push("/");
-    } else {
-      dispatchFeedRefreshReplace();
-      router.refresh();
+    try {
+      const res = await fetch(`/api/admin/posts/${post.id}`, {
+        method: "DELETE",
+        ...adminCredentials,
+      });
+      if (!res.ok) {
+        const data = await readAdminResponseJson(res);
+        const msg =
+          data &&
+          typeof data === "object" &&
+          typeof (data as { error?: string }).error === "string"
+            ? (data as { error: string }).error
+            : `Ошибка ${res.status}`;
+        window.alert(msg);
+        return;
+      }
+      setMenuOpen(false);
+      if (standalone) {
+        router.push("/");
+      } else {
+        dispatchFeedRefreshReplace();
+        router.refresh();
+      }
+    } catch {
+      window.alert("Нет сети или сервер не ответил.");
+    } finally {
+      setWorking(false);
     }
   }
 
   async function togglePin() {
     const next = !pinnedUi;
     setWorking(true);
-    const res = await fetch(`/api/admin/posts/${post.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pinned: next }),
-    });
-    const data = await res.json().catch(() => null);
-    setWorking(false);
-    if (!res.ok) return;
-    setPinnedUi(next);
-    setMenuOpen(false);
-    const updated = feedPostFromAdminPatchJson(data);
-    if (updated) dispatchFeedPostUpdate(updated);
-    dispatchFeedRefreshMerge();
-    router.refresh();
+    try {
+      const res = await fetch(`/api/admin/posts/${post.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pinned: next }),
+        ...adminCredentials,
+      });
+      const data = await readAdminResponseJson(res);
+      if (!res.ok) return;
+      setPinnedUi(next);
+      setMenuOpen(false);
+      const updated = feedPostFromAdminPatchJson(data);
+      if (updated) dispatchFeedPostUpdate(updated);
+      dispatchFeedRefreshMerge();
+      router.refresh();
+    } catch {
+      /* тихо: пин не критичен */
+    } finally {
+      setWorking(false);
+    }
   }
 
   function cancelEdit() {
@@ -245,6 +291,8 @@ export function PostCard({
   async function saveEdit(status: "DRAFT" | "PUBLISHED") {
     setWorking(true);
     setEditMessage(null);
+    const controller = new AbortController();
+    const killSlow = window.setTimeout(() => controller.abort(), 90_000);
     const payload: Record<string, unknown> = {
       title: "",
       body: editBody,
@@ -260,26 +308,49 @@ export function PostCard({
         alt: image.alt,
       }));
     }
-    const res = await fetch(`/api/admin/posts/${post.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json().catch(() => null);
-    setWorking(false);
-    if (res.ok) {
-      if (data) {
-        const updated = feedPostFromAdminPatchJson(data);
-        if (updated) dispatchFeedPostUpdate(updated);
+    try {
+      const res = await fetch(`/api/admin/posts/${post.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        ...adminCredentials,
+        signal: controller.signal,
+      });
+      const data = await readAdminResponseJson(res);
+      if (res.ok) {
+        if (data) {
+          const updated = feedPostFromAdminPatchJson(data);
+          if (updated) dispatchFeedPostUpdate(updated);
+        }
+        setEditMode(false);
+        setMenuOpen(false);
+        setEditMessage(null);
+        dispatchFeedRefreshMerge();
+        router.refresh();
+        return;
       }
-      setEditMode(false);
-      setMenuOpen(false);
-      setEditMessage(null);
-      dispatchFeedRefreshMerge();
-      router.refresh();
-    } else {
-      const err = data as { error?: string } | null;
-      setEditMessage(err?.error ?? "Не удалось сохранить");
+      const apiErr =
+        data &&
+        typeof data === "object" &&
+        typeof (data as { error?: string }).error === "string"
+          ? (data as { error: string }).error
+          : null;
+      setEditMessage(
+        apiErr ??
+          (res.status === 401
+            ? "Сессия истекла. Обновите страницу и войдите снова."
+            : `Не удалось сохранить (HTTP ${res.status})`),
+      );
+    } catch (e) {
+      const aborted = e instanceof Error && e.name === "AbortError";
+      setEditMessage(
+        aborted
+          ? "Сервер долго не отвечает — попробуйте сохранить снова или обновите страницу."
+          : "Нет сети или запрос сброшен. Проверьте подключение.",
+      );
+    } finally {
+      window.clearTimeout(killSlow);
+      setWorking(false);
     }
   }
 
@@ -295,6 +366,7 @@ export function PostCard({
         const res = await fetch("/api/admin/upload", {
           method: "POST",
           body: fd,
+          ...adminCredentials,
         });
         if (!res.ok) continue;
         const row = (await res.json()) as {
@@ -322,7 +394,10 @@ export function PostCard({
 
   async function removeInlineImage(imageId: string) {
     setWorking(true);
-    await fetch(`/api/admin/images/${imageId}`, { method: "DELETE" });
+    await fetch(`/api/admin/images/${imageId}`, {
+      method: "DELETE",
+      ...adminCredentials,
+    });
     setEditImages((prev) => prev.filter((image) => image.id !== imageId));
     setWorking(false);
   }

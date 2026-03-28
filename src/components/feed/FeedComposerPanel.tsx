@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -138,6 +138,12 @@ export function FeedComposerPanel({
   onPostCategoryChange,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!message || !messageRef.current) return;
+    messageRef.current.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [message]);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
@@ -264,7 +270,12 @@ export function FeedComposerPanel({
         </div>
 
         {message ? (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-stone-50 px-3 py-2 text-sm text-stone-600 sm:px-4">
+          <div
+            ref={messageRef}
+            role="alert"
+            aria-live="assertive"
+            className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-stone-50 px-3 py-2 text-sm text-stone-600 sm:px-4"
+          >
             <span>{message}</span>
             {publishedUrl ? (
               <a

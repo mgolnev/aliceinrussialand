@@ -268,7 +268,81 @@ function collectImageTags(
   return urls;
 }
 
-function parseMessages(
+function normalizeWs(s: string) {
+  return s.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Если весь текст — две подряд одинаковые части (частая вёрстка: два .tgme_widget_message_text
+ * или один блок, продублированный без разделителя), оставляем одну копию.
+ */
+function dedupeRepeatedBody(text: string): string {
+  const t = text.trim();
+  if (t.length < 2) return t;
+
+  const paras = t.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  if (paras.length === 2 && normalizeWs(paras[0]) === normalizeWs(paras[1])) {
+    return paras[0];
+  }
+
+  const nw = normalizeWs(t);
+  if (nw.length >= 4 && nw.length % 2 === 0) {
+    const half = nw.length / 2;
+    const a = nw.slice(0, half);
+    const b = nw.slice(half);
+    if (a === b) {
+      const cut = Math.floor(t.length / 2);
+      const approx = t.slice(0, cut).trimEnd();
+      return approx.length ? approx : a;
+    }
+  }
+
+  return t;
+}
+
+/**
+ * Текст поста: не склеивать вложенные `.tgme_widget_message_text` (даёт дубль в ленте виджета).
+ */
+function extractWidgetMessageText(
+  $: cheerio.CheerioAPI,
+  $message: cheerio.Cheerio<AnyNode>,
+): string {
+  const $blocks = $message.find(".tgme_widget_message_text");
+  if ($blocks.length === 0) return "";
+
+  const leaves: string[] = [];
+  $blocks.each((_, node) => {
+    const $n = $(node);
+    if ($n.find(".tgme_widget_message_text").length > 0) return;
+    const piece = $n.text().trim();
+    if (piece) leaves.push(piece);
+  });
+
+  let raw: string;
+  if (leaves.length === 1) {
+    raw = leaves[0];
+  } else if (leaves.length > 1) {
+    const norms = leaves.map((s) => normalizeWs(s));
+    const uniq = new Set(norms);
+    if (uniq.size === 1) {
+      raw = leaves[0];
+    } else {
+      raw = leaves.join("\n\n");
+    }
+  } else {
+    const innermost = $blocks.filter(
+      (_, n) => $(n).find(".tgme_widget_message_text").length === 0,
+    );
+    raw = innermost.length
+      ? innermost.first().text().trim()
+      : $blocks.first().text().trim();
+  }
+
+  return dedupeRepeatedBody(raw);
+}
+
+/** Экспорт для тестов и отладки парсера виджета. */
+export function parseMessages(
   html: string,
   user: string,
   limit: number,
@@ -286,7 +360,7 @@ function parseMessages(
     const timeEl = dateA.find("time");
     const datetime = timeEl.attr("datetime") ?? null;
 
-    const text = $el.find(".tgme_widget_message_text").text().trim();
+    const text = extractWidgetMessageText($, $el);
     const imageUrls = [
       ...collectStyleUrls($, $el),
       ...collectImageTags($, $el),
