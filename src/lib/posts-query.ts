@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { prisma } from "./prisma";
 import { POST_STATUS } from "./constants";
-import { derivePostTitle, extractFirstSentence } from "./post-text";
+import { derivePostTitle } from "./post-text";
 import type { PostCarouselItem } from "@/types/feed";
 
 const imageSelect = {
@@ -70,15 +70,17 @@ function mapPostToCarouselItem(p: {
   const im = p.images[0];
   const variants = im ? parseVariants(im.variantsJson) : {};
   const title = derivePostTitle(p.title, p.body);
-  const fromSentence = extractFirstSentence(p.body).trim();
-  const preview =
-    fromSentence ||
-    p.body.replace(/\s+/g, " ").trim().slice(0, 120) ||
-    "";
+  const normalizedBody = p.body.replace(/\s+/g, " ").trim();
+  const explicit = p.title?.trim();
+  /** Текст для карусели: полный текст (до лимита), визуальная обрезка — в CSS line-clamp. */
+  const preview = explicit
+    ? `${explicit}${normalizedBody ? ` ${normalizedBody}` : ""}`.trim()
+    : normalizedBody || title;
+  const previewCapped = preview.slice(0, 900);
   return {
     slug: p.slug,
     title,
-    preview,
+    preview: previewCapped,
     variants,
     width: im?.width ?? null,
     height: im?.height ?? null,

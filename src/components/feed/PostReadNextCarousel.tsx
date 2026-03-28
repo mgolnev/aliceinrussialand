@@ -36,7 +36,7 @@ function CarouselThumb({
       alt={alt}
       width={iw}
       height={ih}
-      sizes="(max-width: 640px) 72vw, 280px"
+      sizes="(max-width: 640px) 36vw, (max-width: 768px) 30vw, 280px"
       className="h-full w-full object-cover"
       decoding="async"
     />
@@ -68,9 +68,9 @@ export function PostReadNextCarousel({ items }: Props) {
               key={item.slug}
               href={`/p/${item.slug}`}
               role="listitem"
-              className="flex w-[min(280px,calc(100vw-2.75rem))] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-stone-200/80 bg-white/95 shadow-[0_8px_24px_-12px_rgba(60,44,29,0.2)] outline-none ring-stone-400/30 transition hover:border-stone-300 hover:shadow-md focus-visible:ring-2 active:scale-[0.99] sm:w-[min(300px,calc(100vw-4rem))]"
+              className="flex w-[calc((100%-1.5rem)/2.7)] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-stone-200/80 bg-white/95 shadow-[0_8px_24px_-12px_rgba(60,44,29,0.2)] outline-none ring-stone-400/30 transition hover:border-stone-300 hover:shadow-md focus-visible:ring-2 active:scale-[0.99] sm:w-[calc((100%-2rem)/2.7)]"
             >
-              <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#f4efe8]">
+              <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden bg-[#f4efe8]">
                 {hasImage ? (
                   <CarouselThumb
                     variants={item.variants}
@@ -79,14 +79,14 @@ export function PostReadNextCarousel({ items }: Props) {
                     height={item.height}
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-stone-100 to-stone-200/80 text-3xl font-light text-stone-400">
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-stone-100 to-stone-200/80 text-2xl font-light text-stone-400 sm:text-3xl">
                     {initial}
                   </div>
                 )}
               </div>
-              <div className="p-3.5 sm:p-4">
-                <span className="line-clamp-3 text-[15px] font-semibold leading-snug text-stone-900 sm:text-base">
-                  {item.title}
+              <div className="p-2.5 sm:p-3">
+                <span className="line-clamp-5 text-[13px] font-semibold leading-snug text-stone-900 [overflow-wrap:anywhere] sm:text-[14px] sm:leading-snug">
+                  {item.preview}
                 </span>
               </div>
             </Link>
