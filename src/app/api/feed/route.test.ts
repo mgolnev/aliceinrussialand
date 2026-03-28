@@ -15,18 +15,19 @@ describe("GET /api/feed", () => {
     });
   });
 
-  it("первая страница: Cache-Control с s-maxage=60", async () => {
+  it("Cache-Control без публичного CDN-кэша (актуальная лента после правок)", async () => {
     const { GET } = await import("./route");
     const res = await GET(new Request("http://localhost/api/feed"));
-    expect(res.headers.get("cache-control")).toContain("s-maxage=60");
-    expect(res.headers.get("cache-control")).toContain("stale-while-revalidate=300");
+    const cc = res.headers.get("cache-control") ?? "";
+    expect(cc).toContain("no-store");
+    expect(cc).toContain("private");
   });
 
-  it("с cursor: более длинный s-maxage", async () => {
+  it("с cursor: тот же политика кэша", async () => {
     const { GET } = await import("./route");
     const res = await GET(
       new Request("http://localhost/api/feed?cursor=abc"),
     );
-    expect(res.headers.get("cache-control")).toContain("s-maxage=120");
+    expect(res.headers.get("cache-control")).toContain("no-store");
   });
 });
