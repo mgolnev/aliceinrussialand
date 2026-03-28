@@ -44,6 +44,16 @@ export function useFeedPage({
   /** Только смена таба категории — скелетон ленты, не путать с «Показать ещё». */
   const [categoryLoading, setCategoryLoading] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const nextRef = useRef(initialNext);
+  const itemsRef = useRef(initialItems);
+
+  useEffect(() => {
+    nextRef.current = next;
+  }, [next]);
+
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
 
   const applyCategory = useCallback(
     (slug: string | null) => {
@@ -81,13 +91,47 @@ export function useFeedPage({
     if (!next || loading || categoryLoading) return;
     setLoading(true);
     try {
-      const res = await fetchFeed(feedUrl(next, categorySlug));
-      const data = (await res.json()) as {
-        items: FeedPost[];
-        nextCursor: string | null;
-      };
-      setItems((prev) => [...prev, ...data.items]);
-      setNext(data.nextCursor);
+      const seen = new Set(itemsRef.current.map((p) => p.id));
+      const toAppend: FeedPost[] = [];
+      let cursor: string | null = next;
+      let finalNext: string | null = null;
+      let guard = 0;
+
+      while (cursor && guard++ < 50) {
+        const res = await fetchFeed(feedUrl(cursor, categorySlug));
+        const data = (await res.json()) as {
+          items: FeedPost[];
+          nextCursor: string | null;
+        };
+        const extra = data.items.filter((p) => !seen.has(p.id));
+        for (const p of extra) {
+          seen.add(p.id);
+          toAppend.push(p);
+        }
+
+        if (extra.length > 0) {
+          finalNext = data.nextCursor;
+          break;
+        }
+        if (data.items.length === 0) {
+          finalNext = data.nextCursor;
+          break;
+        }
+        if (!data.nextCursor) {
+          finalNext = null;
+          break;
+        }
+        cursor = data.nextCursor;
+      }
+
+      if (guard >= 50 && toAppend.length === 0) {
+        finalNext = null;
+      }
+
+      if (toAppend.length > 0) {
+        setItems((prev) => [...prev, ...toAppend]);
+      }
+      setNext(finalNext);
     } finally {
       setLoading(false);
     }
@@ -114,6 +158,8 @@ export function useFeedPage({
     const handler = (ev: Event) => {
       const mode =
         (ev as CustomEvent<FeedRefreshDetail>).detail?.mode ?? "merge";
+      /** До merge: если лента уже без хвоста (next === null), не подставлять курсор первой страницы — иначе sentinel снова тянет «вторую страницу с начала», дублируя хвост. */
+      const nextBeforeRefresh = nextRef.current;
       void fetchFeed(feedUrl(undefined, categorySlug))
         .then((r) => r.json())
         .then(
@@ -132,7 +178,9 @@ export function useFeedPage({
               const tail = prev.filter((p) => !freshIds.has(p.id));
               return [...fresh, ...tail];
             });
-            setNext(data.nextCursor);
+            setNext(
+              nextBeforeRefresh === null ? null : data.nextCursor,
+            );
           },
         );
     };
