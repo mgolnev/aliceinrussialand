@@ -44,6 +44,13 @@ export function useFeedPage({
       if (slug) params.set("category", slug);
       const q = params.toString();
       router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+      if (typeof window !== "undefined") {
+        const html = document.documentElement;
+        const prev = html.style.scrollBehavior;
+        html.style.scrollBehavior = "auto";
+        window.scrollTo(0, 0);
+        html.style.scrollBehavior = prev;
+      }
       setLoading(true);
       void fetch(feedUrl(undefined, slug))
         .then((r) => r.json())
