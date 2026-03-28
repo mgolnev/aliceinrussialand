@@ -340,7 +340,7 @@ export function PostCard({
         ) : null}
 
         <header
-          className={`relative flex items-start justify-between gap-3 ${
+          className={`relative flex items-center justify-between gap-3 ${
             canManage && editMode
               ? "border-b border-stone-100 px-3 pb-2.5 pt-3 sm:px-5 sm:pb-3 sm:pt-4"
               : feedMediaGrid
@@ -348,7 +348,7 @@ export function PostCard({
                 : "mb-4"
           }`}
         >
-          <div className="min-w-0 flex flex-col gap-1">
+          <div className="min-w-0 flex flex-col gap-0.5">
             <div className="flex flex-wrap items-center gap-2 text-[13px] font-medium text-stone-400">
               {post.publishedAt ? (
                 <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
@@ -362,8 +362,13 @@ export function PostCard({
                 <span className="text-amber-700">Закреплено</span>
               ) : null}
             </div>
+            {post.category?.name?.trim() ? (
+              <span className="text-[13px] font-medium leading-snug text-stone-400">
+                {post.category.name.trim().toLocaleLowerCase("ru-RU")}
+              </span>
+            ) : null}
             {canManage && editMode ? (
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+              <span className="mt-0.5 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                 Редактирование
               </span>
             ) : null}
