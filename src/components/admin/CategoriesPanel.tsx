@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -28,11 +28,19 @@ export type CategoryRow = {
 function SortableItem({
   row,
   onDelete,
+  onSaved,
+  onRenameError,
   busy,
+  savingId,
+  onSavingChange,
 }: {
   row: CategoryRow;
   onDelete: () => void;
+  onSaved: (next: CategoryRow) => void;
+  onRenameError: (msg: string) => void;
   busy: boolean;
+  savingId: string | null;
+  onSavingChange: (id: string | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: row.id });
@@ -40,15 +48,52 @@ function SortableItem({
     transform: CSS.Transform.toString(transform),
     transition,
   };
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(row.name);
+
+  useEffect(() => {
+    if (!editing) setDraft(row.name);
+  }, [row.name, editing]);
+
+  const rowBusy = busy || savingId === row.id;
+
+  async function saveName() {
+    const nextName = draft.trim();
+    if (!nextName || nextName === row.name) {
+      setEditing(false);
+      setDraft(row.name);
+      return;
+    }
+    onSavingChange(row.id);
+    try {
+      const res = await fetch(`/api/admin/categories/${row.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: nextName }),
+      });
+      if (!res.ok) {
+        const d = (await res.json().catch(() => null)) as { error?: string };
+        onRenameError(d?.error ?? "Не удалось сохранить");
+        return;
+      }
+      const updated = (await res.json()) as CategoryRow;
+      onSaved(updated);
+      setEditing(false);
+    } finally {
+      onSavingChange(null);
+    }
+  }
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-white px-3 py-2.5 shadow-sm"
+      className="flex flex-wrap items-center gap-3 rounded-2xl border border-stone-200 bg-white px-3 py-2.5 shadow-sm sm:flex-nowrap"
     >
       <button
         type="button"
-        className="cursor-grab touch-none rounded-lg px-1 text-stone-400 hover:text-stone-600"
+        className="cursor-grab touch-none rounded-lg px-1 text-stone-400 hover:text-stone-600 disabled:cursor-not-allowed disabled:opacity-40"
+        disabled={editing}
         {...attributes}
         {...listeners}
         aria-label="Перетащить"
@@ -56,17 +101,71 @@ function SortableItem({
         ⋮⋮
       </button>
       <div className="min-w-0 flex-1">
-        <p className="font-medium text-stone-900">{row.name}</p>
-        <p className="truncate font-mono text-xs text-stone-500">{row.slug}</p>
+        {editing ? (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              className="w-full min-w-0 rounded-xl border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-400"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              disabled={rowBusy}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void saveName();
+                if (e.key === "Escape") {
+                  setEditing(false);
+                  setDraft(row.name);
+                }
+              }}
+            />
+            <div className="flex shrink-0 gap-2">
+              <button
+                type="button"
+                disabled={rowBusy || !draft.trim()}
+                className="rounded-full bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-800 disabled:opacity-50"
+                onClick={() => void saveName()}
+              >
+                Сохранить
+              </button>
+              <button
+                type="button"
+                disabled={rowBusy}
+                className="rounded-full border border-stone-200 px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-50 disabled:opacity-50"
+                onClick={() => {
+                  setEditing(false);
+                  setDraft(row.name);
+                }}
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <p className="font-medium text-stone-900">{row.name}</p>
+            <p className="truncate font-mono text-xs text-stone-500">{row.slug}</p>
+          </>
+        )}
       </div>
-      <button
-        type="button"
-        disabled={busy}
-        className="shrink-0 rounded-full px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
-        onClick={onDelete}
-      >
-        Удалить
-      </button>
+      <div className="ml-auto flex shrink-0 items-center gap-2 sm:ml-0">
+        {!editing ? (
+          <button
+            type="button"
+            disabled={busy}
+            className="rounded-full px-3 py-1.5 text-sm text-stone-600 hover:bg-stone-100 disabled:opacity-50"
+            onClick={() => setEditing(true)}
+          >
+            Переименовать
+          </button>
+        ) : null}
+        <button
+          type="button"
+          disabled={busy || editing || !!savingId}
+          className="rounded-full px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+          onClick={onDelete}
+        >
+          Удалить
+        </button>
+      </div>
     </div>
   );
 }
@@ -76,6 +175,7 @@ export function CategoriesPanel({ initial }: { initial: CategoryRow[] }) {
   const [rows, setRows] = useState(initial);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [savingId, setSavingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -106,6 +206,7 @@ export function CategoriesPanel({ initial }: { initial: CategoryRow[] }) {
   );
 
   function onDragEnd(event: DragEndEvent) {
+    if (savingId) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const oldIndex = rows.findIndex((r) => r.id === active.id);
@@ -138,6 +239,12 @@ export function CategoriesPanel({ initial }: { initial: CategoryRow[] }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  function replaceRow(updated: CategoryRow) {
+    setRows((prev) =>
+      prev.map((r) => (r.id === updated.id ? updated : r)),
+    );
   }
 
   async function removeCategory(id: string) {
@@ -174,11 +281,11 @@ export function CategoriesPanel({ initial }: { initial: CategoryRow[] }) {
             placeholder="Название"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            disabled={busy}
+            disabled={busy || !!savingId}
           />
           <button
             type="button"
-            disabled={busy || !name.trim()}
+            disabled={busy || !!savingId || !name.trim()}
             className="rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-stone-800 disabled:opacity-50"
             onClick={() => void addCategory()}
           >
@@ -208,6 +315,14 @@ export function CategoriesPanel({ initial }: { initial: CategoryRow[] }) {
                 <SortableItem
                   row={row}
                   busy={busy}
+                  savingId={savingId}
+                  onSavingChange={setSavingId}
+                  onRenameError={(msg) => setMessage(msg)}
+                  onSaved={(next) => {
+                    setMessage(null);
+                    replaceRow(next);
+                    router.refresh();
+                  }}
                   onDelete={() => void removeCategory(row.id)}
                 />
               </li>

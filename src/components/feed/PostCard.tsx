@@ -16,7 +16,12 @@ import { PostImpression } from "./PostImpression";
 import type { FeedCategory, FeedPost } from "@/types/feed";
 import { MediaGrid } from "./MediaGrid";
 import { ImageLightbox } from "./ImageLightbox";
-import { dispatchFeedRefreshMerge, dispatchFeedRefreshReplace } from "@/lib/feed-refresh";
+import {
+  dispatchFeedPostUpdate,
+  dispatchFeedRefreshMerge,
+  dispatchFeedRefreshReplace,
+} from "@/lib/feed-refresh";
+import { feedPostFromAdminPatchJson } from "@/lib/feed-post-from-admin-patch";
 import {
   MoreHorizontal,
   Share2,
@@ -218,10 +223,13 @@ export function PostCard({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pinned: next }),
     });
+    const data = await res.json().catch(() => null);
     setWorking(false);
     if (!res.ok) return;
     setPinnedUi(next);
     setMenuOpen(false);
+    const updated = feedPostFromAdminPatchJson(data);
+    if (updated) dispatchFeedPostUpdate(updated);
     dispatchFeedRefreshMerge();
     router.refresh();
   }
@@ -257,16 +265,21 @@ export function PostCard({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const data = (await res.json().catch(() => null)) as { error?: string } | null;
+    const data = await res.json().catch(() => null);
     setWorking(false);
     if (res.ok) {
+      if (data) {
+        const updated = feedPostFromAdminPatchJson(data);
+        if (updated) dispatchFeedPostUpdate(updated);
+      }
       setEditMode(false);
       setMenuOpen(false);
       setEditMessage(null);
       dispatchFeedRefreshMerge();
       router.refresh();
     } else {
-      setEditMessage(data?.error ?? "Не удалось сохранить");
+      const err = data as { error?: string } | null;
+      setEditMessage(err?.error ?? "Не удалось сохранить");
     }
   }
 

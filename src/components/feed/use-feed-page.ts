@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { FeedCategory, FeedPost } from "@/types/feed";
 import {
+  ALICE_FEED_POST_UPDATE,
   ALICE_FEED_REFRESH,
+  type FeedPostUpdateDetail,
   type FeedRefreshDetail,
 } from "@/lib/feed-refresh";
 
@@ -14,6 +16,10 @@ function feedUrl(cursor: string | undefined, categorySlug: string | null) {
   if (cursor) params.set("cursor", cursor);
   const q = params.toString();
   return q ? `/api/feed?${q}` : "/api/feed";
+}
+
+function fetchFeed(url: string) {
+  return fetch(url, { cache: "no-store" });
 }
 
 export type UseFeedPageArgs = {
@@ -52,7 +58,7 @@ export function useFeedPage({
         html.style.scrollBehavior = prev;
       }
       setLoading(true);
-      void fetch(feedUrl(undefined, slug))
+      void fetchFeed(feedUrl(undefined, slug))
         .then((r) => r.json())
         .then(
           (data: {
@@ -73,7 +79,7 @@ export function useFeedPage({
     if (!next || loading) return;
     setLoading(true);
     try {
-      const res = await fetch(feedUrl(next, categorySlug));
+      const res = await fetchFeed(feedUrl(next, categorySlug));
       const data = (await res.json()) as {
         items: FeedPost[];
         nextCursor: string | null;
@@ -106,7 +112,7 @@ export function useFeedPage({
     const handler = (ev: Event) => {
       const mode =
         (ev as CustomEvent<FeedRefreshDetail>).detail?.mode ?? "merge";
-      void fetch(feedUrl(undefined, categorySlug))
+      void fetchFeed(feedUrl(undefined, categorySlug))
         .then((r) => r.json())
         .then(
           (data: {
@@ -131,6 +137,16 @@ export function useFeedPage({
     window.addEventListener(ALICE_FEED_REFRESH, handler);
     return () => window.removeEventListener(ALICE_FEED_REFRESH, handler);
   }, [categorySlug]);
+
+  useEffect(() => {
+    const onPostUpdate = (ev: Event) => {
+      const post = (ev as CustomEvent<FeedPostUpdateDetail>).detail?.post;
+      if (!post?.id) return;
+      setItems((prev) => prev.map((p) => (p.id === post.id ? post : p)));
+    };
+    window.addEventListener(ALICE_FEED_POST_UPDATE, onPostUpdate);
+    return () => window.removeEventListener(ALICE_FEED_POST_UPDATE, onPostUpdate);
+  }, []);
 
   const empty = !items.length && !next;
 

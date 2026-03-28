@@ -23,13 +23,19 @@ export async function PATCH(req: Request, ctx: Ctx) {
   if (!body) {
     return NextResponse.json({ error: "Некорректный JSON" }, { status: 400 });
   }
-  const name =
-    typeof body.name === "string" ? body.name.trim() : existing.name;
+  let name = existing.name;
+  if (typeof body.name === "string") {
+    const t = body.name.trim();
+    if (!t) {
+      return NextResponse.json({ error: "Укажите название" }, { status: 400 });
+    }
+    name = t;
+  }
   let slug = existing.slug;
   if (typeof body.slug === "string" && body.slug.trim()) {
     slug = toSlug(body.slug);
-  } else if (typeof body.name === "string" && body.name.trim()) {
-    slug = toSlug(body.name);
+  } else if (typeof body.name === "string") {
+    slug = toSlug(name);
   }
   if (slug !== existing.slug) {
     let unique = slug;
@@ -49,6 +55,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     where: { id },
     data: { name, slug },
   });
+  invalidateFeedCategoriesCache();
   return NextResponse.json(row);
 }
 
