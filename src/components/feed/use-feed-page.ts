@@ -41,6 +41,8 @@ export function useFeedPage({
   const [items, setItems] = useState(initialItems);
   const [next, setNext] = useState(initialNext);
   const [loading, setLoading] = useState(false);
+  /** Только смена таба категории — скелетон ленты, не путать с «Показать ещё». */
+  const [categoryLoading, setCategoryLoading] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const applyCategory = useCallback(
@@ -57,7 +59,7 @@ export function useFeedPage({
         window.scrollTo(0, 0);
         html.style.scrollBehavior = prev;
       }
-      setLoading(true);
+      setCategoryLoading(true);
       void fetchFeed(feedUrl(undefined, slug))
         .then((r) => r.json())
         .then(
@@ -70,13 +72,13 @@ export function useFeedPage({
             setNext(data.nextCursor);
           },
         )
-        .finally(() => setLoading(false));
+        .finally(() => setCategoryLoading(false));
     },
     [pathname, router],
   );
 
   const loadMore = useCallback(async () => {
-    if (!next || loading) return;
+    if (!next || loading || categoryLoading) return;
     setLoading(true);
     try {
       const res = await fetchFeed(feedUrl(next, categorySlug));
@@ -89,7 +91,7 @@ export function useFeedPage({
     } finally {
       setLoading(false);
     }
-  }, [next, loading, categorySlug]);
+  }, [next, loading, categoryLoading, categorySlug]);
 
   useEffect(() => {
     const node = sentinelRef.current;
@@ -156,6 +158,7 @@ export function useFeedPage({
     items,
     next,
     loading,
+    categoryLoading,
     loadMore,
     empty,
     sentinelRef,

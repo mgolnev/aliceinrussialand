@@ -2,12 +2,14 @@
 
 import type { RefObject } from "react";
 import { PostCard } from "./PostCard";
+import { FeedPostsSkeleton } from "./FeedPostsSkeleton";
 import type { FeedCategory, FeedPost } from "@/types/feed";
 
 type Props = {
   items: FeedPost[];
   next: string | null;
   loading: boolean;
+  categoryLoading: boolean;
   loadMore: () => Promise<void>;
   categorySlug: string | null;
   categories: FeedCategory[];
@@ -23,6 +25,7 @@ export function FeedPostsBody({
   items,
   next,
   loading,
+  categoryLoading,
   loadMore,
   categorySlug,
   categories,
@@ -33,6 +36,10 @@ export function FeedPostsBody({
   empty,
   sentinelRef,
 }: Props) {
+  if (categoryLoading) {
+    return <FeedPostsSkeleton />;
+  }
+
   if (empty) {
     return (
       <p className="rounded-2xl border border-dashed border-stone-300 bg-white/60 px-6 py-12 text-center text-stone-600">
