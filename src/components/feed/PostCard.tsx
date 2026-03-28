@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -26,6 +27,8 @@ import {
   adminCredentials,
   readAdminResponseJson,
 } from "@/lib/admin-fetch";
+import { useFeedImageUploadQueue } from "@/hooks/use-feed-image-upload-queue";
+import type { FeedComposerImage } from "@/components/feed/FeedComposerPanel";
 import {
   MoreHorizontal,
   Share2,
@@ -126,6 +129,71 @@ export function PostCard({
     setEditCategoryId(post.categoryId);
     setPinnedUi(post.pinned);
   }, [post]);
+
+  const onComposerImageUploaded = useCallback((image: FeedComposerImage) => {
+    setEditImages((prev) => [
+      ...prev,
+      {
+        id: image.id,
+        variants: image.variants,
+        width: image.width ?? null,
+        height: image.height ?? null,
+        caption: image.caption ?? "",
+        alt: image.alt ?? "",
+      },
+    ]);
+  }, []);
+
+  const resolveComposerPostId = useCallback(async () => post.id, [post.id]);
+
+  const {
+    uploadRows,
+    uploadDoneCount,
+    uploadTotalPlanned,
+    uploadIsProcessing,
+    addUploadFiles,
+    stopUpload,
+    retryUpload,
+    dismissCancelledUploads,
+    resetUploadProgressIfIdle,
+    clearUploadSession,
+  } = useFeedImageUploadQueue({
+    onImageUploaded: onComposerImageUploaded,
+    resolvePostId: resolveComposerPostId,
+    fetchInit: adminCredentials,
+    onQueueError: (msg) => setEditMessage(msg),
+  });
+
+  useEffect(() => {
+    if (
+      editMode &&
+      uploadRows.length === 0 &&
+      !uploadIsProcessing &&
+      uploadDoneCount > 0
+    ) {
+      const t = window.setTimeout(() => resetUploadProgressIfIdle(), 1800);
+      return () => window.clearTimeout(t);
+    }
+  }, [
+    editMode,
+    uploadRows.length,
+    uploadIsProcessing,
+    uploadDoneCount,
+    resetUploadProgressIfIdle,
+  ]);
+
+  useEffect(() => {
+    if (!editMode) {
+      stopUpload();
+      clearUploadSession();
+    }
+  }, [editMode, stopUpload, clearUploadSession]);
+
+  const uploadBlocksSubmit =
+    uploadIsProcessing ||
+    uploadRows.some(
+      (r) => r.status === "pending" || r.status === "uploading",
+    );
 
   function updateMenuPosition() {
     const el = menuTriggerRef.current;
@@ -296,7 +364,7 @@ export function PostCard({
     const payload: Record<string, unknown> = {
       title: "",
       body: editBody,
-      displayMode: "GRID",
+      displayMode: post.displayMode,
       status,
       categoryId: editCategoryId,
     };
@@ -350,44 +418,6 @@ export function PostCard({
       );
     } finally {
       window.clearTimeout(killSlow);
-      setWorking(false);
-    }
-  }
-
-  async function uploadInline(files: FileList | null) {
-    if (!files?.length) return;
-    setWorking(true);
-    try {
-      const added: typeof editImages = [];
-      for (const file of Array.from(files)) {
-        const fd = new FormData();
-        fd.set("postId", post.id);
-        fd.set("file", file);
-        const res = await fetch("/api/admin/upload", {
-          method: "POST",
-          body: fd,
-          ...adminCredentials,
-        });
-        if (!res.ok) continue;
-        const row = (await res.json()) as {
-          id: string;
-          sortOrder: number;
-          variants: Record<string, string>;
-          width?: number | null;
-          height?: number | null;
-        };
-        added.push({
-          ...row,
-          width: row.width ?? null,
-          height: row.height ?? null,
-          caption: "",
-          alt: "",
-        });
-      }
-      if (added.length) {
-        setEditImages((prev) => [...prev, ...added]);
-      }
-    } finally {
       setWorking(false);
     }
   }
@@ -610,9 +640,19 @@ export function PostCard({
               )
             }
             onRemoveImage={(id) => void removeInlineImage(id)}
-            uploadFiles={(files) => void uploadInline(files)}
+            uploadFiles={(files) => addUploadFiles(files)}
             working={working}
             message={editMessage}
+            uploadBlocksSubmit={uploadBlocksSubmit}
+            uploadQueue={{
+              rows: uploadRows,
+              doneCount: uploadDoneCount,
+              totalPlanned: uploadTotalPlanned,
+              isProcessing: uploadIsProcessing,
+              onStop: stopUpload,
+              onRetry: retryUpload,
+              onDismissCancelled: dismissCancelledUploads,
+            }}
             onSubmitDraft={() => void saveEdit("DRAFT")}
             onSubmitPublish={() => void saveEdit("PUBLISHED")}
             canSubmit={

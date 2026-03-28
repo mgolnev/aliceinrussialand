@@ -28,7 +28,9 @@ import {
   Loader2,
   Plus,
   X,
+  AlertCircle,
 } from "lucide-react";
+import type { UploadQueueRow } from "@/hooks/use-feed-image-upload-queue";
 
 export type FeedComposerImage = {
   id: string;
@@ -111,6 +113,18 @@ type Props = {
   categories?: Array<{ id: string; name: string; slug: string }>;
   postCategoryId?: string | null;
   onPostCategoryChange?: (categoryId: string | null) => void;
+  /** Очередь загрузки фото: прогресс, остановка, повтор по файлу */
+  uploadQueue?: {
+    rows: UploadQueueRow[];
+    doneCount: number;
+    totalPlanned: number;
+    isProcessing: boolean;
+    onStop: () => void;
+    onRetry: (clientId: string) => void;
+    onDismissCancelled?: () => void;
+  };
+  /** Блокировать публикацию/черновик, пока идёт или ожидает очередь загрузки */
+  uploadBlocksSubmit?: boolean;
 };
 
 export function FeedComposerPanel({
@@ -136,6 +150,8 @@ export function FeedComposerPanel({
   categories,
   postCategoryId,
   onPostCategoryChange,
+  uploadQueue,
+  uploadBlocksSubmit = false,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageRef = useRef<HTMLDivElement>(null);
@@ -168,6 +184,14 @@ export function FeedComposerPanel({
     : "min-w-0 px-3 pb-2 pt-4 sm:px-5 sm:pb-2.5 sm:pt-5";
 
   const Shell = isEmbedded ? "div" : "section";
+
+  const uploadPhotoBusy = Boolean(
+    uploadQueue &&
+      (uploadQueue.isProcessing ||
+        uploadQueue.rows.some(
+          (r) => r.status === "pending" || r.status === "uploading",
+        )),
+  );
 
   return (
     <Shell className={shellClass}>
@@ -226,17 +250,135 @@ export function FeedComposerPanel({
           </div>
         ) : null}
 
+        {uploadQueue &&
+        (uploadQueue.rows.length > 0 ||
+          uploadQueue.isProcessing ||
+          uploadQueue.doneCount > 0) ? (
+          <div
+            className="mt-3 rounded-xl border border-stone-200 bg-stone-50/80 px-3 py-2.5 sm:px-3.5"
+            role="region"
+            aria-label="Загрузка фотографий"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2 gap-y-1">
+              <p className="text-[13px] font-medium text-stone-700 sm:text-sm">
+                Загружено {uploadQueue.doneCount} из {uploadQueue.totalPlanned}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                {(uploadQueue.isProcessing ||
+                  uploadQueue.rows.some(
+                    (r) =>
+                      r.status === "pending" || r.status === "uploading",
+                  )) ? (
+                  <button
+                    type="button"
+                    onClick={() => uploadQueue.onStop()}
+                    className="rounded-full border border-stone-300 bg-white px-3 py-1 text-[13px] font-medium text-stone-700 hover:bg-stone-100 active:scale-[0.98]"
+                  >
+                    Остановить
+                  </button>
+                ) : null}
+                {uploadQueue.rows.some((r) => r.status === "cancelled") &&
+                uploadQueue.onDismissCancelled ? (
+                  <button
+                    type="button"
+                    onClick={() => uploadQueue.onDismissCancelled?.()}
+                    className="text-[13px] text-stone-500 underline-offset-2 hover:text-stone-800 hover:underline"
+                  >
+                    Убрать отменённые
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            <div
+              className="mt-2 h-1.5 overflow-hidden rounded-full bg-stone-200/90"
+              role="progressbar"
+              aria-valuenow={uploadQueue.doneCount}
+              aria-valuemin={0}
+              aria-valuemax={Math.max(1, uploadQueue.totalPlanned)}
+            >
+              <div
+                className="h-full rounded-full bg-emerald-600 transition-[width] duration-300 ease-out"
+                style={{
+                  width: `${uploadQueue.totalPlanned > 0 ? Math.min(100, Math.round((uploadQueue.doneCount / uploadQueue.totalPlanned) * 100)) : 0}%`,
+                }}
+              />
+            </div>
+            {uploadQueue.rows.length > 0 ? (
+              <ul className="mt-2.5 max-h-[min(40vh,220px)] space-y-1.5 overflow-y-auto overscroll-contain pr-0.5">
+                {uploadQueue.rows.map((row) => (
+                  <li
+                    key={row.clientId}
+                    className="flex items-center gap-2 rounded-lg bg-white/90 px-2 py-1.5 ring-1 ring-stone-100"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={row.previewUrl}
+                      alt=""
+                      className="h-10 w-10 shrink-0 rounded-md object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] text-stone-800">
+                        {row.label}
+                      </p>
+                      <div className="mt-0.5 flex items-center gap-1.5 text-[12px] text-stone-500">
+                        {row.status === "pending" ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                            <span>В очереди</span>
+                          </>
+                        ) : null}
+                        {row.status === "uploading" ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0 text-emerald-600" />
+                            <span className="text-emerald-800">Загрузка…</span>
+                          </>
+                        ) : null}
+                        {row.status === "error" ? (
+                          <>
+                            <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-500" />
+                            <span className="text-red-700">
+                              {row.errorMessage ?? "Ошибка загрузки"}
+                            </span>
+                          </>
+                        ) : null}
+                        {row.status === "cancelled" ? (
+                          <span className="text-stone-400">Отменено</span>
+                        ) : null}
+                      </div>
+                    </div>
+                    {row.status === "error" ? (
+                      <button
+                        type="button"
+                        onClick={() => uploadQueue.onRetry(row.clientId)}
+                        className="shrink-0 rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-[12px] font-medium text-stone-800 hover:bg-stone-100 active:scale-95"
+                      >
+                        Повторить
+                      </button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="mt-3 flex w-full min-w-0 flex-nowrap items-center justify-between gap-2 border-t border-stone-100 pt-3 sm:mt-4 sm:pt-3.5">
           <button
             type="button"
             disabled={working}
             onClick={() => fileInputRef.current?.click()}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 active:scale-90 disabled:opacity-50"
+            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 active:scale-90 disabled:opacity-50"
+            aria-label={uploadPhotoBusy ? "Идёт загрузка фото" : "Добавить фото"}
+            aria-busy={uploadPhotoBusy}
           >
-            {working ? (
-              <Loader2 size={20} className="animate-spin" />
+            {uploadPhotoBusy ? (
+              <Loader2
+                size={20}
+                className="animate-spin text-emerald-600"
+                aria-hidden
+              />
             ) : (
-              <ImageIcon size={20} />
+              <ImageIcon size={20} aria-hidden />
             )}
           </button>
           <input
@@ -245,14 +387,17 @@ export function FeedComposerPanel({
             accept="image/*"
             multiple
             className="hidden"
-            onChange={(e) => void uploadFiles(e.target.files)}
+            onChange={(e) => {
+              void uploadFiles(e.target.files);
+              e.target.value = "";
+            }}
           />
 
           <div className="flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={() => onSubmitDraft()}
-              disabled={!canSubmit || working}
+              disabled={!canSubmit || working || uploadBlocksSubmit}
               className="shrink-0 whitespace-nowrap rounded-full px-2.5 py-2 text-[13px] font-medium text-stone-500 transition-colors hover:bg-stone-100 active:scale-95 disabled:opacity-50 sm:px-4 sm:text-sm"
             >
               {draftLabel}
@@ -260,7 +405,7 @@ export function FeedComposerPanel({
             <button
               type="button"
               onClick={() => onSubmitPublish()}
-              disabled={!canSubmit || working}
+              disabled={!canSubmit || working || uploadBlocksSubmit}
               className="flex shrink-0 items-center gap-1.5 rounded-full bg-stone-900 px-3 py-2 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50 sm:gap-2 sm:px-5 sm:text-sm"
             >
               {working ? "..." : publishLabel}
@@ -311,9 +456,23 @@ export function FeedComposerPanel({
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
+                      aria-label={
+                        uploadPhotoBusy
+                          ? "Идёт загрузка фото"
+                          : "Добавить ещё фото"
+                      }
+                      aria-busy={uploadPhotoBusy}
                       className="flex aspect-square min-w-0 items-center justify-center rounded-xl border-2 border-dashed border-stone-200 text-stone-400 transition-colors hover:border-stone-300 hover:text-stone-500 active:scale-95"
                     >
-                      <Plus size={20} />
+                      {uploadPhotoBusy ? (
+                        <Loader2
+                          size={20}
+                          className="animate-spin text-emerald-600"
+                          aria-hidden
+                        />
+                      ) : (
+                        <Plus size={20} aria-hidden />
+                      )}
                     </button>
                   </div>
                 </SortableContext>

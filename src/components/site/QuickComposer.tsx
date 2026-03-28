@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Settings } from "lucide-react";
 import {
@@ -8,6 +8,7 @@ import {
   type FeedComposerImage,
 } from "@/components/feed/FeedComposerPanel";
 import { dispatchFeedRefreshMerge } from "@/lib/feed-refresh";
+import { useFeedImageUploadQueue } from "@/hooks/use-feed-image-upload-queue";
 import type { FeedCategory } from "@/types/feed";
 
 async function ensureDraft(postId: string | null) {
@@ -28,33 +29,54 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
 
   const canSubmit = body.trim().length > 0 || images.length > 0;
 
-  async function uploadFiles(files: FileList | null) {
-    if (!files?.length) return;
-    setWorking(true);
-    setMessage(null);
-    try {
-      const ensuredId = await ensureDraft(postId);
-      setPostId(ensuredId);
-      const added: FeedComposerImage[] = [];
-      for (const file of Array.from(files)) {
-        const fd = new FormData();
-        fd.set("postId", ensuredId);
-        fd.set("file", file);
-        const res = await fetch("/api/admin/upload", {
-          method: "POST",
-          body: fd,
-        });
-        if (!res.ok) continue;
-        const image = (await res.json()) as FeedComposerImage;
-        added.push(image);
-      }
-      if (added.length) {
-        setImages((prev) => [...prev, ...added]);
-      }
-    } finally {
-      setWorking(false);
+  const onImageUploaded = useCallback((image: FeedComposerImage) => {
+    setImages((prev) => [...prev, image]);
+  }, []);
+
+  const resolvePostId = useCallback(async () => {
+    const id = await ensureDraft(postId);
+    setPostId(id);
+    return id;
+  }, [postId]);
+
+  const {
+    uploadRows,
+    uploadDoneCount,
+    uploadTotalPlanned,
+    uploadIsProcessing,
+    addUploadFiles,
+    stopUpload,
+    retryUpload,
+    dismissCancelledUploads,
+    resetUploadProgressIfIdle,
+    clearUploadSession,
+  } = useFeedImageUploadQueue({
+    onImageUploaded,
+    resolvePostId,
+    onQueueError: (msg) => setMessage(msg),
+  });
+
+  useEffect(() => {
+    if (
+      uploadRows.length === 0 &&
+      !uploadIsProcessing &&
+      uploadDoneCount > 0
+    ) {
+      const t = window.setTimeout(() => resetUploadProgressIfIdle(), 1800);
+      return () => window.clearTimeout(t);
     }
-  }
+  }, [
+    uploadRows.length,
+    uploadIsProcessing,
+    uploadDoneCount,
+    resetUploadProgressIfIdle,
+  ]);
+
+  const uploadBlocksSubmit =
+    uploadIsProcessing ||
+    uploadRows.some(
+      (r) => r.status === "pending" || r.status === "uploading",
+    );
 
   async function removeImage(imageId: string) {
     await fetch(`/api/admin/images/${imageId}`, { method: "DELETE" });
@@ -95,6 +117,7 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
       }
 
       if (status === "PUBLISHED" && data?.slug) {
+        clearUploadSession();
         setBody("");
         setImages([]);
         setCategoryId(null);
@@ -128,9 +151,19 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
       images={images}
       onImagesChange={setImages}
       onRemoveImage={(id) => void removeImage(id)}
-      uploadFiles={(files) => void uploadFiles(files)}
+      uploadFiles={(files) => addUploadFiles(files)}
       working={working}
       message={message}
+      uploadBlocksSubmit={uploadBlocksSubmit}
+      uploadQueue={{
+        rows: uploadRows,
+        doneCount: uploadDoneCount,
+        totalPlanned: uploadTotalPlanned,
+        isProcessing: uploadIsProcessing,
+        onStop: stopUpload,
+        onRetry: retryUpload,
+        onDismissCancelled: dismissCancelledUploads,
+      }}
       onSubmitDraft={() => void submit("DRAFT")}
       onSubmitPublish={() => void submit("PUBLISHED")}
       canSubmit={canSubmit}
