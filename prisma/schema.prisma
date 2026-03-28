@@ -28,24 +28,38 @@ model SiteSettings {
   updatedAt            DateTime @updatedAt
 }
 
+model PostCategory {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  posts     Post[]
+}
+
 model Post {
-  id                 String      @id @default(cuid())
-  slug               String      @unique
+  id                 String         @id @default(cuid())
+  slug               String         @unique
   title              String
-  body               String      @default("")
-  displayMode        String      @default("GRID")
-  status             String      @default("DRAFT")
+  body               String         @default("")
+  displayMode        String         @default("GRID")
+  status             String         @default("DRAFT")
   publishedAt        DateTime?
-  pinned             Boolean     @default(false)
-  metaTitle          String      @default("")
-  metaDescription    String      @default("")
+  pinned             Boolean        @default(false)
+  metaTitle          String         @default("")
+  metaDescription    String         @default("")
   telegramSourceUrl  String?
-  locale             String      @default("ru")
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
+  locale             String         @default("ru")
+  categoryId         String?
+  category           PostCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
   images             PostImage[]
 
   @@index([status, publishedAt])
+  @@index([categoryId])
+  @@index([status, pinned, publishedAt(sort: Desc)])
 }
 
 model PostImage {

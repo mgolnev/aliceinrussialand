@@ -1,4 +1,4 @@
-/** Событие для подтягивания первой страницы ленты в FeedClient (без перезагрузки вкладки). */
+/** Событие для подтягивания первой страницы ленты (HomePageClient / useFeedPage). */
 export const ALICE_FEED_REFRESH = "alice-feed-refresh";
 
 export type FeedRefreshDetail = { mode: "merge" | "replace" };

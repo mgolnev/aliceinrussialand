@@ -1,3 +1,6 @@
+"use client";
+
+import type { ReactNode } from "react";
 import Link from "next/link";
 
 type Props = {
@@ -7,6 +10,8 @@ type Props = {
   avatarUrl?: string | null;
   /** Подпись ссылки на /about (SiteSettings.contactsLabel) */
   contactsLabel?: string;
+  /** Вторая строка внутри той же липкой шапки (как папки в админке) */
+  stickyTray?: ReactNode;
 };
 
 export function SiteChrome({
@@ -14,6 +19,7 @@ export function SiteChrome({
   tagline,
   avatarUrl,
   contactsLabel = "Контакты",
+  stickyTray,
 }: Props) {
   return (
     <header className="sticky top-0 z-20 border-b border-stone-200/70 bg-[#fbfaf7]/90 backdrop-blur-xl">
@@ -55,6 +61,11 @@ export function SiteChrome({
           {contactsLabel.trim() || "Контакты"}
         </Link>
       </div>
+      {stickyTray != null ? (
+        <div className="mx-auto max-w-3xl px-3 pb-2.5 pt-0 sm:px-5">
+          {stickyTray}
+        </div>
+      ) : null}
     </header>
   );
 }

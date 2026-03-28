@@ -7,6 +7,7 @@ import {
   getProjectRoot,
   getPublicMediaDir,
 } from "./paths";
+import { POST_IMAGE_MAX_BYTES } from "./upload-limits";
 import {
   deleteSupabaseAboutPhotoFiles,
   deleteSupabaseAvatarFiles,
@@ -37,6 +38,10 @@ async function buildFinalBuffer(buffer: Buffer): Promise<{
   width: number;
   height: number;
 }> {
+  if (buffer.length > POST_IMAGE_MAX_BYTES) {
+    throw new Error("FILE_TOO_LARGE");
+  }
+
   const meta = await sharp(buffer).rotate().metadata();
   const width = meta.width ?? 0;
   const height = meta.height ?? 0;
@@ -59,6 +64,19 @@ async function buildFinalBuffer(buffer: Buffer): Promise<{
   return { data: buffer, width, height };
 }
 
+function encodePostVariantWebp(finalBuf: Buffer, w: number) {
+  return sharp(finalBuf)
+    .rotate()
+    .resize({
+      width: w,
+      height: w,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({ quality: 82, effort: 4 })
+    .toBuffer();
+}
+
 export async function processUpload(params: {
   buffer: Buffer;
   mime: string;
@@ -79,22 +97,18 @@ export async function processUpload(params: {
     const variants: VariantsMap = {};
     const publicBase = supabasePublicMediaBase();
 
-    for (const w of VARIANTS) {
-      const fname = `w${w}.webp`;
-      const objectPath = `${postId}/${imageId}/${fname}`;
-      const webpBuf = await sharp(finalBuf)
-        .rotate()
-        .resize({
-          width: w,
-          height: w,
-          fit: "inside",
-          withoutEnlargement: true,
-        })
-        .webp({ quality: 82, effort: 4 })
-        .toBuffer();
-      await uploadSupabaseFile(objectPath, webpBuf, "image/webp");
-      variants[`w${w}`] = `${publicBase}/${objectPath}`;
-    }
+    const webpBuffers = await Promise.all(
+      VARIANTS.map((w) => encodePostVariantWebp(finalBuf, w)),
+    );
+
+    await Promise.all(
+      VARIANTS.map(async (w, i) => {
+        const fname = `w${w}.webp`;
+        const objectPath = `${postId}/${imageId}/${fname}`;
+        await uploadSupabaseFile(objectPath, webpBuffers[i]!, "image/webp");
+        variants[`w${w}`] = `${publicBase}/${objectPath}`;
+      }),
+    );
 
     return { originalExt, width, height, variants };
   }
@@ -109,23 +123,20 @@ export async function processUpload(params: {
   const outDir = getPublicMediaDir(postId, imageId);
   await ensureDir(outDir);
 
+  const webpBuffers = await Promise.all(
+    VARIANTS.map((w) => encodePostVariantWebp(finalBuf, w)),
+  );
+
   const variants: VariantsMap = {};
 
-  for (const w of VARIANTS) {
-    const fname = `w${w}.webp`;
-    const fpath = path.join(outDir, fname);
-    await sharp(finalBuf)
-      .rotate()
-      .resize({
-        width: w,
-        height: w,
-        fit: "inside",
-        withoutEnlargement: true,
-      })
-      .webp({ quality: 82, effort: 4 })
-      .toFile(fpath);
-    variants[`w${w}`] = `/media/${postId}/${imageId}/${fname}`;
-  }
+  await Promise.all(
+    VARIANTS.map(async (w, i) => {
+      const fname = `w${w}.webp`;
+      const fpath = path.join(outDir, fname);
+      await fs.writeFile(fpath, webpBuffers[i]!);
+      variants[`w${w}`] = `/media/${postId}/${imageId}/${fname}`;
+    }),
+  );
 
   return { originalExt, width, height, variants };
 }
@@ -162,21 +173,28 @@ export async function processAvatarUpload(params: {
 
   if (isSupabaseMediaEnabled()) {
     const publicBase = supabasePublicMediaBase();
-    for (const side of AVATAR_VARIANTS) {
-      const fname = `w${side}.webp`;
-      const objectPath = `${AVATAR_PUBLIC_SUBDIR}/${fname}`;
-      const webpBuf = await sharp(work)
-        .rotate()
-        .resize({
-          width: side,
-          height: side,
-          fit: "cover",
-        })
-        .webp({ quality: 85, effort: 4 })
-        .toBuffer();
-      await uploadSupabaseFile(objectPath, webpBuf, "image/webp");
-      variants[`w${side}`] = `${publicBase}/${objectPath}`;
-    }
+    const webpBuffers = await Promise.all(
+      AVATAR_VARIANTS.map((side) =>
+        sharp(work)
+          .rotate()
+          .resize({
+            width: side,
+            height: side,
+            fit: "cover",
+          })
+          .webp({ quality: 85, effort: 4 })
+          .toBuffer(),
+      ),
+    );
+
+    await Promise.all(
+      AVATAR_VARIANTS.map(async (side, i) => {
+        const fname = `w${side}.webp`;
+        const objectPath = `${AVATAR_PUBLIC_SUBDIR}/${fname}`;
+        await uploadSupabaseFile(objectPath, webpBuffers[i]!, "image/webp");
+        variants[`w${side}`] = `${publicBase}/${objectPath}`;
+      }),
+    );
     return { variants };
   }
 
@@ -188,20 +206,28 @@ export async function processAvatarUpload(params: {
   );
   await ensureDir(outDir);
 
-  for (const side of AVATAR_VARIANTS) {
-    const fname = `w${side}.webp`;
-    const fpath = path.join(outDir, fname);
-    await sharp(work)
-      .rotate()
-      .resize({
-        width: side,
-        height: side,
-        fit: "cover",
-      })
-      .webp({ quality: 85, effort: 4 })
-      .toFile(fpath);
-    variants[`w${side}`] = `/media/${AVATAR_PUBLIC_SUBDIR}/${fname}`;
-  }
+  const webpBuffers = await Promise.all(
+    AVATAR_VARIANTS.map((side) =>
+      sharp(work)
+        .rotate()
+        .resize({
+          width: side,
+          height: side,
+          fit: "cover",
+        })
+        .webp({ quality: 85, effort: 4 })
+        .toBuffer(),
+    ),
+  );
+
+  await Promise.all(
+    AVATAR_VARIANTS.map(async (side, i) => {
+      const fname = `w${side}.webp`;
+      const fpath = path.join(outDir, fname);
+      await fs.writeFile(fpath, webpBuffers[i]!);
+      variants[`w${side}`] = `/media/${AVATAR_PUBLIC_SUBDIR}/${fname}`;
+    }),
+  );
 
   return { variants };
 }
@@ -233,33 +259,48 @@ export async function processAboutPhotoUpload(params: {
 
   if (isSupabaseMediaEnabled()) {
     const publicBase = supabasePublicMediaBase();
-    for (const w of ABOUT_PHOTO_VARIANTS) {
-      const fname = `w${w}.webp`;
-      const objectPath = `${ABOUT_PHOTO_SUBDIR}/${fname}`;
-      const webpBuf = await sharp(work)
-        .rotate()
-        .resize({ width: w, withoutEnlargement: true })
-        .webp({ quality: 85, effort: 4 })
-        .toBuffer();
-      await uploadSupabaseFile(objectPath, webpBuf, "image/webp");
-      variants[`w${w}`] = `${publicBase}/${objectPath}`;
-    }
+    const webpBuffers = await Promise.all(
+      ABOUT_PHOTO_VARIANTS.map((w) =>
+        sharp(work)
+          .rotate()
+          .resize({ width: w, withoutEnlargement: true })
+          .webp({ quality: 85, effort: 4 })
+          .toBuffer(),
+      ),
+    );
+
+    await Promise.all(
+      ABOUT_PHOTO_VARIANTS.map(async (w, i) => {
+        const fname = `w${w}.webp`;
+        const objectPath = `${ABOUT_PHOTO_SUBDIR}/${fname}`;
+        await uploadSupabaseFile(objectPath, webpBuffers[i]!, "image/webp");
+        variants[`w${w}`] = `${publicBase}/${objectPath}`;
+      }),
+    );
     return { variants };
   }
 
   const outDir = path.join(getProjectRoot(), "public", "media", ABOUT_PHOTO_SUBDIR);
   await ensureDir(outDir);
 
-  for (const w of ABOUT_PHOTO_VARIANTS) {
-    const fname = `w${w}.webp`;
-    const fpath = path.join(outDir, fname);
-    await sharp(work)
-      .rotate()
-      .resize({ width: w, withoutEnlargement: true })
-      .webp({ quality: 85, effort: 4 })
-      .toFile(fpath);
-    variants[`w${w}`] = `/media/${ABOUT_PHOTO_SUBDIR}/${fname}`;
-  }
+  const webpBuffers = await Promise.all(
+    ABOUT_PHOTO_VARIANTS.map((w) =>
+      sharp(work)
+        .rotate()
+        .resize({ width: w, withoutEnlargement: true })
+        .webp({ quality: 85, effort: 4 })
+        .toBuffer(),
+    ),
+  );
+
+  await Promise.all(
+    ABOUT_PHOTO_VARIANTS.map(async (w, i) => {
+      const fname = `w${w}.webp`;
+      const fpath = path.join(outDir, fname);
+      await fs.writeFile(fpath, webpBuffers[i]!);
+      variants[`w${w}`] = `/media/${ABOUT_PHOTO_SUBDIR}/${fname}`;
+    }),
+  );
 
   return { variants };
 }

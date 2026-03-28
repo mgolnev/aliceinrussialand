@@ -1,10 +1,10 @@
+import { cache } from "react";
 import type { SiteSettings as SiteSettingsRow } from "@prisma/client";
 import { prisma } from "./prisma";
-
-/** Во время `next build` Next поднимает сотни RSC-вызовов параллельно — пул Supabase не выдерживает. */
-function isNextProductionBuild(): boolean {
-  return process.env.NEXT_PHASE === "phase-production-build";
-}
+import {
+  defaultSiteSettings,
+  querySiteSettingsRow,
+} from "./site-settings-db";
 
 export type SocialLink = {
   id: string;
@@ -13,34 +13,8 @@ export type SocialLink = {
   kind: "telegram" | "behance" | "instagram" | "email" | "other";
 };
 
-/** Дефолты как в schema.prisma — без обращения к БД (важно для параллельного SSG на сборке). */
-function defaultSiteSettings(): SiteSettingsRow {
-  return {
-    id: 1,
-    displayName: "Иллюстратор",
-    tagline: "",
-    bio: "",
-    aboutMarkdown: "",
-    avatarMediaPath: null,
-    aboutPhotoPath: null,
-    socialLinksJson: "[]",
-    telegramChannelUser: "",
-    contactsLabel: "Контакты",
-    defaultLocale: "ru",
-    siteUrl: "http://localhost:3000",
-    plausibleDomain: "",
-    yandexMetrikaId: "",
-    updatedAt: new Date(0),
-  };
-}
-
-export async function getSiteSettings(): Promise<SiteSettingsRow> {
-  if (isNextProductionBuild()) {
-    return defaultSiteSettings();
-  }
-  const row = await prisma.siteSettings.findUnique({ where: { id: 1 } });
-  return row ?? defaultSiteSettings();
-}
+/** Одно чтение настроек на запрос React (RSC): дедуп в layout + page + generateMetadata. */
+export const getSiteSettings = cache(querySiteSettingsRow);
 
 /** Создать строку настроек при отсутствии — только перед записями (admin API). */
 export async function ensureSiteSettings(): Promise<SiteSettingsRow> {
@@ -95,3 +69,5 @@ export function parseSocialLinks(json: string): SocialLink[] {
     return [];
   }
 }
+
+export { defaultSiteSettings };

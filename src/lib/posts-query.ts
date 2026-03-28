@@ -1,5 +1,8 @@
+import { cache } from "react";
 import { prisma } from "./prisma";
 import { POST_STATUS } from "./constants";
+import { derivePostTitle, extractFirstSentence } from "./post-text";
+import type { PostCarouselItem } from "@/types/feed";
 
 const imageSelect = {
   id: true,
@@ -33,9 +36,100 @@ export async function getPublishedPostBySlug(slug: string) {
     where: { slug, status: POST_STATUS.PUBLISHED },
     include: {
       images: { orderBy: { sortOrder: "asc" }, select: imageSelect },
+      category: { select: { id: true, name: true, slug: true } },
     },
   });
 }
+
+/** Дедуп вызова в `generateMetadata` и `PostPage` в одном запросе. */
+export const getPublishedPostBySlugCached = cache(getPublishedPostBySlug);
+
+const carouselOrderBy = [
+  { pinned: "desc" as const },
+  { publishedAt: "desc" as const },
+  { id: "desc" as const },
+];
+
+const firstImageInclude = {
+  orderBy: { sortOrder: "asc" as const },
+  take: 1,
+  select: imageSelect,
+} as const;
+
+function mapPostToCarouselItem(p: {
+  slug: string;
+  title: string;
+  body: string;
+  images: Array<{
+    alt: string;
+    variantsJson: string;
+    width: number | null;
+    height: number | null;
+  }>;
+}): PostCarouselItem {
+  const im = p.images[0];
+  const variants = im ? parseVariants(im.variantsJson) : {};
+  const title = derivePostTitle(p.title, p.body);
+  const fromSentence = extractFirstSentence(p.body).trim();
+  const preview =
+    fromSentence ||
+    p.body.replace(/\s+/g, " ").trim().slice(0, 120) ||
+    "";
+  return {
+    slug: p.slug,
+    title,
+    preview,
+    variants,
+    width: im?.width ?? null,
+    height: im?.height ?? null,
+    alt: (im?.alt?.trim() ? im.alt : title) || title,
+  };
+}
+
+/**
+ * Карусель после поста: до 5 публикаций из той же категории, затем остальные
+ * опубликованные (как в ленте: закреплённые и новее выше), без текущего поста.
+ */
+export async function getPostCarouselPeers(
+  currentPostId: string,
+  categoryId: string | null,
+  opts?: { categoryFirst?: number; totalLimit?: number },
+): Promise<PostCarouselItem[]> {
+  const categoryFirst = opts?.categoryFirst ?? 5;
+  const totalLimit = opts?.totalLimit ?? 16;
+
+  const sameCategory = categoryId
+    ? await prisma.post.findMany({
+        where: {
+          status: POST_STATUS.PUBLISHED,
+          id: { not: currentPostId },
+          categoryId,
+        },
+        orderBy: carouselOrderBy,
+        take: categoryFirst,
+        include: { images: firstImageInclude },
+      })
+    : [];
+
+  const excludeIds = [currentPostId, ...sameCategory.map((p) => p.id)];
+  const remaining = Math.max(0, totalLimit - sameCategory.length);
+  const general =
+    remaining > 0
+      ? await prisma.post.findMany({
+          where: {
+            status: POST_STATUS.PUBLISHED,
+            id: { notIn: excludeIds },
+          },
+          orderBy: carouselOrderBy,
+          take: remaining,
+          include: { images: firstImageInclude },
+        })
+      : [];
+
+  return [...sameCategory, ...general].map(mapPostToCarouselItem);
+}
+
+export const getPostCarouselPeersCached = cache(getPostCarouselPeers);
 
 export function parseVariants(json: string): Record<string, string> {
   try {

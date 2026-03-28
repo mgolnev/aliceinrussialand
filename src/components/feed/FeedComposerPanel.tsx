@@ -18,6 +18,11 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { MediaGrid } from "@/components/feed/MediaGrid";
 import {
+  handleMobileEditableBlur,
+  handleMobileEditableFocus,
+} from "@/lib/mobile-editable-scroll";
+import { pillTabClass } from "@/lib/pill-tab-styles";
+import {
   Image as ImageIcon,
   Send,
   Loader2,
@@ -102,6 +107,10 @@ type Props = {
   canSubmit: boolean;
   draftLabel?: string;
   publishLabel?: string;
+  /** Пилюли выбора категории (лента / правка в карточке) */
+  categories?: Array<{ id: string; name: string; slug: string }>;
+  postCategoryId?: string | null;
+  onPostCategoryChange?: (categoryId: string | null) => void;
 };
 
 export function FeedComposerPanel({
@@ -124,6 +133,9 @@ export function FeedComposerPanel({
   canSubmit,
   draftLabel = "В черновик",
   publishLabel = "Опубликовать",
+  categories,
+  postCategoryId,
+  onPostCategoryChange,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sensors = useSensors(
@@ -168,9 +180,45 @@ export function FeedComposerPanel({
         <textarea
           value={body}
           onChange={(e) => onBodyChange(e.target.value)}
+          onFocus={handleMobileEditableFocus}
+          onBlur={handleMobileEditableBlur}
           placeholder={placeholder}
-          className="min-h-[120px] w-full min-w-0 resize-none border-none bg-transparent p-0 text-[16px] leading-relaxed text-stone-900 outline-none placeholder:text-stone-400 sm:min-h-[160px]"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck
+          className="min-h-[120px] w-full min-w-0 resize-none border-none bg-transparent p-0 text-base leading-relaxed text-stone-900 outline-none placeholder:text-stone-400 sm:min-h-[160px]"
+          style={{ fontSize: "max(16px, 1rem)" }}
         />
+
+        {categories &&
+        categories.length > 0 &&
+        onPostCategoryChange &&
+        postCategoryId !== undefined ? (
+          <div className="mt-3 min-w-0">
+            <p className="mb-1.5 text-xs font-medium text-stone-500">
+              Категория
+            </p>
+            <div className="flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden">
+              <button
+                type="button"
+                className={pillTabClass(!postCategoryId)}
+                onClick={() => onPostCategoryChange(null)}
+              >
+                Без категории
+              </button>
+              {categories.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={pillTabClass(postCategoryId === c.id)}
+                  onClick={() => onPostCategoryChange(c.id)}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-3 flex w-full min-w-0 flex-nowrap items-center justify-between gap-2 border-t border-stone-100 pt-3 sm:mt-4 sm:pt-3.5">
           <button

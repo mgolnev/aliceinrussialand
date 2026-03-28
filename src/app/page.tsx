@@ -1,15 +1,21 @@
 import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { getFeedPage } from "@/lib/feed-server";
-import { SiteChrome, SiteFooter } from "@/components/site/SiteChrome";
-import { FeedClient } from "@/components/feed/FeedClient";
+import { SiteFooter } from "@/components/site/SiteChrome";
+import { HomePageClient } from "@/components/feed/HomePageClient";
 import { FeedScrollRestore } from "@/components/feed/FeedScrollRestore";
-import { QuickComposer } from "@/components/site/QuickComposer";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 import { cookies } from "next/headers";
 
-export default async function HomePage() {
+type HomeProps = { searchParams: Promise<{ category?: string }> };
+
+export default async function HomePage({ searchParams }: HomeProps) {
+  const sp = await searchParams;
+  const categoryParam = sp.category?.trim() || undefined;
   const settings = await getSiteSettings();
-  const { items, nextCursor } = await getFeedPage();
+  const { items, nextCursor, categories } = await getFeedPage(
+    undefined,
+    categoryParam,
+  );
   const siteUrl =
     settings.siteUrl ||
     process.env.NEXT_PUBLIC_SITE_URL ||
@@ -27,25 +33,20 @@ export default async function HomePage() {
   return (
     <>
       <FeedScrollRestore />
-      <SiteChrome
+      <HomePageClient
         displayName={settings.displayName}
         tagline={settings.tagline}
         avatarUrl={parseAvatarUrl(settings.avatarMediaPath)}
         contactsLabel={settings.contactsLabel}
+        initialItems={items}
+        initialNext={nextCursor}
+        initialCategorySlug={categoryParam ?? null}
+        categories={categories}
+        plausibleDomain={plausible}
+        yandexMetrikaId={yandexMetrikaId}
+        siteUrl={siteUrl}
+        canManage={isAdmin}
       />
-      <div className="mx-auto min-w-0 max-w-3xl px-3 py-4 sm:px-5 sm:py-10">
-        {isAdmin ? <QuickComposer /> : null}
-        <div className="mt-4 sm:mt-0">
-          <FeedClient
-            initialItems={items}
-            initialNext={nextCursor}
-            plausibleDomain={plausible}
-            yandexMetrikaId={yandexMetrikaId}
-            siteUrl={siteUrl}
-            canManage={isAdmin}
-          />
-        </div>
-      </div>
       <SiteFooter />
     </>
   );

@@ -1,24 +1,91 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "./prisma";
 import { POST_STATUS } from "./constants";
 import { parseVariants } from "./posts-query";
-import type { FeedPost } from "@/types/feed";
+import type { FeedCategory, FeedPost } from "@/types/feed";
+import { CACHE_TAG_FEED_CATEGORIES } from "./cache-tags";
+import { isNextProductionBuild } from "./site-settings-db";
 
 const take = 8;
 
-function isNextProductionBuild(): boolean {
-  return process.env.NEXT_PHASE === "phase-production-build";
+/** После смены схемы без `prisma generate` делегат отсутствует — не падаем. */
+function postCategoryDb() {
+  return (
+    prisma as unknown as {
+      postCategory?: {
+        findMany: (args: {
+          orderBy: { sortOrder: "asc" };
+          select: {
+            id: true;
+            name: true;
+            slug: true;
+            sortOrder: true;
+          };
+        }) => Promise<FeedCategory[]>;
+        findUnique: (args: {
+          where: { slug: string };
+          select: { id: true };
+        }) => Promise<{ id: string } | null>;
+      };
+    }
+  ).postCategory;
 }
 
-export async function getFeedPage(cursor?: string): Promise<{
+export async function listFeedCategories(): Promise<FeedCategory[]> {
+  if (isNextProductionBuild()) {
+    return [];
+  }
+  const pc = postCategoryDb();
+  if (!pc) {
+    console.warn(
+      "[prisma] Нет модели postCategory в клиенте. Выполните: npx prisma generate и перезапустите сервер.",
+    );
+    return [];
+  }
+  return unstable_cache(
+    async () => {
+      const inner = postCategoryDb();
+      if (!inner) return [];
+      return inner.findMany({
+        orderBy: { sortOrder: "asc" },
+        select: { id: true, name: true, slug: true, sortOrder: true },
+      });
+    },
+    ["list-feed-categories-v1"],
+    { tags: [CACHE_TAG_FEED_CATEGORIES], revalidate: 3600 },
+  )();
+}
+
+export async function getFeedPage(
+  cursor?: string,
+  categorySlug?: string | null,
+): Promise<{
   items: FeedPost[];
   nextCursor: string | null;
+  categories: FeedCategory[];
 }> {
   if (isNextProductionBuild()) {
-    return { items: [], nextCursor: null };
+    return { items: [], nextCursor: null, categories: [] };
+  }
+
+  const categories = await listFeedCategories();
+  let filterCategoryId: string | undefined;
+  if (categorySlug?.trim()) {
+    const pc = postCategoryDb();
+    if (pc) {
+      const row = await pc.findUnique({
+        where: { slug: categorySlug.trim() },
+        select: { id: true },
+      });
+      if (row) filterCategoryId = row.id;
+    }
   }
 
   const posts = await prisma.post.findMany({
-    where: { status: POST_STATUS.PUBLISHED },
+    where: {
+      status: POST_STATUS.PUBLISHED,
+      ...(filterCategoryId ? { categoryId: filterCategoryId } : {}),
+    },
     orderBy: [{ pinned: "desc" }, { publishedAt: "desc" }, { id: "desc" }],
     take: take + 1,
     ...(cursor
@@ -29,6 +96,7 @@ export async function getFeedPage(cursor?: string): Promise<{
       : {}),
     include: {
       images: { orderBy: { sortOrder: "asc" } },
+      category: { select: { id: true, name: true, slug: true } },
     },
   });
 
@@ -44,6 +112,8 @@ export async function getFeedPage(cursor?: string): Promise<{
     displayMode: p.displayMode === "STACK" ? "STACK" : "GRID",
     publishedAt: p.publishedAt?.toISOString() ?? null,
     pinned: p.pinned,
+    categoryId: p.categoryId,
+    category: p.category,
     images: p.images.map((im) => ({
       id: im.id,
       caption: im.caption,
@@ -54,5 +124,5 @@ export async function getFeedPage(cursor?: string): Promise<{
     })),
   }));
 
-  return { items, nextCursor };
+  return { items, nextCursor, categories };
 }

@@ -114,8 +114,7 @@ export function ImageLightbox({
       Object.assign(body.style, prevBody);
       body.style.paddingRight = "";
       body.style.touchAction = "";
-      /* globals.css задаёт html { scroll-behavior: smooth } — без сброса
-         scrollTo после закрытия лайтбокса визуально «проезжает» ленту. */
+      /* На всякий случай: инлайн smooth на html ломает мгновенный возврат скролла. */
       const prevInlineScrollBehavior = html.style.scrollBehavior;
       html.style.scrollBehavior = "auto";
       window.scrollTo(0, scrollY);

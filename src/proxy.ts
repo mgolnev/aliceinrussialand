@@ -7,6 +7,7 @@ import {
   updateSupabaseSession,
 } from "@/utils/supabase/proxy";
 import { isSupabaseBrowserAuthConfigured } from "@/utils/supabase/env";
+import { shouldAttemptSupabaseSessionRefresh } from "@/lib/proxy-session-policy";
 
 function getSecret() {
   const s = process.env.SESSION_SECRET;
@@ -30,12 +31,24 @@ async function isAdmin(request: NextRequest) {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const sessionResponse = isSupabaseBrowserAuthConfigured()
-    ? await updateSupabaseSession(request)
-    : NextResponse.next({ request });
+  const cookieNames = request.cookies.getAll().map((c) => c.name);
+  const sessionResponse =
+    shouldAttemptSupabaseSessionRefresh(
+      pathname,
+      cookieNames,
+      isSupabaseBrowserAuthConfigured(),
+    )
+      ? await updateSupabaseSession(request)
+      : NextResponse.next({ request });
 
   if (pathname.startsWith("/admin/login")) {
     return sessionResponse;
+  }
+
+  /** Сразу на ленту, без кадра с оболочкой админки */
+  if (pathname === "/admin" && (await isAdmin(request))) {
+    const home = NextResponse.redirect(new URL("/", request.url));
+    return mergeResponseCookies(sessionResponse, home);
   }
 
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
@@ -59,7 +72,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Обход статики и типичных публичных файлов; остальное — Supabase session refresh + админка.
+     * Как раньше: весь документный трафик; дорогой вызов Supabase делаем только по policy внутри proxy.
      */
     "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],

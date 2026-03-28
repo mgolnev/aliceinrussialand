@@ -8,16 +8,15 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ResponsiveImage } from "@/components/ui/ResponsiveImage";
 import { PostImpression } from "./PostImpression";
-import type { FeedPost } from "@/types/feed";
+import type { FeedCategory, FeedPost } from "@/types/feed";
 import { MediaGrid } from "./MediaGrid";
 import { ImageLightbox } from "./ImageLightbox";
-import { FeedComposerPanel } from "@/components/feed/FeedComposerPanel";
 import { dispatchFeedRefreshMerge, dispatchFeedRefreshReplace } from "@/lib/feed-refresh";
-import { saveFeedScrollPosition } from "@/lib/feed-scroll";
 import {
   MoreHorizontal,
   Share2,
@@ -27,12 +26,31 @@ import {
   Trash2,
   X,
   ArrowLeft,
+  Pin,
+  PinOff,
 } from "lucide-react";
+
+const FeedComposerPanelLazy = dynamic(
+  () =>
+    import("./FeedComposerPanel").then((m) => ({
+      default: m.FeedComposerPanel,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="mx-3 mb-3 h-40 animate-pulse rounded-2xl bg-stone-100 sm:mx-5"
+        aria-hidden
+      />
+    ),
+  },
+);
 
 export type { FeedPost };
 
 type Props = {
   post: FeedPost;
+  categories?: FeedCategory[];
   plausibleDomain?: string;
   yandexMetrikaId?: string;
   siteUrl: string;
@@ -57,6 +75,7 @@ function formatDate(iso: string | null) {
 
 export function PostCard({
   post,
+  categories = [],
   plausibleDomain,
   yandexMetrikaId,
   siteUrl,
@@ -72,6 +91,10 @@ export function PostCard({
   const [editBody, setEditBody] = useState(post.body);
   const [editImages, setEditImages] = useState(post.images);
   const [editMessage, setEditMessage] = useState<string | null>(null);
+  const [editCategoryId, setEditCategoryId] = useState<string | null>(
+    post.categoryId,
+  );
+  const [pinnedUi, setPinnedUi] = useState(post.pinned);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const menuPanelRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(
@@ -91,6 +114,8 @@ export function PostCard({
   useEffect(() => {
     setEditBody(post.body);
     setEditImages(post.images);
+    setEditCategoryId(post.categoryId);
+    setPinnedUi(post.pinned);
   }, [post]);
 
   function updateMenuPosition() {
@@ -185,11 +210,28 @@ export function PostCard({
     }
   }
 
+  async function togglePin() {
+    const next = !pinnedUi;
+    setWorking(true);
+    const res = await fetch(`/api/admin/posts/${post.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pinned: next }),
+    });
+    setWorking(false);
+    if (!res.ok) return;
+    setPinnedUi(next);
+    setMenuOpen(false);
+    dispatchFeedRefreshMerge();
+    router.refresh();
+  }
+
   function cancelEdit() {
     setEditMode(false);
     setEditMessage(null);
     setEditBody(post.body);
     setEditImages(post.images);
+    setEditCategoryId(post.categoryId);
   }
 
   async function saveEdit(status: "DRAFT" | "PUBLISHED") {
@@ -200,6 +242,7 @@ export function PostCard({
       body: editBody,
       displayMode: "GRID",
       status,
+      categoryId: editCategoryId,
     };
     if (editImages.length > 0) {
       payload.images = editImages.map((image, index) => ({
@@ -279,10 +322,14 @@ export function PostCard({
         ? "px-3 sm:px-5 pt-3 pb-0 sm:pt-4"
         : "px-3 sm:px-5 py-3 sm:py-5";
 
+  /** В режиме редактирования `overflow-hidden` на iOS ломает scrollIntoView и клавиатуру. */
+  const articleClip =
+    canManage && editMode ? "overflow-x-hidden" : "overflow-hidden";
+
   return (
     <>
       <article
-        className={`relative min-w-0 scroll-mt-24 overflow-hidden rounded-[24px] border border-stone-200/80 bg-white/95 shadow-[0_8px_30px_-10px_rgba(60,44,29,0.15)] backdrop-blur-sm sm:rounded-[30px] ${articlePad}`}
+        className={`relative min-w-0 scroll-mt-24 ${articleClip} rounded-[24px] border border-stone-200/80 bg-white/95 shadow-[0_8px_30px_-10px_rgba(60,44,29,0.15)] backdrop-blur-sm sm:rounded-[30px] ${articlePad}`}
       >
         {plausibleDomain || yandexMetrikaId?.trim() ? (
           <PostImpression
@@ -308,10 +355,10 @@ export function PostCard({
               ) : (
                 <span className="text-amber-600">Черновик</span>
               )}
-              {post.pinned ? (
+              {pinnedUi ? (
                 <span className="h-1 w-1 rounded-full bg-stone-300" />
               ) : null}
-              {post.pinned ? (
+              {pinnedUi ? (
                 <span className="text-amber-700">Закреплено</span>
               ) : null}
             </div>
@@ -326,6 +373,8 @@ export function PostCard({
             {standalone ? (
               <Link
                 href="/"
+                scroll={false}
+                aria-label="Назад"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90"
               >
                 <ArrowLeft size={18} />
@@ -363,35 +412,8 @@ export function PostCard({
                       }}
                       role="menu"
                     >
-                      {!standalone ? (
-                        <Link
-                          href={postUrl}
-                          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-stone-700 hover:bg-stone-50 active:bg-stone-100"
-                          onClick={() => {
-                            saveFeedScrollPosition();
-                            setMenuOpen(false);
-                          }}
-                          role="menuitem"
-                        >
-                          <ExternalLink size={16} className="text-stone-400" />
-                          Открыть пост
-                        </Link>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100"
-                        role="menuitem"
-                        onClick={() => {
-                          sharePost();
-                          setMenuOpen(false);
-                        }}
-                      >
-                        <Share2 size={16} className="text-stone-400" />
-                        Поделиться
-                      </button>
                       {canManage ? (
                         <>
-                          <div className="my-1.5 h-px bg-stone-100" />
                           <button
                             type="button"
                             className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100"
@@ -418,6 +440,20 @@ export function PostCard({
                           <button
                             type="button"
                             disabled={working}
+                            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
+                            role="menuitem"
+                            onClick={() => void togglePin()}
+                          >
+                            {pinnedUi ? (
+                              <PinOff size={16} className="text-stone-400" />
+                            ) : (
+                              <Pin size={16} className="text-stone-400" />
+                            )}
+                            {pinnedUi ? "Открепить" : "Закрепить"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={working}
                             className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-red-600 hover:bg-red-50 active:bg-red-100 disabled:opacity-50"
                             role="menuitem"
                             onClick={() => void deletePost()}
@@ -425,8 +461,32 @@ export function PostCard({
                             <Trash2 size={16} className="text-red-400" />
                             Удалить
                           </button>
+                          <div className="my-1.5 h-px bg-stone-100" />
                         </>
                       ) : null}
+                      {!standalone ? (
+                        <Link
+                          href={postUrl}
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-stone-700 hover:bg-stone-50 active:bg-stone-100"
+                          onClick={() => setMenuOpen(false)}
+                          role="menuitem"
+                        >
+                          <ExternalLink size={16} className="text-stone-400" />
+                          Открыть пост
+                        </Link>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100"
+                        role="menuitem"
+                        onClick={() => {
+                          sharePost();
+                          setMenuOpen(false);
+                        }}
+                      >
+                        <Share2 size={16} className="text-stone-400" />
+                        Поделиться
+                      </button>
                     </div>,
                     document.body,
                   )
@@ -438,7 +498,7 @@ export function PostCard({
 
         {canManage && editMode ? (
           <div className="px-3 pb-2 pt-2 sm:px-5 sm:pb-2 sm:pt-3">
-          <FeedComposerPanel
+          <FeedComposerPanelLazy
             variant="embedded"
             headerLeft=""
             body={editBody}
@@ -466,6 +526,21 @@ export function PostCard({
               editBody.trim().length > 0 || editImages.length > 0
             }
             publishLabel={post.publishedAt ? "Сохранить" : "Опубликовать"}
+            categories={
+              categories.length > 0
+                ? categories.map((c) => ({
+                    id: c.id,
+                    name: c.name,
+                    slug: c.slug,
+                  }))
+                : undefined
+            }
+            postCategoryId={
+              categories.length > 0 ? editCategoryId : undefined
+            }
+            onPostCategoryChange={
+              categories.length > 0 ? setEditCategoryId : undefined
+            }
           />
           </div>
         ) : (
@@ -509,6 +584,8 @@ export function PostCard({
                       variants={im.variants}
                       alt={im.alt || post.title}
                       caption={im.caption}
+                      width={im.width}
+                      height={im.height}
                       priority={i === 0}
                       className="rounded-xl sm:rounded-[14px]"
                     />

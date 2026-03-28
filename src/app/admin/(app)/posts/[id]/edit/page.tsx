@@ -12,10 +12,16 @@ type PageProps = { params: Promise<{ id: string }> };
 
 export default async function EditPostPage({ params }: PageProps) {
   const { id } = await params;
-  const post = await prisma.post.findUnique({
-    where: { id },
-    include: { images: { orderBy: { sortOrder: "asc" } } },
-  });
+  const [post, categories] = await Promise.all([
+    prisma.post.findUnique({
+      where: { id },
+      include: { images: { orderBy: { sortOrder: "asc" } } },
+    }),
+    prisma.postCategory.findMany({
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, name: true, slug: true },
+    }),
+  ]);
   if (!post) notFound();
 
   const settings = await getSiteSettings();
@@ -28,6 +34,8 @@ export default async function EditPostPage({ params }: PageProps) {
     caption: im.caption,
     alt: im.alt,
     variants: parseVariants(im.variantsJson),
+    width: im.width,
+    height: im.height,
   }));
 
   const initial: EditorPost = {
@@ -42,8 +50,11 @@ export default async function EditPostPage({ params }: PageProps) {
     metaDescription: post.metaDescription,
     telegramSourceUrl: post.telegramSourceUrl,
     locale: post.locale,
+    categoryId: post.categoryId,
     images,
   };
 
-  return <PostEditor initial={initial} siteUrl={siteUrl} />;
+  return (
+    <PostEditor initial={initial} siteUrl={siteUrl} categories={categories} />
+  );
 }

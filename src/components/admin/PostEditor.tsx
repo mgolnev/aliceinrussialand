@@ -23,7 +23,12 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { POST_STATUS } from "@/lib/constants";
+import {
+  handleMobileEditableBlur,
+  handleMobileEditableFocus,
+} from "@/lib/mobile-editable-scroll";
 import { MediaGrid } from "@/components/feed/MediaGrid";
+import { pillTabClass } from "@/lib/pill-tab-styles";
 
 export type EditorImage = {
   id: string;
@@ -47,12 +52,14 @@ export type EditorPost = {
   metaDescription: string;
   telegramSourceUrl: string | null;
   locale: string;
+  categoryId: string | null;
   images: EditorImage[];
 };
 
 type Props = {
   initial: EditorPost;
   siteUrl: string;
+  categories: Array<{ id: string; name: string; slug: string }>;
 };
 
 function makeSlug(value: string) {
@@ -77,6 +84,7 @@ function normalizeEditorPost(data: EditorPost & { images: EditorImage[] }): Edit
     metaDescription: data.metaDescription,
     telegramSourceUrl: data.telegramSourceUrl,
     locale: data.locale,
+    categoryId: data.categoryId ?? null,
     images: [],
   };
 }
@@ -92,6 +100,7 @@ function draftSnapshot(post: EditorPost, images: EditorImage[]) {
     metaDescription: post.metaDescription,
     telegramSourceUrl: post.telegramSourceUrl,
     locale: post.locale,
+    categoryId: post.categoryId,
     images: images.map((im, index) => ({
       id: im.id,
       caption: im.caption,
@@ -158,10 +167,12 @@ function SortableRow({
           <summary className="cursor-pointer select-none">SEO и описание фото</summary>
           <div className="mt-2 space-y-2">
             <input
-              className="w-full rounded-xl border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-400"
+              className="w-full rounded-xl border border-stone-300 px-3 py-2 text-base outline-none focus:border-stone-400 sm:text-sm"
               placeholder="Alt для SEO"
               value={image.alt}
               onChange={(e) => onAlt(e.target.value)}
+              onFocus={handleMobileEditableFocus}
+              onBlur={handleMobileEditableBlur}
             />
             <button
               type="button"
@@ -177,7 +188,7 @@ function SortableRow({
   );
 }
 
-export function PostEditor({ initial, siteUrl }: Props) {
+export function PostEditor({ initial, siteUrl, categories }: Props) {
   const router = useRouter();
   const [post, setPost] = useState(initial);
   const [images, setImages] = useState(
@@ -275,6 +286,7 @@ export function PostEditor({ initial, siteUrl }: Props) {
           telegramSourceUrl: post.telegramSourceUrl,
           pinned: post.pinned,
           locale: post.locale,
+          categoryId: post.categoryId,
         },
         images,
         {
@@ -389,6 +401,7 @@ export function PostEditor({ initial, siteUrl }: Props) {
                   telegramSourceUrl: post.telegramSourceUrl,
                   pinned: post.pinned,
                   locale: post.locale,
+                  categoryId: post.categoryId,
                 },
                 undefined,
                 {
@@ -422,7 +435,7 @@ export function PostEditor({ initial, siteUrl }: Props) {
             {showPreview ? "Скрыть предпросмотр" : "Предпросмотр"}
           </button>
           <Link
-            href="/admin"
+            href="/admin/posts"
             className="rounded-full px-3 py-2 text-sm text-stone-600 hover:bg-white hover:text-stone-900"
           >
             К списку
@@ -444,12 +457,14 @@ export function PostEditor({ initial, siteUrl }: Props) {
           <label className="block text-sm font-medium">
             Slug (URL)
             <input
-              className="mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3 font-mono text-sm outline-none focus:border-stone-400"
+              className="mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3 font-mono text-base outline-none focus:border-stone-400 sm:text-sm"
               value={post.slug}
               onChange={(e) => {
                 setSlugTouched(true);
                 setPost((p) => ({ ...p, slug: e.target.value }));
               }}
+              onFocus={handleMobileEditableFocus}
+              onBlur={handleMobileEditableBlur}
             />
             <p className="mt-1 text-xs text-stone-500">
               Если не редактировать вручную, адрес будет обновляться по заголовку.
@@ -458,12 +473,47 @@ export function PostEditor({ initial, siteUrl }: Props) {
           <label className="block text-sm font-medium">
             Текст поста
             <textarea
-              className="mt-1 min-h-[260px] w-full rounded-[24px] border border-stone-300 px-4 py-4 leading-7 outline-none focus:border-stone-400"
+              className="mt-1 min-h-[260px] w-full rounded-[24px] border border-stone-300 px-4 py-4 text-base leading-relaxed outline-none focus:border-stone-400 sm:leading-7"
+              style={{ fontSize: "max(16px, 1rem)" }}
               value={post.body}
               placeholder="Напишите текст так, как будто публикуете пост в канале…"
               onChange={(e) => setPost((p) => ({ ...p, body: e.target.value }))}
+              onFocus={handleMobileEditableFocus}
+              onBlur={handleMobileEditableBlur}
             />
           </label>
+
+          {categories.length > 0 ? (
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-stone-700">Категория</p>
+              <div className="mt-2 flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden">
+                <button
+                  type="button"
+                  className={pillTabClass(!post.categoryId)}
+                  onClick={() =>
+                    setPost((p) => ({ ...p, categoryId: null }))
+                  }
+                >
+                  Без категории
+                </button>
+                {categories.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={pillTabClass(post.categoryId === c.id)}
+                    onClick={() =>
+                      setPost((p) => ({ ...p, categoryId: c.id }))
+                    }
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-stone-500">
+                Без категории пост только во вкладке «Все» в ленте.
+              </p>
+            </div>
+          ) : null}
 
           <div className="rounded-[24px] border border-stone-200 bg-stone-50/90 p-4 shadow-sm">
             <div className="flex flex-wrap items-center gap-2">
@@ -493,6 +543,7 @@ export function PostEditor({ initial, siteUrl }: Props) {
                       telegramSourceUrl: post.telegramSourceUrl,
                       pinned: post.pinned,
                       locale: post.locale,
+                      categoryId: post.categoryId,
                     },
                     undefined,
                     { successMessage: "Черновик сохранён" },
@@ -518,6 +569,7 @@ export function PostEditor({ initial, siteUrl }: Props) {
                         telegramSourceUrl: post.telegramSourceUrl,
                         pinned: post.pinned,
                         locale: post.locale,
+                        categoryId: post.categoryId,
                       },
                       undefined,
                       { successMessage: "Пост сохранён как черновик" },
@@ -651,29 +703,34 @@ export function PostEditor({ initial, siteUrl }: Props) {
               <label className="block text-sm font-medium">
                 Meta title
                 <input
-                  className="mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm outline-none focus:border-stone-400"
+                  className="mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3 text-base outline-none focus:border-stone-400 sm:text-sm"
                   value={post.metaTitle}
                   onChange={(e) =>
                     setPost((p) => ({ ...p, metaTitle: e.target.value }))
                   }
                   placeholder="Если оставить пустым, возьмётся заголовок"
+                  onFocus={handleMobileEditableFocus}
+                  onBlur={handleMobileEditableBlur}
                 />
               </label>
               <label className="block text-sm font-medium">
                 Meta description
                 <textarea
-                  className="mt-1 min-h-[96px] w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm outline-none focus:border-stone-400"
+                  className="mt-1 min-h-[96px] w-full rounded-2xl border border-stone-300 px-4 py-3 text-base outline-none focus:border-stone-400 sm:text-sm"
+                  style={{ fontSize: "max(16px, 1rem)" }}
                   value={post.metaDescription}
                   onChange={(e) =>
                     setPost((p) => ({ ...p, metaDescription: e.target.value }))
                   }
                   placeholder="Если оставить пустым, возьмётся начало текста"
+                  onFocus={handleMobileEditableFocus}
+                  onBlur={handleMobileEditableBlur}
                 />
               </label>
               <label className="block text-sm font-medium">
                 Ссылка на оригинал в Telegram
                 <input
-                  className="mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm outline-none focus:border-stone-400"
+                  className="mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3 text-base outline-none focus:border-stone-400 sm:text-sm"
                   value={post.telegramSourceUrl ?? ""}
                   onChange={(e) =>
                     setPost((p) => ({
@@ -681,6 +738,8 @@ export function PostEditor({ initial, siteUrl }: Props) {
                       telegramSourceUrl: e.target.value || null,
                     }))
                   }
+                  onFocus={handleMobileEditableFocus}
+                  onBlur={handleMobileEditableBlur}
                 />
               </label>
             </div>
@@ -698,7 +757,7 @@ export function PostEditor({ initial, siteUrl }: Props) {
                   method: "DELETE",
                 }).then((res) => {
                   if (res.ok) {
-                    window.location.href = "/admin";
+                    window.location.href = "/admin/posts";
                   } else {
                     setMessage("Не удалось удалить пост");
                   }

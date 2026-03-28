@@ -3,24 +3,28 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import {
-  getPublishedPostBySlug,
+  getPostCarouselPeersCached,
+  getPublishedPostBySlugCached,
   parseVariants,
 } from "@/lib/posts-query";
+import { listFeedCategories } from "@/lib/feed-server";
 import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { absoluteUrl } from "@/lib/absolute-url";
 import { SiteChrome, SiteFooter } from "@/components/site/SiteChrome";
 import { PostCard } from "@/components/feed/PostCard";
-import type { FeedPost } from "@/types/feed";
+import { PostReadNextCarousel } from "@/components/feed/PostReadNextCarousel";
+import type { FeedCategory, FeedPost } from "@/types/feed";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getPublishedPostBySlug(slug);
+  const [post, settings] = await Promise.all([
+    getPublishedPostBySlugCached(slug),
+    getSiteSettings(),
+  ]);
   if (!post) return { title: "Не найдено" };
-
-  const settings = await getSiteSettings();
   const siteUrl =
     settings.siteUrl ||
     process.env.NEXT_PUBLIC_SITE_URL ||
@@ -56,10 +60,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function PostPage({ params }: PageProps) {
   const { slug } = await params;
-  const post = await getPublishedPostBySlug(slug);
+  const [post, settings, cookieStore] = await Promise.all([
+    getPublishedPostBySlugCached(slug),
+    getSiteSettings(),
+    cookies(),
+  ]);
   if (!post) notFound();
 
-  const settings = await getSiteSettings();
   const siteUrl =
     settings.siteUrl ||
     process.env.NEXT_PUBLIC_SITE_URL ||
@@ -70,9 +77,12 @@ export default async function PostPage({ params }: PageProps) {
     settings.yandexMetrikaId?.trim() ||
     process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID?.trim() ||
     "";
-  const cookieStore = await cookies();
   const session = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   const isAdmin = session ? await verifySessionToken(session) : false;
+  const [readNextItems, categories] = await Promise.all([
+    getPostCarouselPeersCached(post.id, post.categoryId),
+    isAdmin ? listFeedCategories() : Promise.resolve([] as FeedCategory[]),
+  ]);
 
   const feedPost: FeedPost = {
     id: post.id,
@@ -82,6 +92,8 @@ export default async function PostPage({ params }: PageProps) {
     displayMode: post.displayMode === "STACK" ? "STACK" : "GRID",
     publishedAt: post.publishedAt?.toISOString() ?? null,
     pinned: post.pinned,
+    categoryId: post.categoryId,
+    category: post.category,
     images: post.images.map((im) => ({
       id: im.id,
       caption: im.caption,
@@ -116,18 +128,24 @@ export default async function PostPage({ params }: PageProps) {
       />
       <div className="mx-auto max-w-3xl px-3 py-8 sm:px-5 sm:py-10">
         <nav className="mb-6 text-sm text-stone-600">
-          <Link href="/" className="hover:text-stone-900 hover:underline">
-            ← На главную ленту
+          <Link
+            href="/"
+            scroll={false}
+            className="hover:text-stone-900 hover:underline"
+          >
+            ← Назад
           </Link>
         </nav>
         <PostCard
           post={feedPost}
+          categories={categories}
           plausibleDomain={plausible}
           yandexMetrikaId={yandexMetrikaId}
           siteUrl={siteUrl}
           canManage={isAdmin}
           standalone
         />
+        <PostReadNextCarousel items={readNextItems} />
       </div>
       <SiteFooter />
     </>

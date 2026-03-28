@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { prisma } from "@/lib/prisma";
 import { processUpload } from "@/lib/image-pipeline";
+import { POST_IMAGE_MAX_BYTES } from "@/lib/upload-limits";
 
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -31,17 +32,34 @@ export async function POST(req: Request) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  if (buffer.length > 25 * 1024 * 1024) {
-    return NextResponse.json({ error: "Файл слишком большой (макс. 25 МБ)" }, { status: 400 });
+  if (buffer.length > POST_IMAGE_MAX_BYTES) {
+    const mb = Math.round(POST_IMAGE_MAX_BYTES / (1024 * 1024));
+    return NextResponse.json(
+      { error: `Файл слишком большой (макс. ${mb} МБ)` },
+      { status: 400 },
+    );
   }
 
   const imageId = nanoid();
-  const { originalExt, width, height, variants } = await processUpload({
-    buffer,
-    mime,
-    postId,
-    imageId,
-  });
+  let processed: Awaited<ReturnType<typeof processUpload>>;
+  try {
+    processed = await processUpload({
+      buffer,
+      mime,
+      postId,
+      imageId,
+    });
+  } catch (e) {
+    if (e instanceof Error && e.message === "FILE_TOO_LARGE") {
+      const mb = Math.round(POST_IMAGE_MAX_BYTES / (1024 * 1024));
+      return NextResponse.json(
+        { error: `Файл слишком большой (макс. ${mb} МБ)` },
+        { status: 400 },
+      );
+    }
+    throw e;
+  }
+  const { originalExt, width, height, variants } = processed;
 
   const maxOrder = await prisma.postImage.aggregate({
     where: { postId },

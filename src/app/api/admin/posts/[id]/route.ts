@@ -34,7 +34,10 @@ export async function GET(_req: Request, ctx: Ctx) {
   const { id } = await ctx.params;
   const post = await prisma.post.findUnique({
     where: { id },
-    include: { images: { orderBy: { sortOrder: "asc" } } },
+    include: {
+      images: { orderBy: { sortOrder: "asc" } },
+      category: { select: { id: true, name: true, slug: true } },
+    },
   });
   if (!post) {
     return NextResponse.json({ error: "Не найдено" }, { status: 404 });
@@ -110,6 +113,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     metaDescription?: string;
     telegramSourceUrl?: string | null;
     locale?: string;
+    categoryId?: string | null;
   } = {};
 
   const nextBody =
@@ -140,6 +144,18 @@ export async function PATCH(req: Request, ctx: Ctx) {
     data.telegramSourceUrl = body.telegramSourceUrl || null;
   }
   if (typeof body.locale === "string") data.locale = body.locale;
+
+  if ("categoryId" in body) {
+    if (body.categoryId === null) {
+      data.categoryId = null;
+    } else if (typeof body.categoryId === "string") {
+      const cat = await prisma.postCategory.findUnique({
+        where: { id: body.categoryId },
+        select: { id: true },
+      });
+      if (cat) data.categoryId = cat.id;
+    }
+  }
 
   try {
     if (Object.keys(data).length > 0) {
@@ -176,7 +192,10 @@ export async function PATCH(req: Request, ctx: Ctx) {
 
     const fresh = await prisma.post.findUnique({
       where: { id },
-      include: { images: { orderBy: { sortOrder: "asc" } } },
+      include: {
+        images: { orderBy: { sortOrder: "asc" } },
+        category: { select: { id: true, name: true, slug: true } },
+      },
     });
 
     return NextResponse.json({

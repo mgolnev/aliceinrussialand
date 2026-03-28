@@ -13,6 +13,8 @@ const sans = Manrope({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  /** Android Chrome: вёрстка подстраивается под высоту с клавиатурой (меньше «уезжания» полей). */
+  interactiveWidget: "resizes-content",
 };
 
 export async function generateMetadata(): Promise<Metadata> {

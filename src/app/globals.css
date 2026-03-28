@@ -34,7 +34,8 @@ body {
 }
 
 html {
-  scroll-behavior: smooth;
+  /* Не smooth: иначе Next.js + восстановление скролла ленты дают лишнюю анимацию при / ↔ /p/ */
+  scroll-behavior: auto;
   overflow-x: hidden;
   max-width: 100vw;
 }

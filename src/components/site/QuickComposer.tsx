@@ -8,6 +8,7 @@ import {
   type FeedComposerImage,
 } from "@/components/feed/FeedComposerPanel";
 import { dispatchFeedRefreshMerge } from "@/lib/feed-refresh";
+import type { FeedCategory } from "@/types/feed";
 
 async function ensureDraft(postId: string | null) {
   if (postId) return postId;
@@ -16,11 +17,12 @@ async function ensureDraft(postId: string | null) {
   return data.id;
 }
 
-export function QuickComposer() {
+export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
   const router = useRouter();
   const [postId, setPostId] = useState<string | null>(null);
   const [body, setBody] = useState("");
   const [images, setImages] = useState<FeedComposerImage[]>([]);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -75,6 +77,7 @@ export function QuickComposer() {
           body,
           displayMode: "GRID",
           status,
+          categoryId,
           images: images.map((image, index) => ({
             id: image.id,
             sortOrder: index,
@@ -94,6 +97,7 @@ export function QuickComposer() {
       if (status === "PUBLISHED" && data?.slug) {
         setBody("");
         setImages([]);
+        setCategoryId(null);
         setPostId(null);
         setMessage(null);
         dispatchFeedRefreshMerge();
@@ -112,7 +116,7 @@ export function QuickComposer() {
       headerLeft="Новая публикация"
       headerRight={
         <a
-          href="/admin"
+          href="/admin/posts"
           className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-800"
         >
           <Settings size={14} />
@@ -130,6 +134,15 @@ export function QuickComposer() {
       onSubmitDraft={() => void submit("DRAFT")}
       onSubmitPublish={() => void submit("PUBLISHED")}
       canSubmit={canSubmit}
+      categories={
+        categories.length > 0
+          ? categories.map((c) => ({ id: c.id, name: c.name, slug: c.slug }))
+          : undefined
+      }
+      postCategoryId={categories.length > 0 ? categoryId : undefined}
+      onPostCategoryChange={
+        categories.length > 0 ? setCategoryId : undefined
+      }
     />
   );
 }

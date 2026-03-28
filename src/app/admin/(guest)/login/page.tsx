@@ -25,7 +25,7 @@ function LoginForm() {
       setError(data?.error ?? "Ошибка входа");
       return;
     }
-    const from = searchParams.get("from") || "/admin";
+    const from = searchParams.get("from") || "/";
     router.replace(from);
     router.refresh();
   }
