@@ -72,7 +72,6 @@ export function PostCard({
   const [editBody, setEditBody] = useState(post.body);
   const [editImages, setEditImages] = useState(post.images);
   const [editMessage, setEditMessage] = useState<string | null>(null);
-  const swipeStartX = useRef<number | null>(null);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const menuPanelRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(

@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { Share2, X } from "lucide-react";
 
 export type LightboxSlide = {
   src: string;
@@ -60,6 +60,8 @@ export function ImageLightbox({
   } | null>(null);
   const swipeRef = useRef<{ x: number } | null>(null);
   const tapRef = useRef<{ t: number; x: number; y: number } | null>(null);
+  const [shareHint, setShareHint] = useState<string | null>(null);
+  const [shareBusy, setShareBusy] = useState(false);
 
   const slide = slides[index];
 
@@ -109,7 +111,12 @@ export function ImageLightbox({
       Object.assign(body.style, prevBody);
       body.style.paddingRight = "";
       body.style.touchAction = "";
+      /* globals.css задаёт html { scroll-behavior: smooth } — без сброса
+         scrollTo после закрытия лайтбокса визуально «проезжает» ленту. */
+      const prevInlineScrollBehavior = html.style.scrollBehavior;
+      html.style.scrollBehavior = "auto";
       window.scrollTo(0, scrollY);
+      html.style.scrollBehavior = prevInlineScrollBehavior;
     };
   }, []);
 
@@ -120,6 +127,65 @@ export function ImageLightbox({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  const shareCurrentPhoto = useCallback(async () => {
+    const src = slide?.src;
+    if (!src || shareBusy) return;
+    setShareBusy(true);
+    setShareHint(null);
+    try {
+      if (typeof navigator.share === "function") {
+        try {
+          const res = await fetch(src, { mode: "cors" });
+          const blob = await res.blob();
+          const mime = blob.type || "image/jpeg";
+          const ext = mime.includes("png")
+            ? "png"
+            : mime.includes("webp")
+              ? "webp"
+              : "jpg";
+          const file = new File(
+            [blob],
+            `photo-${index + 1}.${ext}`,
+            { type: mime },
+          );
+          if (navigator.canShare?.({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: slide.alt || "Фото",
+              text: slide.caption || undefined,
+            });
+            return;
+          }
+        } catch {
+          /* файл недоступен (CORS и т.д.) — шарим URL */
+        }
+        await navigator.share({
+          title: slide.alt || "Фото",
+          text: slide.caption || slide.alt || "",
+          url: src,
+        });
+        return;
+      }
+      await navigator.clipboard.writeText(src);
+      setShareHint("Ссылка скопирована");
+      window.setTimeout(() => setShareHint(null), 2500);
+    } catch (e) {
+      const name = e instanceof Error ? e.name : "";
+      if (name !== "AbortError") {
+        try {
+          await navigator.clipboard.writeText(src);
+          setShareHint("Ссылка скопирована");
+          window.setTimeout(() => setShareHint(null), 2500);
+        } catch {
+          setShareHint("Не удалось поделиться");
+          window.setTimeout(() => setShareHint(null), 2500);
+        }
+      }
+    } finally {
+      setShareBusy(false);
+    }
+  }, [index, shareBusy, slide]);
 
   /** React помечает touchmove/wheel как passive — preventDefault не останавливает скролл фона. */
   useEffect(() => {
@@ -281,22 +347,24 @@ export function ImageLightbox({
       role="presentation"
     >
       <div
-        className="absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 border-b border-white/15 bg-black/75 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md"
+        className="absolute inset-x-0 top-0 z-20 border-b border-white/15 bg-black/75 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md"
         onClick={(ev) => ev.stopPropagation()}
       >
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-full px-3 py-2.5 text-[15px] font-semibold text-white transition active:bg-white/15"
-          onClick={onClose}
-        >
-          <X size={20} strokeWidth={2.25} aria-hidden />
-          Закрыть
-        </button>
-        {slides.length > 1 ? (
-          <span className="shrink-0 text-sm tabular-nums text-white/65">
-            {index + 1} / {slides.length}
-          </span>
-        ) : null}
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            className="flex min-w-0 items-center gap-2 rounded-full px-3 py-2.5 text-[15px] font-semibold text-white transition active:bg-white/15"
+            onClick={onClose}
+          >
+            <X size={20} strokeWidth={2.25} aria-hidden />
+            <span className="hidden sm:inline">Закрыть</span>
+          </button>
+          {slides.length > 1 ? (
+            <span className="shrink-0 text-sm tabular-nums text-white/65">
+              {index + 1} / {slides.length}
+            </span>
+          ) : null}
+        </div>
       </div>
 
       <div
@@ -336,6 +404,26 @@ export function ImageLightbox({
           </p>
         </div>
       ) : null}
+
+      <div
+        className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] z-30 flex flex-col items-start gap-1"
+        onClick={(ev) => ev.stopPropagation()}
+      >
+        <button
+          type="button"
+          aria-label="Поделиться фотографией"
+          disabled={shareBusy}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-md transition hover:bg-white/10 active:bg-white/15 disabled:opacity-50"
+          onClick={() => void shareCurrentPhoto()}
+        >
+          <Share2 size={22} strokeWidth={2} aria-hidden />
+        </button>
+        {shareHint ? (
+          <p className="max-w-[min(100vw-2rem,16rem)] rounded-lg bg-black/60 px-2 py-1.5 text-xs text-white/90 backdrop-blur-sm">
+            {shareHint}
+          </p>
+        ) : null}
+      </div>
 
       {slides.length > 1 ? (
         <div
