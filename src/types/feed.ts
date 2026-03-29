@@ -10,6 +10,8 @@ export type PostCarouselItem = {
   slug: string;
   title: string;
   preview: string;
+  categoryName: string;
+  categorySlug: string;
   variants: Record<string, string>;
   width: number | null;
   height: number | null;

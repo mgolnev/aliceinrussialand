@@ -79,10 +79,11 @@ export default async function PostPage({ params }: PageProps) {
     "";
   const session = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   const isAdmin = session ? await verifySessionToken(session) : false;
-  const [readNextItems, categories] = await Promise.all([
-    getPostCarouselPeersCached(post.id, post.categoryId),
-    isAdmin ? listFeedCategories() : Promise.resolve([] as FeedCategory[]),
-  ]);
+  const readNextItems = await getPostCarouselPeersCached(
+    post.id,
+    post.categoryId,
+  );
+  const allFeedCategories: FeedCategory[] = await listFeedCategories();
 
   const feedPost: FeedPost = {
     id: post.id,
@@ -138,14 +139,18 @@ export default async function PostPage({ params }: PageProps) {
         </nav>
         <PostCard
           post={feedPost}
-          categories={categories}
+          categories={isAdmin ? allFeedCategories : []}
           plausibleDomain={plausible}
           yandexMetrikaId={yandexMetrikaId}
           siteUrl={siteUrl}
           canManage={isAdmin}
           standalone
         />
-        <PostReadNextCarousel items={readNextItems} />
+        <PostReadNextCarousel
+          items={readNextItems}
+          categories={allFeedCategories}
+          currentPostCategoryId={post.categoryId}
+        />
       </div>
       <SiteFooter />
     </>

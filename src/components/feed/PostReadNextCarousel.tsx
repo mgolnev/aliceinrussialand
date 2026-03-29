@@ -1,98 +1,52 @@
 "use client";
 
-import Link from "next/link";
-import Image, { type ImageLoaderProps } from "next/image";
-import { useCallback } from "react";
-import type { PostCarouselItem } from "@/types/feed";
+import type { FeedCategory, PostCarouselItem } from "@/types/feed";
 import {
-  intrinsicSizeForImage,
-  pickDefaultVariantUrl,
-  pickVariantUrlForRequestedWidth,
-} from "@/lib/image-variants";
+  WatchNextContinuation,
+  type WatchNextCard,
+} from "./WatchNextContinuation";
 
-function CarouselThumb({
-  variants,
-  alt,
-  width,
-  height,
-}: {
-  variants: Record<string, string>;
-  alt: string;
-  width: number | null;
-  height: number | null;
-}) {
-  const fallback = pickDefaultVariantUrl(variants);
-  const { width: iw, height: ih } = intrinsicSizeForImage(width, height);
-  const loader = useCallback(
-    ({ width: requested }: ImageLoaderProps) =>
-      pickVariantUrlForRequestedWidth(variants, requested) ?? fallback!,
-    [variants, fallback],
-  );
-  if (!fallback) return null;
-  return (
-    <Image
-      loader={loader}
-      src={fallback}
-      alt={alt}
-      width={iw}
-      height={ih}
-      sizes="(max-width: 640px) 36vw, (max-width: 768px) 30vw, 280px"
-      className="h-full w-full object-cover"
-      decoding="async"
-    />
-  );
+function itemToWatchCard(item: PostCarouselItem): WatchNextCard {
+  const letter = item.title.trim().slice(0, 1).toUpperCase() || "•";
+  return {
+    slug: item.slug,
+    preview: item.preview,
+    displayLetter: letter,
+    categoryName: item.categoryName,
+    variants: item.variants,
+    width: item.width,
+    height: item.height,
+    alt: item.alt,
+  };
 }
 
 type Props = {
   items: PostCarouselItem[];
+  categories: FeedCategory[];
+  /** Категория текущего поста — исключается из чипов «Темы». */
+  currentPostCategoryId: string | null;
 };
 
-/** Горизонтальная карусель после поста: обложка и заголовок. */
-export function PostReadNextCarousel({ items }: Props) {
+/** Блок «Смотреть дальше» после поста: та же вёрстка, что в конце категории; подборка — getPostCarouselPeers. */
+export function PostReadNextCarousel({
+  items,
+  categories,
+  currentPostCategoryId,
+}: Props) {
   if (items.length === 0) return null;
 
+  const featured = itemToWatchCard(items[0]!);
+  const more = items.slice(1, 7).map(itemToWatchCard);
+  const topics = categories
+    .filter((c) => c.id !== currentPostCategoryId)
+    .slice(0, 5);
+
   return (
-    <section
-      className="mt-10 border-t border-stone-200/80 pt-8 sm:mt-12 sm:pt-10"
-      aria-label="Дальше читайте"
-    >
-      <div
-        className="-mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-3 [scrollbar-width:none] sm:-mx-5 sm:gap-4 sm:px-5 [&::-webkit-scrollbar]:hidden"
-        role="list"
-      >
-        {items.map((item) => {
-          const hasImage = Boolean(pickDefaultVariantUrl(item.variants));
-          const initial = item.title.trim().slice(0, 1).toUpperCase() || "•";
-          return (
-            <Link
-              key={item.slug}
-              href={`/p/${item.slug}`}
-              role="listitem"
-              className="flex w-[calc((100%-1.5rem)/2.7)] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-stone-200/80 bg-white/95 shadow-[0_8px_24px_-12px_rgba(60,44,29,0.2)] outline-none ring-stone-400/30 transition hover:border-stone-300 hover:shadow-md focus-visible:ring-2 active:scale-[0.99] sm:w-[calc((100%-2rem)/2.7)]"
-            >
-              <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden bg-[#f4efe8]">
-                {hasImage ? (
-                  <CarouselThumb
-                    variants={item.variants}
-                    alt={item.alt}
-                    width={item.width}
-                    height={item.height}
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-stone-100 to-stone-200/80 text-2xl font-light text-stone-400 sm:text-3xl">
-                    {initial}
-                  </div>
-                )}
-              </div>
-              <div className="p-2.5 sm:p-3">
-                <span className="line-clamp-5 text-[13px] font-semibold leading-snug text-stone-900 [overflow-wrap:anywhere] sm:text-[14px] sm:leading-snug">
-                  {item.preview}
-                </span>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-    </section>
+    <WatchNextContinuation
+      featured={featured}
+      more={more}
+      topics={topics}
+      sectionHeadingId="post-read-next-heading"
+    />
   );
 }

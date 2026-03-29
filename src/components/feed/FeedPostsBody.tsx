@@ -56,6 +56,7 @@ export function FeedPostsBody({
         </p>
         {showCategoryExplore && categorySlug ? (
           <CategoryFeedContinuation
+            key={categorySlug}
             categorySlug={categorySlug}
             onSelectCategory={onSelectCategory}
           />
@@ -92,6 +93,7 @@ export function FeedPostsBody({
       ) : null}
       {showCategoryExplore && categorySlug ? (
         <CategoryFeedContinuation
+          key={categorySlug}
           categorySlug={categorySlug}
           onSelectCategory={onSelectCategory}
         />

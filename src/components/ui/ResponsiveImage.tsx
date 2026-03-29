@@ -36,15 +36,18 @@ export function ResponsiveImage({
   height,
 }: Props) {
   const fallback = pickDefaultVariantUrl(variants);
-  if (!fallback) return null;
-
   const { width: iw, height: ih } = intrinsicSizeForImage(width, height);
 
   const loader = useCallback(
-    ({ width: requested }: ImageLoaderProps) =>
-      pickVariantUrlForRequestedWidth(variants, requested) ?? fallback,
-    [variants, fallback],
+    ({ width: requested }: ImageLoaderProps) => {
+      const fb = pickDefaultVariantUrl(variants);
+      if (!fb) return "";
+      return pickVariantUrlForRequestedWidth(variants, requested) ?? fb;
+    },
+    [variants],
   );
+
+  if (!fallback) return null;
 
   return (
     <figure className="min-w-0 space-y-2">

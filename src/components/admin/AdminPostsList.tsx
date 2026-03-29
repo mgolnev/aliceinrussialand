@@ -53,14 +53,16 @@ function PostThumb({
   imageCount: number;
 }) {
   const extra = imageCount > 1 ? imageCount - 1 : 0;
+  const boxClass =
+    "relative h-full w-full min-h-0 min-w-0 overflow-hidden rounded-[10px]";
 
   if (imageCount === 0) {
     return (
       <div
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-stone-100 ring-1 ring-stone-200/70"
+        className={`${boxClass} flex shrink-0 items-center justify-center bg-stone-100 ring-1 ring-stone-200/70`}
         aria-hidden
       >
-        <ImageIcon className="h-4 w-4 text-stone-300" strokeWidth={1.5} />
+        <ImageIcon className="h-[22%] min-h-4 w-[22%] min-w-4 text-stone-300" strokeWidth={1.5} />
       </div>
     );
   }
@@ -68,12 +70,12 @@ function PostThumb({
   if (!thumbUrl) {
     return (
       <div
-        className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-stone-100 ring-1 ring-stone-200/70"
+        className={`${boxClass} flex shrink-0 items-center justify-center bg-stone-100 ring-1 ring-stone-200/70`}
         aria-label={`${imageCount} фото`}
       >
-        <ImageIcon className="h-4 w-4 text-stone-400" strokeWidth={1.5} />
+        <ImageIcon className="h-[22%] min-h-4 w-[22%] min-w-4 text-stone-400" strokeWidth={1.5} />
         {extra > 0 ? (
-          <span className="absolute -bottom-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded bg-stone-900/88 px-0.5 text-[9px] font-bold leading-none text-white shadow-sm">
+          <span className="absolute bottom-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded bg-stone-900/88 px-0.5 text-[9px] font-bold leading-none text-white shadow-sm">
             +{extra}
           </span>
         ) : null}
@@ -83,7 +85,7 @@ function PostThumb({
 
   return (
     <div
-      className="relative h-11 w-11 shrink-0"
+      className={`${boxClass} shrink-0 ring-1 ring-stone-200/80`}
       aria-label={
         imageCount === 1
           ? "1 фото"
@@ -94,11 +96,11 @@ function PostThumb({
       <img
         src={thumbUrl}
         alt=""
-        className="h-full w-full rounded-[10px] object-cover ring-1 ring-stone-200/80"
+        className="h-full w-full object-cover"
         loading="lazy"
       />
       {extra > 0 ? (
-        <span className="absolute -bottom-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded bg-stone-900/88 px-0.5 text-[9px] font-bold leading-none text-white shadow-sm">
+        <span className="absolute bottom-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded bg-stone-900/88 px-0.5 text-[9px] font-bold leading-none text-white shadow-sm">
           +{extra}
         </span>
       ) : null}
@@ -192,15 +194,17 @@ function AdminPostRow({
 
   return (
     <li className="touch-manipulation overflow-visible border-b border-stone-200/50 last:border-b-0">
-      <div className="group flex items-start overflow-visible">
+      <div className="group flex min-h-[5rem] items-stretch overflow-visible sm:min-h-[5.25rem]">
         <Link
           href={href}
-          className="flex min-w-0 flex-1 items-start gap-3 py-3 pl-3 pr-1 transition-colors active:bg-stone-100/80 sm:gap-4 sm:py-3.5 sm:pl-4 sm:pr-2 group-hover:bg-stone-50/95"
+          className="flex min-h-0 min-w-0 flex-1 items-stretch gap-3 py-2 pl-3 pr-1 transition-colors active:bg-stone-100/80 sm:gap-4 sm:py-2.5 sm:pl-4 sm:pr-2 group-hover:bg-stone-50/95"
         >
-          <div className="mt-1 shrink-0">
-            <PostThumb thumbUrl={p.thumbUrl} imageCount={p.imageCount} />
+          <div className="box-border flex h-full min-h-0 shrink-0 items-center self-stretch py-1 pl-0 pr-0 sm:py-1.5">
+            <div className="relative aspect-square h-[88%] max-h-[7rem] min-h-[4rem] w-auto min-w-[4rem] max-w-[7rem] sm:h-[90%] sm:min-h-[4.25rem] sm:max-h-[7.25rem] sm:min-w-[4.25rem] sm:max-w-[7.25rem]">
+              <PostThumb thumbUrl={p.thumbUrl} imageCount={p.imageCount} />
+            </div>
           </div>
-          <div className="min-w-0 flex-1 pr-2">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col justify-start pr-2 pt-1 pb-1">
             <p className="line-clamp-2 text-[13px] font-normal leading-[1.35] text-stone-800">
               {p.preview}
             </p>
@@ -252,7 +256,7 @@ function AdminPostRow({
         >
           <button
             type="button"
-            className="flex min-h-[4.25rem] w-11 items-start justify-center px-1 pt-3.5 text-stone-300 transition-colors hover:bg-stone-100/80 hover:text-stone-600 active:bg-stone-200/40 sm:min-h-[4.5rem] sm:w-12 sm:pt-4"
+            className="flex h-full min-h-[5rem] w-11 items-start justify-center px-1 pt-3.5 text-stone-300 transition-colors hover:bg-stone-100/80 hover:text-stone-600 active:bg-stone-200/40 sm:min-h-[5.25rem] sm:w-12 sm:pt-4"
             aria-expanded={menuOpen}
             aria-haspopup="menu"
             aria-label="Действия"

@@ -60,6 +60,7 @@ function mapPostToCarouselItem(p: {
   slug: string;
   title: string;
   body: string;
+  category: { name: string; slug: string } | null;
   images: Array<{
     alt: string;
     variantsJson: string;
@@ -78,6 +79,8 @@ function mapPostToCarouselItem(p: {
     slug: p.slug,
     title,
     preview: previewCapped,
+    categoryName: p.category?.name?.trim() || "Без темы",
+    categorySlug: p.category?.slug?.trim() ?? "",
     variants,
     width: im?.width ?? null,
     height: im?.height ?? null,
@@ -106,7 +109,10 @@ export async function getPostCarouselPeers(
         },
         orderBy: carouselOrderBy,
         take: categoryFirst,
-        include: { images: firstImageInclude },
+        include: {
+          images: firstImageInclude,
+          category: { select: { name: true, slug: true } },
+        },
       })
     : [];
 
@@ -121,7 +127,10 @@ export async function getPostCarouselPeers(
           },
           orderBy: carouselOrderBy,
           take: remaining,
-          include: { images: firstImageInclude },
+          include: {
+            images: firstImageInclude,
+            category: { select: { name: true, slug: true } },
+          },
         })
       : [];
 
