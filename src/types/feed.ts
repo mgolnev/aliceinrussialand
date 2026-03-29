@@ -16,6 +16,27 @@ export type PostCarouselItem = {
   alt: string;
 };
 
+/** Карточка в блоке «ещё вдохновения» в конце категории. */
+export type CategoryExplorePost = {
+  slug: string;
+  preview: string;
+  displayLetter: string;
+  categoryName: string;
+  categorySlug: string;
+  variants: Record<string, string>;
+  width: number | null;
+  height: number | null;
+  alt: string;
+};
+
+export type CategoryFeedExplorePayload = {
+  currentCategoryName: string;
+  currentCategorySlug: string;
+  featured: CategoryExplorePost | null;
+  more: CategoryExplorePost[];
+  topics: FeedCategory[];
+};
+
 export type FeedPost = {
   id: string;
   slug: string;

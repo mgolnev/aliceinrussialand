@@ -4,6 +4,7 @@ import type { RefObject } from "react";
 import { PostCard } from "./PostCard";
 import { FeedPostsSkeleton } from "./FeedPostsSkeleton";
 import type { FeedCategory, FeedPost } from "@/types/feed";
+import { CategoryFeedContinuation } from "./CategoryFeedContinuation";
 
 type Props = {
   items: FeedPost[];
@@ -12,6 +13,7 @@ type Props = {
   categoryLoading: boolean;
   loadMore: () => Promise<void>;
   categorySlug: string | null;
+  onSelectCategory: (slug: string | null) => void;
   categories: FeedCategory[];
   plausibleDomain?: string;
   yandexMetrikaId?: string;
@@ -28,6 +30,7 @@ export function FeedPostsBody({
   categoryLoading,
   loadMore,
   categorySlug,
+  onSelectCategory,
   categories,
   plausibleDomain,
   yandexMetrikaId,
@@ -40,13 +43,24 @@ export function FeedPostsBody({
     return <FeedPostsSkeleton />;
   }
 
+  const showCategoryExplore =
+    Boolean(categorySlug) && !categoryLoading && !next;
+
   if (empty) {
     return (
-      <p className="rounded-2xl border border-dashed border-stone-300 bg-white/60 px-6 py-12 text-center text-stone-600">
-        {categorySlug
-          ? "В этой категории пока нет постов."
-          : "Пока нет опубликованных постов. Зайдите в админку и создайте первый."}
-      </p>
+      <div className="min-w-0 space-y-6">
+        <p className="rounded-2xl border border-dashed border-stone-300 bg-white/60 px-6 py-12 text-center text-stone-600">
+          {categorySlug
+            ? "В этой категории пока нет постов."
+            : "Пока нет опубликованных постов. Зайдите в админку и создайте первый."}
+        </p>
+        {showCategoryExplore && categorySlug ? (
+          <CategoryFeedContinuation
+            categorySlug={categorySlug}
+            onSelectCategory={onSelectCategory}
+          />
+        ) : null}
+      </div>
     );
   }
 
@@ -75,6 +89,12 @@ export function FeedPostsBody({
             {loading ? "Подгружаем…" : "Показать ещё"}
           </button>
         </div>
+      ) : null}
+      {showCategoryExplore && categorySlug ? (
+        <CategoryFeedContinuation
+          categorySlug={categorySlug}
+          onSelectCategory={onSelectCategory}
+        />
       ) : null}
     </div>
   );
