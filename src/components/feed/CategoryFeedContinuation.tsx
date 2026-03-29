@@ -82,17 +82,25 @@ export function CategoryFeedContinuation({
   if (loading) {
     return (
       <section
-        className="mt-8 rounded-2xl border border-stone-200/70 bg-white/50 px-3 py-5 sm:mt-10 sm:px-4 sm:py-6"
+        className="mt-8 overflow-hidden rounded-2xl border border-stone-200/70 bg-white/50 sm:mt-10"
         aria-busy="true"
         aria-label="Загрузка подборки"
       >
-        <div className="h-4 w-48 animate-pulse rounded bg-stone-200/80" />
-        <div className="mt-4 h-24 animate-pulse rounded-xl bg-stone-200/60" />
-        <div className="mt-5 h-3 w-24 animate-pulse rounded bg-stone-200/70" />
-        <div className="mt-2 flex gap-2 overflow-hidden">
-          <div className="h-28 w-28 shrink-0 animate-pulse rounded-lg bg-stone-200/50" />
-          <div className="h-28 w-28 shrink-0 animate-pulse rounded-lg bg-stone-200/50" />
-          <div className="h-28 w-28 shrink-0 animate-pulse rounded-lg bg-stone-200/50" />
+        <div className="flex h-40 border-b border-stone-200/40 sm:h-44">
+          <div className="h-full w-[60%] max-w-[60%] shrink-0 animate-pulse bg-stone-200/60" />
+          <div className="flex h-full w-[40%] min-w-[40%] shrink-0 flex-col justify-center gap-2 border-l border-stone-200/30 px-3 py-3 sm:px-3.5">
+            <div className="h-2.5 w-full animate-pulse rounded bg-stone-200/70" />
+            <div className="h-2.5 w-4/5 animate-pulse rounded bg-stone-200/70" />
+            <div className="h-2 w-1/2 animate-pulse rounded bg-stone-200/60" />
+          </div>
+        </div>
+        <div className="px-3 py-4 sm:px-4">
+          <div className="h-3 w-24 animate-pulse rounded bg-stone-200/70" />
+          <div className="mt-2 flex gap-2 overflow-hidden pt-2">
+            <div className="h-28 w-28 shrink-0 animate-pulse rounded-lg bg-stone-200/50" />
+            <div className="h-28 w-28 shrink-0 animate-pulse rounded-lg bg-stone-200/50" />
+            <div className="h-28 w-28 shrink-0 animate-pulse rounded-lg bg-stone-200/50" />
+          </div>
         </div>
       </section>
     );
@@ -107,47 +115,51 @@ export function CategoryFeedContinuation({
 
   return (
     <section
-      className="mt-8 rounded-2xl border border-stone-200/80 bg-[#fffdf9]/90 px-3 py-5 shadow-[0_12px_40px_-28px_rgba(60,44,29,0.35)] sm:mt-10 sm:px-4 sm:py-6"
+      className="mt-8 overflow-hidden rounded-2xl border border-stone-200/80 bg-[#fffdf9]/90 shadow-[0_12px_40px_-28px_rgba(60,44,29,0.35)] sm:mt-10"
       aria-label="Продолжение после категории"
     >
-      <h2 className="text-base font-semibold leading-tight text-stone-900 sm:text-lg">
-        Ещё немного вдохновения
-      </h2>
-
       {featured ? (
-        <div className="mt-5">
-          <Link
-            href={`/p/${featured.slug}`}
-            className="flex gap-3 rounded-xl border border-stone-200/80 bg-white/90 p-2.5 outline-none ring-stone-400/30 transition hover:border-stone-300 hover:bg-white focus-visible:ring-2 active:scale-[0.99] sm:p-3"
-          >
-            <div className="relative h-[5.25rem] w-[5.25rem] shrink-0 overflow-hidden rounded-lg bg-[#f4efe8] sm:h-28 sm:w-28">
-              {pickDefaultVariantUrl(featured.variants) ? (
-                <ExploreThumb
-                  variants={featured.variants}
-                  alt={featured.alt}
-                  width={featured.width}
-                  height={featured.height}
-                  sizes="112px"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center text-2xl font-light text-stone-400">
-                  {featured.displayLetter}
-                </span>
-              )}
-            </div>
-            <div className="min-w-0 flex-1 py-0.5">
-              <p className="line-clamp-2 text-[14px] font-semibold leading-snug text-stone-900 [overflow-wrap:anywhere] sm:text-[15px]">
-                {featured.preview}
+        <Link
+          href={`/p/${featured.slug}`}
+          aria-label={`Продолжить смотреть: ${featured.preview.slice(0, 120)}`}
+          className="group relative flex h-40 min-h-0 w-full shrink-0 overflow-hidden rounded-t-2xl border-b border-stone-200/80 bg-white shadow-[0_12px_36px_-18px_rgba(55,42,28,0.45)] outline-none ring-stone-400/30 transition-[box-shadow,background-color,border-color] duration-200 hover:border-stone-300/90 hover:bg-[#fffdfb] hover:shadow-[0_18px_48px_-20px_rgba(55,42,28,0.5)] focus-visible:ring-2 focus-visible:ring-inset active:bg-stone-50/95 sm:h-44"
+        >
+          <div className="relative h-full w-[60%] max-w-[60%] shrink-0 overflow-hidden bg-[#ede8e0]">
+            {pickDefaultVariantUrl(featured.variants) ? (
+              <ExploreThumb
+                variants={featured.variants}
+                alt={featured.alt}
+                width={featured.width}
+                height={featured.height}
+                sizes="(max-width: 768px) 60vw, 400px"
+                className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+              />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-stone-100 to-stone-200/80 text-3xl font-light text-stone-400 sm:text-4xl">
+                {featured.displayLetter}
+              </span>
+            )}
+          </div>
+          <div className="flex h-full min-h-0 w-[40%] min-w-[40%] shrink-0 flex-col justify-between gap-2 border-l border-stone-200/60 bg-gradient-to-br from-white via-white to-[#faf7f2] px-3 py-3 sm:gap-2.5 sm:px-3.5 sm:py-3.5">
+            <p className="line-clamp-3 min-h-0 text-[13px] font-semibold leading-snug tracking-tight text-stone-900 [overflow-wrap:anywhere] sm:line-clamp-4 sm:text-[14px] sm:leading-snug">
+              {featured.preview}
+            </p>
+            <div className="mt-auto shrink-0 space-y-1.5">
+              <p className="text-[11px] normal-case leading-tight text-stone-500 sm:text-xs">
+                {featured.categoryName}
               </p>
-              <p className="mt-1.5 text-xs text-stone-500">{featured.categoryName}</p>
+              <p className="text-[11px] font-semibold text-amber-950/75 transition group-hover:text-amber-950 sm:text-xs">
+                Смотреть пост →
+              </p>
             </div>
-          </Link>
-        </div>
+          </div>
+        </Link>
       ) : null}
 
       {more.length > 0 ? (
-        <div className="mt-6">
+        <div
+          className={`px-3 pt-5 sm:px-4 ${hasTopics ? "pb-1" : "pb-5"}`}
+        >
           <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
             Ещё
           </p>
@@ -183,7 +195,7 @@ export function CategoryFeedContinuation({
                     <p className="line-clamp-1 text-[11px] font-medium leading-tight text-stone-900 [overflow-wrap:anywhere] sm:text-xs">
                       {item.preview}
                     </p>
-                    <p className="mt-0.5 truncate text-[10px] text-stone-500 sm:text-[11px]">
+                    <p className="mt-0.5 truncate text-[10px] normal-case text-stone-500 sm:text-[11px]">
                       {item.categoryName}
                     </p>
                   </div>
@@ -195,7 +207,9 @@ export function CategoryFeedContinuation({
       ) : null}
 
       {hasTopics ? (
-        <div className="mt-6">
+        <div
+          className={`px-3 pb-5 sm:px-4 ${featured || more.length > 0 ? "mt-6" : "pt-5"}`}
+        >
           <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
             Темы
           </p>
@@ -205,7 +219,7 @@ export function CategoryFeedContinuation({
                 key={c.id}
                 type="button"
                 onClick={() => onSelectCategory(c.slug)}
-                className="rounded-full border border-stone-300/90 bg-white/90 px-3 py-1.5 text-sm font-medium text-stone-800 shadow-sm transition hover:border-stone-400 hover:bg-white"
+                className="rounded-full border border-stone-300/90 bg-white/90 px-3 py-1.5 text-sm font-medium normal-case text-stone-800 shadow-sm transition hover:border-stone-400 hover:bg-white"
               >
                 {c.name}
               </button>
