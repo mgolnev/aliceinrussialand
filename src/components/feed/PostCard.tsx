@@ -451,20 +451,21 @@ export function PostCard({
   const articleClip =
     canManage && editMode ? "overflow-x-hidden" : "overflow-hidden";
 
+  /** Полноэкранная ссылка на пост: текст/шапка не перехватывают hit-test (кроме кнопок и фото). */
+  const showPostLinkOverlay = !standalone && !(canManage && editMode);
+
   return (
     <>
       <article
         className={`relative min-w-0 scroll-mt-24 ${articleClip} rounded-[24px] border border-stone-200/80 bg-white/95 shadow-[0_8px_30px_-10px_rgba(60,44,29,0.15)] backdrop-blur-sm sm:rounded-[30px] ${articlePad}`}
       >
-        {!standalone && !(canManage && editMode) ? (
+        {showPostLinkOverlay ? (
           <PostOpenLinkOverlay href={postUrl} ariaLabel={openPostAria} />
         ) : null}
 
         <div
           className={`relative z-[1] min-w-0 ${
-            !standalone && !(canManage && editMode)
-              ? "pointer-events-none"
-              : ""
+            showPostLinkOverlay ? "pointer-events-none" : ""
           }`}
         >
         {plausibleDomain || yandexMetrikaId?.trim() ? (
@@ -477,11 +478,7 @@ export function PostCard({
 
         <header
           className={`relative flex items-center justify-between gap-3 ${
-            !standalone && !(canManage && editMode)
-              ? canManage
-                ? "pointer-events-auto"
-                : "pointer-events-none"
-              : ""
+            showPostLinkOverlay ? "pointer-events-none" : ""
           } ${
             canManage && editMode
               ? "border-b border-stone-100 px-3 pb-2.5 pt-3 sm:px-5 sm:pb-3 sm:pt-4"
@@ -490,7 +487,13 @@ export function PostCard({
                 : "mb-4"
           }`}
         >
-          <div className="min-w-0 flex flex-col gap-0.5">
+          <div
+            className={
+              showPostLinkOverlay
+                ? "min-w-0 flex flex-col gap-0.5 pointer-events-none [&_*]:pointer-events-none"
+                : "min-w-0 flex flex-col gap-0.5"
+            }
+          >
             <div className="flex flex-wrap items-center gap-2 text-[13px] font-medium text-stone-400">
               {post.publishedAt ? (
                 <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
@@ -518,7 +521,7 @@ export function PostCard({
 
           <div
             className={`flex shrink-0 items-center gap-1.5 ${
-              !canManage && !standalone ? "pointer-events-auto" : ""
+              showPostLinkOverlay ? "pointer-events-auto" : ""
             }`}
           >
             {canManage && editMode ? (
@@ -709,8 +712,8 @@ export function PostCard({
             {post.body ? (
               <div
                 className={`min-w-0 whitespace-pre-wrap text-[15px] leading-relaxed text-stone-800 sm:text-[16px] sm:leading-8 ${
-                  feedMediaGrid ? "mb-2 sm:mb-2.5" : "mb-3 sm:mb-5"
-                }`}
+                  showPostLinkOverlay ? "pointer-events-none" : ""
+                } ${feedMediaGrid ? "mb-2 sm:mb-2.5" : "mb-3 sm:mb-5"}`}
               >
                 {post.body}
               </div>

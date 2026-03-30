@@ -1,3 +1,13 @@
+/** Плашка как у кнопки «Контакты» в шапке (`SiteChrome`). */
+export function chromePlaqueButtonClass(): string {
+  return [
+    "shrink-0 rounded-full border border-stone-200 bg-white",
+    "px-3 py-2 text-[13px] font-semibold text-stone-800 shadow-sm",
+    "transition-colors hover:border-stone-300 hover:bg-stone-50 active:scale-[0.97]",
+    "sm:px-4 sm:text-sm",
+  ].join(" ");
+}
+
 /** Общий вид «папок» (админка, лента, выбор категории в редакторе). */
 export function pillTabClass(active: boolean): string {
   return [

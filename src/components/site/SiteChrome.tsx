@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { chromePlaqueButtonClass } from "@/lib/pill-tab-styles";
 import { LinkPendingBackdrop } from "@/components/ui/LinkPendingBackdrop";
 
 type Props = {
@@ -58,10 +59,7 @@ export function SiteChrome({
           <LinkPendingBackdrop />
         </Link>
 
-        <Link
-          href="/about"
-          className="shrink-0 rounded-full border border-stone-200 bg-white px-3 py-2 text-[13px] font-semibold text-stone-800 shadow-sm transition-colors hover:border-stone-300 hover:bg-stone-50 active:scale-[0.97] sm:px-4 sm:text-sm"
-        >
+        <Link href="/about" className={chromePlaqueButtonClass()}>
           {contactsLabel.trim() || "Контакты"}
         </Link>
       </div>

@@ -10,6 +10,8 @@ import { listFeedCategories } from "@/lib/feed-server";
 import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { absoluteUrl } from "@/lib/absolute-url";
 import { excerptForMetaDescription } from "@/lib/meta-excerpt";
+import { buildImplicitPostDocumentTitle } from "@/lib/post-document-title";
+import { stripEmojiForSeo } from "@/lib/seo-sanitize";
 import { SiteChrome, SiteFooter } from "@/components/site/SiteChrome";
 import { PostBackTray } from "@/components/feed/PostBackTray";
 import { PostCard } from "@/components/feed/PostCard";
@@ -30,9 +32,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     settings.siteUrl ||
     process.env.NEXT_PUBLIC_SITE_URL ||
     "http://localhost:3000";
-  const title = post.metaTitle || post.title;
-  const description =
-    post.metaDescription || excerptForMetaDescription(post.body);
+  const metaTitleTrim = post.metaTitle?.trim() ?? "";
+  const titleRaw = metaTitleTrim
+    ? metaTitleTrim
+    : buildImplicitPostDocumentTitle(
+        post.title,
+        settings.displayName,
+        post.category?.name,
+      );
+  const descriptionRaw =
+    post.metaDescription?.trim() || excerptForMetaDescription(post.body);
+  /** В выдаче и соцсетях — без эмодзи; текст поста на странице не меняем. */
+  const title = stripEmojiForSeo(titleRaw) || titleRaw.trim() || "Публикация";
+  const description = stripEmojiForSeo(descriptionRaw) || descriptionRaw.trim();
   const first = post.images[0];
   const og =
     first && parseVariants(first.variantsJson).w1280

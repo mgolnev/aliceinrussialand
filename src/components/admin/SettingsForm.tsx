@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import type { SocialLink } from "@/lib/site";
+import { SOCIAL_KIND_OPTIONS } from "@/lib/social-link-kinds";
 
 type Props = {
   initial: {
@@ -433,11 +434,11 @@ export function SettingsForm({ initial }: Props) {
                     })
                   }
                 >
-                  <option value="telegram">Telegram</option>
-                  <option value="behance">Behance</option>
-                  <option value="instagram">Instagram</option>
-                  <option value="email">Почта</option>
-                  <option value="other">Другое</option>
+                  {SOCIAL_KIND_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
                 <button
                   type="button"
