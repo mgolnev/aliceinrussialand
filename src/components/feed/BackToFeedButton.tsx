@@ -2,13 +2,14 @@
 
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import { chromePlaqueButtonClass, pillTabClass } from "@/lib/pill-tab-styles";
 
 type Variant = "pill" | "plaque";
 
 /**
- * «← Лента»: как браузерный «назад», если в истории есть предыдущая страница;
- * иначе — переход на главную ленту «Все» (`/` без фильтра категории).
+ * «Назад» с иконкой: как браузерный «назад», если в истории есть предыдущая страница;
+ * иначе — переход на главную (`/` без фильтра категории).
  */
 export function BackToFeedButton({ variant }: { variant: Variant }) {
   const router = useRouter();
@@ -27,10 +28,16 @@ export function BackToFeedButton({ variant }: { variant: Variant }) {
       <button
         type="button"
         onClick={goBack}
-        className={`relative ${pillTabClass(true)}`}
-        aria-label="Назад к ленте"
+        className={`relative inline-flex items-center gap-0.5 ${pillTabClass(true)}`}
+        aria-label="Назад"
       >
-        ← Лента
+        <ChevronLeft
+          size={18}
+          strokeWidth={2.25}
+          className="-ml-0.5 shrink-0 opacity-85"
+          aria-hidden
+        />
+        Назад
       </button>
     );
   }
@@ -39,10 +46,16 @@ export function BackToFeedButton({ variant }: { variant: Variant }) {
     <button
       type="button"
       onClick={goBack}
-      className={chromePlaqueButtonClass()}
-      aria-label="Назад к ленте"
+      className={`relative inline-flex items-center gap-0.5 ${chromePlaqueButtonClass()}`}
+      aria-label="Назад"
     >
-      ← Лента
+      <ChevronLeft
+        size={18}
+        strokeWidth={2.25}
+        className="-ml-0.5 shrink-0 opacity-85"
+        aria-hidden
+      />
+      Назад
     </button>
   );
 }

@@ -32,8 +32,7 @@ import { useFeedImageUploadQueue } from "@/hooks/use-feed-image-upload-queue";
 import type { FeedComposerImage } from "@/components/feed/FeedComposerPanel";
 import {
   MoreHorizontal,
-  Share2,
-  Forward,
+  CornerUpRight,
   ExternalLink,
   Edit3,
   EyeOff,
@@ -624,7 +623,11 @@ export function PostCard({
                             setMenuOpen(false);
                           }}
                         >
-                          <Share2 size={16} className="text-stone-400" />
+                          <CornerUpRight
+                            size={16}
+                            strokeWidth={2.25}
+                            className="text-stone-400"
+                          />
                           Поделиться
                         </button>
                       </div>,
@@ -644,7 +647,12 @@ export function PostCard({
                   sharePost();
                 }}
               >
-                <Forward size={18} aria-hidden />
+                <CornerUpRight
+                  size={20}
+                  strokeWidth={2.25}
+                  className="text-stone-700"
+                  aria-hidden
+                />
               </button>
             )}
           </div>
