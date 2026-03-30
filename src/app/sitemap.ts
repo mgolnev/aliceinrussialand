@@ -6,8 +6,8 @@ import { getSiteSettings } from "@/lib/site";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const settings = await getSiteSettings();
   const base =
-    process.env.NEXT_PUBLIC_SITE_URL ||
     settings.siteUrl ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
     "http://localhost:3000";
   const origin = base.replace(/\/$/, "");
 

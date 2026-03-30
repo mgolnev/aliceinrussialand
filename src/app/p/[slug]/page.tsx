@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import {
@@ -10,7 +9,9 @@ import {
 import { listFeedCategories } from "@/lib/feed-server";
 import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { absoluteUrl } from "@/lib/absolute-url";
+import { excerptForMetaDescription } from "@/lib/meta-excerpt";
 import { SiteChrome, SiteFooter } from "@/components/site/SiteChrome";
+import { PostBackTray } from "@/components/feed/PostBackTray";
 import { PostCard } from "@/components/feed/PostCard";
 import { PostReadNextCarousel } from "@/components/feed/PostReadNextCarousel";
 import type { FeedCategory, FeedPost } from "@/types/feed";
@@ -30,7 +31,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     process.env.NEXT_PUBLIC_SITE_URL ||
     "http://localhost:3000";
   const title = post.metaTitle || post.title;
-  const description = post.metaDescription || post.body.slice(0, 160);
+  const description =
+    post.metaDescription || excerptForMetaDescription(post.body);
   const first = post.images[0];
   const og =
     first && parseVariants(first.variantsJson).w1280
@@ -111,7 +113,10 @@ export default async function PostPage({ params }: PageProps) {
     headline: post.title,
     datePublished: post.publishedAt?.toISOString(),
     image: feedPost.images
-      .map((im) => siteUrl.replace(/\/$/, "") + (im.variants.w1280 || ""))
+      .map((im) => {
+        const path = im.variants.w1280;
+        return path ? absoluteUrl(siteUrl, path) : "";
+      })
       .filter(Boolean),
   };
 
@@ -126,17 +131,9 @@ export default async function PostPage({ params }: PageProps) {
         tagline={settings.tagline}
         avatarUrl={parseAvatarUrl(settings.avatarMediaPath)}
         contactsLabel={settings.contactsLabel}
+        stickyTray={<PostBackTray />}
       />
-      <div className="mx-auto max-w-3xl px-3 py-8 sm:px-5 sm:py-10">
-        <nav className="mb-6 text-sm text-stone-600">
-          <Link
-            href="/"
-            scroll={false}
-            className="hover:text-stone-900 hover:underline"
-          >
-            ← Назад
-          </Link>
-        </nav>
+      <div className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-10">
         <PostCard
           post={feedPost}
           categories={isAdmin ? allFeedCategories : []}

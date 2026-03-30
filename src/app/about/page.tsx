@@ -6,6 +6,7 @@ import {
   parseAvatarUrl,
   parseSocialLinks,
 } from "@/lib/site";
+import { absoluteUrl } from "@/lib/absolute-url";
 import { SiteChrome, SiteFooter } from "@/components/site/SiteChrome";
 import { SocialLinksSection } from "@/components/site/SocialLinksSection";
 
@@ -13,10 +14,34 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSiteSettings();
+  const siteUrl =
+    s.siteUrl ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "http://localhost:3000";
+  const description = s.bio?.trim() || s.tagline?.trim() || undefined;
+  const aboutImg = parseAboutPhotoUrl(s.aboutPhotoPath);
+  const avatar = parseAvatarUrl(s.avatarMediaPath);
+  const ogPath = aboutImg || avatar;
+  const og = ogPath ? absoluteUrl(siteUrl, ogPath) : undefined;
+  const title = "Обо мне";
+
   return {
-    title: "Обо мне",
-    description: s.bio || s.tagline,
+    title,
+    description,
     alternates: { canonical: "/about" },
+    openGraph: {
+      title,
+      description,
+      url: absoluteUrl(siteUrl, "/about"),
+      type: "website",
+      images: og ? [{ url: og }] : undefined,
+    },
+    twitter: {
+      card: og ? "summary_large_image" : "summary",
+      title,
+      description,
+      images: og ? [og] : undefined,
+    },
   };
 }
 

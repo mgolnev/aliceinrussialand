@@ -71,11 +71,28 @@ async function fetchViaAjax(
     const contentType = res.headers.get("content-type") ?? "";
     const text = await res.text();
 
+    const trimStart = text.trimStart();
+    const tryJson =
+      contentType.includes("json") ||
+      trimStart.startsWith("{") ||
+      trimStart.startsWith('"');
+
     let html: string;
-    if (contentType.includes("json") || text.trimStart().startsWith("{")) {
+    if (tryJson) {
       try {
-        const json = JSON.parse(text) as Record<string, unknown>;
-        html = typeof json.html === "string" ? json.html : "";
+        const parsed = JSON.parse(text) as unknown;
+        if (typeof parsed === "string") {
+          /** Сейчас t.me часто отдаёт JSON-строку с HTML, раньше был объект `{ html }`. */
+          html = parsed;
+        } else if (
+          parsed &&
+          typeof parsed === "object" &&
+          typeof (parsed as { html?: unknown }).html === "string"
+        ) {
+          html = (parsed as { html: string }).html;
+        } else {
+          html = "";
+        }
       } catch {
         return { ok: false, reason: "Невалидный JSON" };
       }
@@ -89,10 +106,19 @@ async function fetchViaAjax(
 
     const $ = cheerio.load(html);
     const prevHref = $('link[rel="prev"]').attr("href") ?? "";
-    const nextBefore =
+    const more = $(".tme_messages_more, a.js-messages_more").first();
+    let nextBefore: string | null =
       prevHref.match(/[?&]before=(\d+)/)?.[1] ??
       prevHref.match(/before=(\d+)/)?.[1] ??
       null;
+    if (!nextBefore) {
+      const dataB = more.attr("data-before")?.trim();
+      if (dataB) nextBefore = dataB;
+      else {
+        const href = more.attr("href") ?? "";
+        nextBefore = href.match(/[?&]before=(\d+)/)?.[1] ?? null;
+      }
+    }
 
     return { ok: true, html, nextBefore };
   } catch (e) {

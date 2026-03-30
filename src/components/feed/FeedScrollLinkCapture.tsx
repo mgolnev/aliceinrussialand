@@ -4,7 +4,9 @@ import { useEffect } from "react";
 import { saveFeedScrollPosition } from "@/lib/feed-scroll";
 
 /**
- * Любой переход на /p/... с главной должен сохранить scroll (не только пункт меню).
+ * Сохраняем scroll ленты только при уходе с главной на пост.
+ * На странице поста не пишем в sessionStorage — иначе тап по рекомендациям
+ * сохраняет «низ длинного поста» и ломает восстановление при возврате на /.
  */
 export function FeedScrollLinkCapture() {
   useEffect(() => {
@@ -15,6 +17,8 @@ export function FeedScrollLinkCapture() {
       if (!a) return;
       const href = a.getAttribute("href");
       if (!href || !href.startsWith("/p/")) return;
+      if (typeof window === "undefined") return;
+      if (window.location.pathname.startsWith("/p/")) return;
       saveFeedScrollPosition();
     };
     document.addEventListener("pointerdown", onPointerDown, true);

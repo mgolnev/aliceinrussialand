@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ResponsiveImage } from "@/components/ui/ResponsiveImage";
 import { PostImpression } from "./PostImpression";
+import { PostOpenLinkOverlay } from "./PostOpenLinkOverlay";
 import type { FeedCategory, FeedPost } from "@/types/feed";
 import { MediaGrid } from "./MediaGrid";
 import { ImageLightbox } from "./ImageLightbox";
@@ -32,12 +33,12 @@ import type { FeedComposerImage } from "@/components/feed/FeedComposerPanel";
 import {
   MoreHorizontal,
   Share2,
+  Forward,
   ExternalLink,
   Edit3,
   EyeOff,
   Trash2,
   X,
-  ArrowLeft,
   Pin,
   PinOff,
 } from "lucide-react";
@@ -250,9 +251,11 @@ export function PostCard({
   function sharePost() {
     const url = `${siteUrl.replace(/\/$/, "")}${postUrl}`;
     if (navigator.share) {
-      void navigator.share({ title: post.title, text: post.title, url }).catch(() => {});
+      void navigator
+        .share({ title: post.title, text: post.title, url })
+        .catch(() => {});
     } else {
-      void navigator.clipboard.writeText(url);
+      void navigator.clipboard.writeText(url).catch(() => {});
     }
   }
 
@@ -433,6 +436,10 @@ export function PostCard({
   }
 
   const feedMediaGrid = !standalone && post.images.length > 0;
+  const openPostAria =
+    post.title?.trim() ||
+    post.body.trim().slice(0, 80) ||
+    "Открыть пост";
   const articlePad =
     canManage && editMode
       ? "p-0"
@@ -449,6 +456,17 @@ export function PostCard({
       <article
         className={`relative min-w-0 scroll-mt-24 ${articleClip} rounded-[24px] border border-stone-200/80 bg-white/95 shadow-[0_8px_30px_-10px_rgba(60,44,29,0.15)] backdrop-blur-sm sm:rounded-[30px] ${articlePad}`}
       >
+        {!standalone && !(canManage && editMode) ? (
+          <PostOpenLinkOverlay href={postUrl} ariaLabel={openPostAria} />
+        ) : null}
+
+        <div
+          className={`relative z-[1] min-w-0 ${
+            !standalone && !(canManage && editMode)
+              ? "pointer-events-none"
+              : ""
+          }`}
+        >
         {plausibleDomain || yandexMetrikaId?.trim() ? (
           <PostImpression
             slug={post.slug}
@@ -459,6 +477,12 @@ export function PostCard({
 
         <header
           className={`relative flex items-center justify-between gap-3 ${
+            !standalone && !(canManage && editMode)
+              ? canManage
+                ? "pointer-events-auto"
+                : "pointer-events-none"
+              : ""
+          } ${
             canManage && editMode
               ? "border-b border-stone-100 px-3 pb-2.5 pt-3 sm:px-5 sm:pb-3 sm:pt-4"
               : feedMediaGrid
@@ -492,17 +516,11 @@ export function PostCard({
             ) : null}
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5">
-            {standalone ? (
-              <Link
-                href="/"
-                scroll={false}
-                aria-label="Назад"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90"
-              >
-                <ArrowLeft size={18} />
-              </Link>
-            ) : null}
+          <div
+            className={`flex shrink-0 items-center gap-1.5 ${
+              !canManage && !standalone ? "pointer-events-auto" : ""
+            }`}
+          >
             {canManage && editMode ? (
               <button
                 type="button"
@@ -512,109 +530,119 @@ export function PostCard({
               >
                 <X size={18} />
               </button>
-            ) : (
-            <div className="relative">
-              <button
-                ref={menuTriggerRef}
-                type="button"
-                aria-expanded={menuOpen}
-                aria-haspopup="menu"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90"
-                onClick={() => setMenuOpen((value) => !value)}
-              >
-                <MoreHorizontal size={18} />
-              </button>
-              {menuOpen && menuPos
-                ? createPortal(
-                    <div
-                      ref={menuPanelRef}
-                      className="fixed z-[100] w-56 overflow-hidden rounded-2xl border border-stone-200 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100"
-                      style={{
-                        top: menuPos.top,
-                        right: menuPos.right,
-                      }}
-                      role="menu"
-                    >
-                      {canManage ? (
-                        <>
-                          <button
-                            type="button"
-                            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100"
-                            role="menuitem"
-                            onClick={() => {
-                              setEditMessage(null);
-                              setEditMode(true);
-                              setMenuOpen(false);
-                            }}
-                          >
-                            <Edit3 size={16} className="text-stone-400" />
-                            Редактировать
-                          </button>
-                          <button
-                            type="button"
-                            disabled={working}
-                            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
-                            role="menuitem"
-                            onClick={() => void setDraft()}
-                          >
-                            <EyeOff size={16} className="text-stone-400" />
-                            В черновики
-                          </button>
-                          <button
-                            type="button"
-                            disabled={working}
-                            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
-                            role="menuitem"
-                            onClick={() => void togglePin()}
-                          >
-                            {pinnedUi ? (
-                              <PinOff size={16} className="text-stone-400" />
-                            ) : (
-                              <Pin size={16} className="text-stone-400" />
-                            )}
-                            {pinnedUi ? "Открепить" : "Закрепить"}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={working}
-                            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-red-600 hover:bg-red-50 active:bg-red-100 disabled:opacity-50"
-                            role="menuitem"
-                            onClick={() => void deletePost()}
-                          >
-                            <Trash2 size={16} className="text-red-400" />
-                            Удалить
-                          </button>
-                          <div className="my-1.5 h-px bg-stone-100" />
-                        </>
-                      ) : null}
-                      {!standalone ? (
-                        <Link
-                          href={postUrl}
-                          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-stone-700 hover:bg-stone-50 active:bg-stone-100"
-                          onClick={() => setMenuOpen(false)}
-                          role="menuitem"
-                        >
-                          <ExternalLink size={16} className="text-stone-400" />
-                          Открыть пост
-                        </Link>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100"
-                        role="menuitem"
-                        onClick={() => {
-                          sharePost();
-                          setMenuOpen(false);
+            ) : canManage ? (
+              <div className="relative">
+                <button
+                  ref={menuTriggerRef}
+                  type="button"
+                  aria-expanded={menuOpen}
+                  aria-haspopup="menu"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90"
+                  onClick={() => setMenuOpen((value) => !value)}
+                >
+                  <MoreHorizontal size={18} />
+                </button>
+                {menuOpen && menuPos
+                  ? createPortal(
+                      <div
+                        ref={menuPanelRef}
+                        className="fixed z-[100] w-56 overflow-hidden rounded-2xl border border-stone-200 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100"
+                        style={{
+                          top: menuPos.top,
+                          right: menuPos.right,
                         }}
+                        role="menu"
                       >
-                        <Share2 size={16} className="text-stone-400" />
-                        Поделиться
-                      </button>
-                    </div>,
-                    document.body,
-                  )
-                : null}
-            </div>
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100"
+                          role="menuitem"
+                          onClick={() => {
+                            setEditMessage(null);
+                            setEditMode(true);
+                            setMenuOpen(false);
+                          }}
+                        >
+                          <Edit3 size={16} className="text-stone-400" />
+                          Редактировать
+                        </button>
+                        <button
+                          type="button"
+                          disabled={working}
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
+                          role="menuitem"
+                          onClick={() => void setDraft()}
+                        >
+                          <EyeOff size={16} className="text-stone-400" />
+                          В черновики
+                        </button>
+                        <button
+                          type="button"
+                          disabled={working}
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
+                          role="menuitem"
+                          onClick={() => void togglePin()}
+                        >
+                          {pinnedUi ? (
+                            <PinOff size={16} className="text-stone-400" />
+                          ) : (
+                            <Pin size={16} className="text-stone-400" />
+                          )}
+                          {pinnedUi ? "Открепить" : "Закрепить"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={working}
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-red-600 hover:bg-red-50 active:bg-red-100 disabled:opacity-50"
+                          role="menuitem"
+                          onClick={() => void deletePost()}
+                        >
+                          <Trash2 size={16} className="text-red-400" />
+                          Удалить
+                        </button>
+                        <div className="my-1.5 h-px bg-stone-100" />
+                        {!standalone ? (
+                          <Link
+                            href={postUrl}
+                            className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-stone-700 hover:bg-stone-50 active:bg-stone-100"
+                            onClick={() => setMenuOpen(false)}
+                            role="menuitem"
+                          >
+                            <ExternalLink size={16} className="text-stone-400" />
+                            Открыть пост
+                          </Link>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100"
+                          role="menuitem"
+                          onClick={() => {
+                            sharePost();
+                            setMenuOpen(false);
+                          }}
+                        >
+                          <Share2 size={16} className="text-stone-400" />
+                          Поделиться
+                        </button>
+                      </div>,
+                      document.body,
+                    )
+                  : null}
+              </div>
+            ) : (
+              <button
+                type="button"
+                aria-label="Поделиться"
+                title="Поделиться"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  sharePost();
+                }}
+              >
+                <Forward size={18} aria-hidden />
+              </button>
             )}
           </div>
         </header>
@@ -689,7 +717,7 @@ export function PostCard({
             ) : null}
 
             {!standalone && post.images.length > 0 ? (
-              <div className="min-w-0">
+              <div className="pointer-events-auto min-w-0">
                 <MediaGrid
                   fullBleed
                   flushCardBottom
@@ -705,7 +733,7 @@ export function PostCard({
                 />
               </div>
             ) : (
-              <div className="min-w-0 space-y-3 sm:space-y-4">
+              <div className="pointer-events-auto min-w-0 space-y-3 sm:space-y-4">
                 {post.images.map((im, i) => (
                   <button
                     key={im.id}
@@ -728,6 +756,7 @@ export function PostCard({
             )}
           </>
         )}
+        </div>
       </article>
 
       {viewerIndex !== null && viewerImage?.src ? (

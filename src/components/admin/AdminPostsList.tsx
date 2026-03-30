@@ -2,13 +2,21 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 import { ImageIcon, MoreHorizontal } from "lucide-react";
 import { POST_STATUS } from "@/lib/constants";
 import {
   dispatchFeedRefreshMerge,
   dispatchFeedRefreshReplace,
 } from "@/lib/feed-refresh";
+import { LinkNavigatePendingBackdrop } from "@/components/feed/PostOpenLinkOverlay";
 
 export type AdminPostListRow = {
   id: string;
@@ -138,18 +146,59 @@ function AdminPostRow({
   const metaDate = formatMetaDate(p.publishedAt, p.updatedAt);
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const menuWrapRef = useRef<HTMLDivElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(
+    null,
+  );
+
+  const updateMenuPosition = useCallback(() => {
+    const el = menuTriggerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const gap = 6;
+    setMenuPos({
+      top: rect.bottom + gap,
+      right: Math.max(8, window.innerWidth - rect.right),
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!menuOpen) {
+      setMenuPos(null);
+      return;
+    }
+    updateMenuPosition();
+  }, [menuOpen, updateMenuPosition]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onScrollOrResize = () => updateMenuPosition();
+    window.addEventListener("scroll", onScrollOrResize, true);
+    window.addEventListener("resize", onScrollOrResize);
+    return () => {
+      window.removeEventListener("scroll", onScrollOrResize, true);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
+  }, [menuOpen, updateMenuPosition]);
 
   useEffect(() => {
     if (!menuOpen) return;
     const onPointerDown = (e: PointerEvent) => {
-      const root = menuWrapRef.current;
-      if (root && !root.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
+      const t = e.target as Node;
+      if (menuTriggerRef.current?.contains(t)) return;
+      if (menuPanelRef.current?.contains(t)) return;
+      setMenuOpen(false);
     };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [menuOpen]);
 
   const patchStatus = useCallback(
@@ -197,14 +246,15 @@ function AdminPostRow({
       <div className="group flex min-h-[5rem] items-stretch overflow-visible sm:min-h-[5.25rem]">
         <Link
           href={href}
-          className="flex min-h-0 min-w-0 flex-1 items-stretch gap-3 py-2 pl-3 pr-1 transition-colors active:bg-stone-100/80 sm:gap-4 sm:py-2.5 sm:pl-4 sm:pr-2 group-hover:bg-stone-50/95"
+          className="relative flex min-h-0 min-w-0 flex-1 items-stretch gap-3 py-2 pl-3 pr-1 transition-[colors,transform] motion-safe:active:scale-[0.995] motion-safe:active:bg-stone-100/80 sm:gap-4 sm:py-2.5 sm:pl-4 sm:pr-2 group-hover:bg-stone-50/95"
         >
-          <div className="box-border flex h-full min-h-0 shrink-0 items-center self-stretch py-1 pl-0 pr-0 sm:py-1.5">
+          <LinkNavigatePendingBackdrop />
+          <div className="relative z-[1] box-border flex h-full min-h-0 shrink-0 items-center self-stretch py-1 pl-0 pr-0 sm:py-1.5">
             <div className="relative aspect-square h-[88%] max-h-[7rem] min-h-[4rem] w-auto min-w-[4rem] max-w-[7rem] sm:h-[90%] sm:min-h-[4.25rem] sm:max-h-[7.25rem] sm:min-w-[4.25rem] sm:max-w-[7.25rem]">
               <PostThumb thumbUrl={p.thumbUrl} imageCount={p.imageCount} />
             </div>
           </div>
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col justify-start pr-2 pt-1 pb-1">
+          <div className="relative z-[1] flex min-h-0 min-w-0 flex-1 flex-col justify-start pr-2 pt-1 pb-1">
             <p className="line-clamp-2 text-[13px] font-normal leading-[1.35] text-stone-800">
               {p.preview}
             </p>
@@ -250,93 +300,100 @@ function AdminPostRow({
           </div>
         </Link>
 
-        <div
-          ref={menuWrapRef}
-          className="relative z-10 flex shrink-0 self-stretch overflow-visible border-l border-stone-200/40 bg-white/80 group-hover:bg-stone-50/90"
-        >
-          <button
-            type="button"
-            className="flex h-full min-h-[5rem] w-11 items-start justify-center px-1 pt-3.5 text-stone-300 transition-colors hover:bg-stone-100/80 hover:text-stone-600 active:bg-stone-200/40 sm:min-h-[5.25rem] sm:w-12 sm:pt-4"
-            aria-expanded={menuOpen}
-            aria-haspopup="menu"
-            aria-label="Действия"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setMenuOpen((v) => !v);
-            }}
-          >
-            <MoreHorizontal className="h-5 w-5" strokeWidth={1.5} />
-          </button>
-          {menuOpen ? (
-            <div
-              className="absolute right-0 top-full z-[100] min-w-[200px] rounded-xl border border-stone-200/90 bg-white py-1 shadow-lg"
-              role="menu"
+        <div className="relative z-10 flex w-11 shrink-0 flex-col items-stretch self-stretch overflow-visible border-l border-stone-200/40 bg-white/80 group-hover:bg-stone-50/90 sm:w-12">
+          <div className="flex shrink-0 justify-center pt-2 sm:pt-2.5">
+            <button
+              ref={menuTriggerRef}
+              type="button"
+              className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-stone-300 transition-colors hover:bg-stone-100/80 hover:text-stone-600 active:bg-stone-200/40"
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+              aria-label="Действия"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMenuOpen((v) => !v);
+              }}
             >
-              <Link
-                href={`/admin/posts/${p.id}/edit`}
-                role="menuitem"
-                className="block px-3 py-2 text-[14px] text-stone-800 hover:bg-stone-50"
-                onClick={() => setMenuOpen(false)}
-              >
-                Slug и SEO
-              </Link>
-              {published ? (
-                <Link
-                  href={`/p/${p.slug}`}
-                  role="menuitem"
-                  className="block px-3 py-2 text-[14px] text-stone-800 hover:bg-stone-50"
-                  onClick={() => setMenuOpen(false)}
+              <MoreHorizontal className="h-5 w-5" strokeWidth={1.5} />
+            </button>
+          </div>
+          {menuOpen && menuPos
+            ? createPortal(
+                <div
+                  ref={menuPanelRef}
+                  className="fixed z-[200] min-w-[200px] rounded-xl border border-stone-200/90 bg-white py-1 shadow-lg"
+                  style={{ top: menuPos.top, right: menuPos.right }}
+                  role="menu"
                 >
-                  Открыть на сайте
-                </Link>
-              ) : null}
-              <button
-                type="button"
-                role="menuitem"
-                disabled={busy}
-                className="block w-full px-3 py-2 text-left text-[14px] text-stone-800 hover:bg-stone-50 disabled:opacity-50"
-                onClick={() => {
-                  void navigator.clipboard.writeText(`${base}/p/${p.slug}`);
-                  setMenuOpen(false);
-                }}
-              >
-                Копировать URL
-              </button>
-              <div className="my-1 border-t border-stone-100" />
-              {published ? (
-                <button
-                  type="button"
-                  role="menuitem"
-                  disabled={busy}
-                  className="block w-full px-3 py-2 text-left text-[14px] text-stone-800 hover:bg-stone-50 disabled:opacity-50"
-                  onClick={() => void patchStatus(POST_STATUS.DRAFT)}
-                >
-                  В черновик
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  role="menuitem"
-                  disabled={busy}
-                  className="block w-full px-3 py-2 text-left text-[14px] text-emerald-800 hover:bg-emerald-50/80 disabled:opacity-50"
-                  onClick={() => void patchStatus(POST_STATUS.PUBLISHED)}
-                >
-                  Опубликовать
-                </button>
-              )}
-              <div className="my-1 border-t border-stone-100" />
-              <button
-                type="button"
-                role="menuitem"
-                disabled={busy}
-                className="block w-full px-3 py-2 text-left text-[14px] text-red-600 hover:bg-red-50 disabled:opacity-50"
-                onClick={() => void deletePost()}
-              >
-                Удалить
-              </button>
-            </div>
-          ) : null}
+                  <Link
+                    href={`/admin/posts/${p.id}/edit`}
+                    role="menuitem"
+                    className="block px-3 py-2 text-[14px] text-stone-800 hover:bg-stone-50"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Slug и SEO
+                  </Link>
+                  {published ? (
+                    <Link
+                      href={`/p/${p.slug}`}
+                      role="menuitem"
+                      className="block px-3 py-2 text-[14px] text-stone-800 hover:bg-stone-50"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Открыть на сайте
+                    </Link>
+                  ) : null}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    disabled={busy}
+                    className="block w-full px-3 py-2 text-left text-[14px] text-stone-800 hover:bg-stone-50 disabled:opacity-50"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      void navigator.clipboard
+                        .writeText(`${base}/p/${p.slug}`)
+                        .catch(() => {});
+                    }}
+                  >
+                    Копировать URL
+                  </button>
+                  <div className="my-1 border-t border-stone-100" />
+                  {published ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled={busy}
+                      className="block w-full px-3 py-2 text-left text-[14px] text-stone-800 hover:bg-stone-50 disabled:opacity-50"
+                      onClick={() => void patchStatus(POST_STATUS.DRAFT)}
+                    >
+                      В черновик
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled={busy}
+                      className="block w-full px-3 py-2 text-left text-[14px] text-emerald-800 hover:bg-emerald-50/80 disabled:opacity-50"
+                      onClick={() => void patchStatus(POST_STATUS.PUBLISHED)}
+                    >
+                      Опубликовать
+                    </button>
+                  )}
+                  <div className="my-1 border-t border-stone-100" />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    disabled={busy}
+                    className="block w-full px-3 py-2 text-left text-[14px] text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    onClick={() => void deletePost()}
+                  >
+                    Удалить
+                  </button>
+                </div>,
+                document.body,
+              )
+            : null}
         </div>
       </div>
     </li>

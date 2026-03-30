@@ -9,6 +9,7 @@ import {
   pickDefaultVariantUrl,
   pickVariantUrlForRequestedWidth,
 } from "@/lib/image-variants";
+import { LinkNavigatePendingBackdrop } from "./PostOpenLinkOverlay";
 
 export type WatchNextCard = {
   slug: string;
@@ -135,9 +136,10 @@ export function WatchNextContinuation({
           <Link
             href={`/p/${featured.slug}`}
             aria-label={`Продолжить смотреть: ${featured.preview.slice(0, 120)}`}
-            className="group relative flex h-40 min-h-0 w-full shrink-0 overflow-hidden rounded-t-2xl border-b border-stone-200/80 bg-white shadow-[0_12px_36px_-18px_rgba(55,42,28,0.45)] outline-none ring-stone-400/30 transition-[box-shadow,background-color,border-color] duration-200 hover:border-stone-300/90 hover:bg-[#fffdfb] hover:shadow-[0_18px_48px_-20px_rgba(55,42,28,0.5)] focus-visible:ring-2 focus-visible:ring-inset active:bg-stone-50/95 sm:h-44"
+            className="group relative flex h-40 min-h-0 w-full shrink-0 overflow-hidden rounded-t-2xl border-b border-stone-200/80 bg-white shadow-[0_12px_36px_-18px_rgba(55,42,28,0.45)] outline-none ring-stone-400/30 transition-[box-shadow,background-color,border-color,transform] duration-200 hover:border-stone-300/90 hover:bg-[#fffdfb] hover:shadow-[0_18px_48px_-20px_rgba(55,42,28,0.5)] focus-visible:ring-2 focus-visible:ring-inset motion-safe:active:scale-[0.99] motion-safe:active:bg-stone-50/95 sm:h-44"
           >
-            <div className="relative h-full w-[60%] max-w-[60%] shrink-0 overflow-hidden bg-[#ede8e0]">
+            <LinkNavigatePendingBackdrop />
+            <div className="relative z-[1] h-full w-[60%] max-w-[60%] shrink-0 overflow-hidden bg-[#ede8e0]">
               {pickDefaultVariantUrl(featured.variants) ? (
                 <ExploreThumb
                   variants={featured.variants}
@@ -153,7 +155,7 @@ export function WatchNextContinuation({
                 </span>
               )}
             </div>
-            <div className="flex h-full min-h-0 w-[40%] min-w-[40%] shrink-0 flex-col justify-between gap-2 border-l border-stone-200/60 bg-gradient-to-br from-white via-white to-[#faf7f2] px-3 py-3 sm:gap-2.5 sm:px-3.5 sm:py-3.5">
+            <div className="relative z-[1] flex h-full min-h-0 w-[40%] min-w-[40%] shrink-0 flex-col justify-between gap-2 border-l border-stone-200/60 bg-gradient-to-br from-white via-white to-[#faf7f2] px-3 py-3 sm:gap-2.5 sm:px-3.5 sm:py-3.5">
               <p className="line-clamp-3 min-h-0 text-[13px] font-semibold leading-snug tracking-tight text-stone-900 [overflow-wrap:anywhere] sm:line-clamp-4 sm:text-[14px] sm:leading-snug">
                 {featured.preview}
               </p>
@@ -186,9 +188,10 @@ export function WatchNextContinuation({
                   <Link
                     key={item.slug}
                     href={`/p/${item.slug}`}
-                    className="flex w-[7.25rem] shrink-0 flex-col overflow-hidden rounded-lg border border-stone-200/70 bg-white/95 outline-none ring-stone-400/30 transition hover:border-stone-300 focus-visible:ring-2 active:scale-[0.99] sm:w-[7.75rem]"
+                    className="relative flex w-[7.25rem] shrink-0 flex-col overflow-hidden rounded-lg border border-stone-200/70 bg-white/95 outline-none ring-stone-400/30 transition hover:border-stone-300 focus-visible:ring-2 motion-safe:active:scale-[0.98] sm:w-[7.75rem]"
                   >
-                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#f4efe8]">
+                    <LinkNavigatePendingBackdrop />
+                    <div className="relative z-[1] aspect-[4/3] w-full overflow-hidden bg-[#f4efe8]">
                       {has ? (
                         <ExploreThumb
                           variants={item.variants}
@@ -204,7 +207,7 @@ export function WatchNextContinuation({
                         </span>
                       )}
                     </div>
-                    <div className="min-h-0 px-2 py-1.5">
+                    <div className="relative z-[1] min-h-0 px-2 py-1.5">
                       <p className="line-clamp-1 text-[11px] font-medium leading-tight text-stone-900 [overflow-wrap:anywhere] sm:text-xs">
                         {item.preview}
                       </p>

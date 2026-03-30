@@ -6,6 +6,8 @@ import { toSlug } from "@/lib/slug";
 import { processUpload } from "@/lib/image-pipeline";
 import { downloadTelegramImage } from "@/lib/telegram-public";
 import { derivePostTitle } from "@/lib/post-text";
+import { normalizeTelegramPostUrl } from "@/lib/telegram-post-url";
+import { excerptForMetaDescription } from "@/lib/meta-excerpt";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -54,9 +56,9 @@ export async function POST(req: Request) {
           displayMode: "GRID",
           status: publish ? POST_STATUS.PUBLISHED : POST_STATUS.DRAFT,
           publishedAt,
-          telegramSourceUrl: item.href,
+          telegramSourceUrl: normalizeTelegramPostUrl(item.href),
           metaTitle: titleLine,
-          metaDescription: item.text.slice(0, 160),
+          metaDescription: excerptForMetaDescription(item.text),
         },
       });
 

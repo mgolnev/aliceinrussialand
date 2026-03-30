@@ -1,5 +1,7 @@
+import type { Metadata } from "next";
 import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { getFeedPage } from "@/lib/feed-server";
+import { absoluteUrl } from "@/lib/absolute-url";
 import { SiteFooter } from "@/components/site/SiteChrome";
 import { HomePageClient } from "@/components/feed/HomePageClient";
 import { FeedScrollRestore } from "@/components/feed/FeedScrollRestore";
@@ -7,6 +9,37 @@ import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 import { cookies } from "next/headers";
 
 type HomeProps = { searchParams: Promise<{ category?: string }> };
+
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getSiteSettings();
+  const siteUrl =
+    s.siteUrl ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "http://localhost:3000";
+  const description =
+    s.tagline?.trim() || s.bio?.trim() || "Лента работ";
+  const avatar = parseAvatarUrl(s.avatarMediaPath);
+  const og = avatar ? absoluteUrl(siteUrl, avatar) : undefined;
+
+  return {
+    title: { absolute: s.displayName },
+    description,
+    alternates: { canonical: "/" },
+    openGraph: {
+      title: s.displayName,
+      description,
+      url: absoluteUrl(siteUrl, "/"),
+      type: "website",
+      images: og ? [{ url: og }] : undefined,
+    },
+    twitter: {
+      card: og ? "summary_large_image" : "summary",
+      title: s.displayName,
+      description,
+      images: og ? [og] : undefined,
+    },
+  };
+}
 
 export default async function HomePage({ searchParams }: HomeProps) {
   const sp = await searchParams;

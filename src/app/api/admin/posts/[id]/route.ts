@@ -6,6 +6,7 @@ import { toSlug } from "@/lib/slug";
 import { deleteImageFiles } from "@/lib/image-pipeline";
 import { parseVariants } from "@/lib/posts-query";
 import { derivePostTitle } from "@/lib/post-text";
+import { excerptForMetaDescription } from "@/lib/meta-excerpt";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -138,7 +139,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
     data.metaTitle = rawMetaTitle || nextTitle;
   }
   if (typeof body.metaDescription === "string") {
-    data.metaDescription = rawMetaDescription || nextBody.slice(0, 160);
+    data.metaDescription =
+      rawMetaDescription || excerptForMetaDescription(nextBody);
   }
   if (typeof body.telegramSourceUrl === "string") {
     data.telegramSourceUrl = body.telegramSourceUrl || null;
