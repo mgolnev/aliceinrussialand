@@ -13,6 +13,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ResponsiveImage } from "@/components/ui/ResponsiveImage";
+import { ShareForwardIcon } from "@/components/ui/ShareForwardIcon";
 import { PostImpression } from "./PostImpression";
 import { PostOpenLinkOverlay } from "./PostOpenLinkOverlay";
 import type { FeedCategory, FeedPost } from "@/types/feed";
@@ -623,9 +624,8 @@ export function PostCard({
                             setMenuOpen(false);
                           }}
                         >
-                          <CornerUpRight
+                          <ShareForwardIcon
                             size={16}
-                            strokeWidth={2.25}
                             className="text-stone-400"
                           />
                           Поделиться
@@ -647,12 +647,7 @@ export function PostCard({
                   sharePost();
                 }}
               >
-                <CornerUpRight
-                  size={20}
-                  strokeWidth={2.25}
-                  className="text-stone-700"
-                  aria-hidden
-                />
+                <ShareForwardIcon size={20} className="text-stone-700" />
               </button>
             )}
           </div>

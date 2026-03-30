@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Share2, X } from "lucide-react";
+import { X } from "lucide-react";
+import { ShareForwardIcon } from "@/components/ui/ShareForwardIcon";
 
 export type LightboxSlide = {
   src: string;
@@ -478,7 +479,7 @@ export function ImageLightbox({
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-md transition hover:bg-white/10 active:bg-white/15 disabled:opacity-50"
           onClick={() => void shareCurrentPhoto()}
         >
-          <Share2 size={22} strokeWidth={2} aria-hidden />
+          <ShareForwardIcon size={22} className="text-white" />
         </button>
         {shareHint ? (
           <p className="max-w-[min(100vw-2rem,16rem)] rounded-lg bg-black/60 px-2 py-1.5 text-xs text-white/90 backdrop-blur-sm">
