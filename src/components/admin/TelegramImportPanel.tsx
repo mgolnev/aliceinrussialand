@@ -1,15 +1,13 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import {
+  sortTelegramItemsNewestFirst,
+  type TelegramFeedListItem,
+} from "@/lib/telegram-feed-item-sort";
 import { normalizeTelegramPostUrl } from "@/lib/telegram-post-url";
 
-type TgItem = {
-  messageId: string;
-  href: string;
-  text: string;
-  imageUrls: string[];
-  dateIso: string | null;
-};
+type TgItem = TelegramFeedListItem;
 
 type Props = {
   defaultChannel: string;
@@ -29,34 +27,9 @@ function formatDate(iso: string | null) {
   }
 }
 
-function tgItemTimeMs(it: TgItem): number | null {
-  if (!it.dateIso) return null;
-  const t = Date.parse(it.dateIso);
-  return Number.isNaN(t) ? null : t;
-}
-
-function tgMessageNum(it: TgItem): number {
-  const tail = it.messageId.includes("/")
-    ? (it.messageId.split("/").pop() ?? it.messageId)
-    : it.messageId;
-  const n = parseInt(tail, 10);
-  return Number.isFinite(n) ? n : 0;
-}
-
 /** Витрина t.me отдаёт посты от старых к новым — для списка нужны новые сверху. */
 function mergeImportedHrefs(prev: string[], next: string[]): string[] {
   return [...new Set([...prev, ...next])];
-}
-
-function sortTgItemsNewestFirst(items: TgItem[]): TgItem[] {
-  return [...items].sort((a, b) => {
-    const ta = tgItemTimeMs(a);
-    const tb = tgItemTimeMs(b);
-    if (ta != null && tb != null && tb !== ta) return tb - ta;
-    if (ta != null && tb == null) return -1;
-    if (ta == null && tb != null) return 1;
-    return tgMessageNum(b) - tgMessageNum(a);
-  });
 }
 
 export function TelegramImportPanel({
@@ -109,7 +82,7 @@ export function TelegramImportPanel({
       const batch = data.items ?? [];
       const batchImported = data.importedHrefs ?? [];
       if (reset) {
-        const sorted = sortTgItemsNewestFirst(batch);
+        const sorted = sortTelegramItemsNewestFirst(batch);
         setItems(sorted);
         setImportedHrefs(batchImported);
         const sel: Record<string, boolean> = {};
@@ -119,7 +92,7 @@ export function TelegramImportPanel({
         setSelected(sel);
       } else {
         setItems((prev) =>
-          sortTgItemsNewestFirst([...(prev ?? []), ...batch]),
+          sortTelegramItemsNewestFirst([...(prev ?? []), ...batch]),
         );
         setImportedHrefs((p) => mergeImportedHrefs(p, batchImported));
         setSelected((prev) => {

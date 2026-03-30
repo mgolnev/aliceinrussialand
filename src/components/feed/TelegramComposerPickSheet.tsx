@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { adminCredentials, readAdminResponseJson } from "@/lib/admin-fetch";
+import { sortTelegramItemsNewestFirst } from "@/lib/telegram-feed-item-sort";
 import { normalizeTelegramPostUrl } from "@/lib/telegram-post-url";
 
 function mergeImportedHrefs(prev: string[], next: string[]): string[] {
@@ -106,10 +107,10 @@ export function TelegramComposerPickSheet({
                 merged.push(it);
               }
             }
-            return merged;
+            return sortTelegramItemsNewestFirst(merged);
           });
         } else {
-          setItems(batch);
+          setItems(sortTelegramItemsNewestFirst(batch));
         }
       } finally {
         setLoading(false);
