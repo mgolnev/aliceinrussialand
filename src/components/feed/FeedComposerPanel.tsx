@@ -406,49 +406,51 @@ export function FeedComposerPanel({
                 >
                   <div
                     role="menu"
-                    className="w-full rounded-t-2xl border border-stone-200/80 bg-white p-2 shadow-xl sm:max-w-sm sm:rounded-2xl"
+                    className="w-full rounded-t-2xl border border-stone-200/80 bg-white px-4 pt-4 pb-[max(1.75rem,calc(env(safe-area-inset-bottom,0px)+1.25rem))] shadow-xl sm:max-w-sm sm:rounded-2xl sm:p-3 sm:pb-3"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <p className="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wide text-stone-400">
+                    <p className="pb-3 text-xs font-semibold uppercase tracking-wide text-stone-400 sm:px-0 sm:pb-2">
                       Добавить
                     </p>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      disabled={uploadPhotoBusy}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-stone-800 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
-                      onClick={() => {
-                        setQuickMenuOpen(false);
-                        fileInputRef.current?.click();
-                      }}
-                    >
-                      {uploadPhotoBusy ? (
-                        <Loader2
-                          className="h-5 w-5 shrink-0 animate-spin text-emerald-600"
-                          aria-hidden
-                        />
-                      ) : (
-                        <ImagePlus className="h-5 w-5 shrink-0 text-stone-500" />
-                      )}
-                      Добавить фото
-                    </button>
-                    {onRequestTelegramImport ? (
+                    <div className="flex flex-col gap-3 sm:gap-1">
                       <button
                         type="button"
                         role="menuitem"
-                        disabled={uploadBlocksSubmit}
-                        className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-stone-800 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
+                        disabled={uploadPhotoBusy}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-4 text-left text-sm font-medium text-stone-800 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50 sm:py-3"
                         onClick={() => {
                           setQuickMenuOpen(false);
-                          onRequestTelegramImport();
+                          fileInputRef.current?.click();
                         }}
                       >
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-sky-100 text-[11px] font-bold text-sky-800">
-                          TG
-                        </span>
-                        Импорт из Telegram
+                        {uploadPhotoBusy ? (
+                          <Loader2
+                            className="h-5 w-5 shrink-0 animate-spin text-emerald-600"
+                            aria-hidden
+                          />
+                        ) : (
+                          <ImagePlus className="h-5 w-5 shrink-0 text-stone-500" />
+                        )}
+                        Добавить фото
                       </button>
-                    ) : null}
+                      {onRequestTelegramImport ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          disabled={uploadBlocksSubmit}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-4 text-left text-sm font-medium text-stone-800 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50 sm:py-3"
+                          onClick={() => {
+                            setQuickMenuOpen(false);
+                            onRequestTelegramImport();
+                          }}
+                        >
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-sky-100 text-[11px] font-bold text-sky-800">
+                            TG
+                          </span>
+                          Импорт из Telegram
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               ) : null}
