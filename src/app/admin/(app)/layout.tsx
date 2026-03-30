@@ -26,8 +26,12 @@ export default async function AdminAppLayout({
   const initials = settings.displayName.slice(0, 2).toUpperCase();
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[linear-gradient(180deg,#fffdf8_0%,#f6f0e8_100%)] text-stone-900">
-      <header className="sticky top-0 z-20 border-b border-stone-200/70 bg-[#fffdf9]/92 backdrop-blur-xl">
+    <div className="min-h-screen bg-[linear-gradient(180deg,#fffdf8_0%,#f6f0e8_100%)] text-stone-900">
+      {/*
+        `overflow-x-hidden` на предке ломает `position: sticky` у шапки.
+        Горизонтальный клип — только на main.
+      */}
+      <header className="sticky top-0 z-30 border-b border-stone-200/70 bg-[#fffdf9]/92 backdrop-blur-xl">
         <div className="mx-auto max-w-5xl px-3 pt-3 sm:px-6 sm:pt-4">
           <div className="flex min-w-0 items-center justify-between gap-3 pb-2">
             <div className="flex min-w-0 items-center gap-3">
@@ -66,7 +70,9 @@ export default async function AdminAppLayout({
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-3 py-6 sm:px-6 sm:py-8">{children}</main>
+      <main className="mx-auto max-w-5xl overflow-x-hidden px-3 py-6 sm:px-6 sm:py-8">
+        {children}
+      </main>
     </div>
   );
 }
