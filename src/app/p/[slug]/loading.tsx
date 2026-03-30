@@ -1,4 +1,5 @@
 import { SiteChrome, SiteFooter } from "@/components/site/SiteChrome";
+import { FeedHeaderTraySkeleton } from "@/components/feed/FeedHeaderTraySkeleton";
 import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
 
 export default async function PostLoading() {
@@ -11,12 +12,9 @@ export default async function PostLoading() {
         tagline={settings.tagline}
         avatarUrl={parseAvatarUrl(settings.avatarMediaPath)}
         contactsLabel={settings.contactsLabel}
+        stickyTray={<FeedHeaderTraySkeleton variant="back" />}
       />
-      <div className="mx-auto max-w-3xl px-3 py-8 sm:px-5 sm:py-10">
-        <nav className="mb-6" aria-hidden>
-          <div className="h-4 w-24 animate-pulse rounded bg-stone-200/80" />
-        </nav>
-
+      <div className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-10">
         <div
           className="overflow-hidden rounded-[24px] border border-stone-200/80 bg-white/95 shadow-[0_8px_30px_-10px_rgba(60,44,29,0.15)] sm:rounded-[30px]"
           aria-busy="true"

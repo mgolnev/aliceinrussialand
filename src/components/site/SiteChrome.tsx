@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { LinkNavigatePendingBackdrop } from "@/components/feed/PostOpenLinkOverlay";
 
 type Props = {
   displayName: string;
@@ -26,7 +27,9 @@ export function SiteChrome({
       <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-3 sm:gap-4 sm:px-5">
         <Link
           href="/"
-          className="group flex min-w-0 flex-1 items-center gap-3 transition-transform active:scale-[0.98]"
+          prefetch
+          scroll={false}
+          className="group relative flex min-w-0 flex-1 items-center gap-3 transition-transform active:scale-[0.98]"
         >
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- внешний Supabase / произвольный origin
@@ -52,6 +55,7 @@ export function SiteChrome({
               <p className="truncate text-xs text-stone-500 sm:text-sm">{tagline}</p>
             ) : null}
           </div>
+          <LinkNavigatePendingBackdrop />
         </Link>
 
         <Link
