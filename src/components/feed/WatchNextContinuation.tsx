@@ -9,7 +9,7 @@ import {
   pickDefaultVariantUrl,
   pickVariantUrlForRequestedWidth,
 } from "@/lib/image-variants";
-import { LinkNavigatePendingBackdrop } from "./PostOpenLinkOverlay";
+import { LinkPendingBackdrop } from "@/components/ui/LinkPendingBackdrop";
 
 export type WatchNextCard = {
   slug: string;
@@ -138,7 +138,7 @@ export function WatchNextContinuation({
             aria-label={`Продолжить смотреть: ${featured.preview.slice(0, 120)}`}
             className="group relative flex h-40 min-h-0 w-full shrink-0 overflow-hidden rounded-t-2xl border-b border-stone-200/80 bg-white shadow-[0_12px_36px_-18px_rgba(55,42,28,0.45)] outline-none ring-stone-400/30 transition-[box-shadow,background-color,border-color,transform] duration-200 hover:border-stone-300/90 hover:bg-[#fffdfb] hover:shadow-[0_18px_48px_-20px_rgba(55,42,28,0.5)] focus-visible:ring-2 focus-visible:ring-inset motion-safe:active:scale-[0.99] motion-safe:active:bg-stone-50/95 sm:h-44"
           >
-            <LinkNavigatePendingBackdrop />
+            <LinkPendingBackdrop />
             <div className="relative z-[1] h-full w-[60%] max-w-[60%] shrink-0 overflow-hidden bg-[#ede8e0]">
               {pickDefaultVariantUrl(featured.variants) ? (
                 <ExploreThumb
@@ -190,7 +190,7 @@ export function WatchNextContinuation({
                     href={`/p/${item.slug}`}
                     className="relative flex w-[7.25rem] shrink-0 flex-col overflow-hidden rounded-lg border border-stone-200/70 bg-white/95 outline-none ring-stone-400/30 transition hover:border-stone-300 focus-visible:ring-2 motion-safe:active:scale-[0.98] sm:w-[7.75rem]"
                   >
-                    <LinkNavigatePendingBackdrop />
+                    <LinkPendingBackdrop />
                     <div className="relative z-[1] aspect-[4/3] w-full overflow-hidden bg-[#f4efe8]">
                       {has ? (
                         <ExploreThumb

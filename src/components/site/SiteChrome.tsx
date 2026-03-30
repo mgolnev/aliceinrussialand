@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { LinkNavigatePendingBackdrop } from "@/components/feed/PostOpenLinkOverlay";
+import { LinkPendingBackdrop } from "@/components/ui/LinkPendingBackdrop";
 
 type Props = {
   displayName: string;
@@ -55,7 +55,7 @@ export function SiteChrome({
               <p className="truncate text-xs text-stone-500 sm:text-sm">{tagline}</p>
             ) : null}
           </div>
-          <LinkNavigatePendingBackdrop />
+          <LinkPendingBackdrop />
         </Link>
 
         <Link

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { pillTabClass } from "@/lib/pill-tab-styles";
-import { LinkNavigatePendingBackdrop } from "@/components/feed/PostOpenLinkOverlay";
+import { LinkPendingBackdrop } from "@/components/ui/LinkPendingBackdrop";
 
 /** Одна строка в липкой шапке страницы поста — как `FeedCategoryBar` variant="header". */
 export function PostBackTray() {
@@ -18,7 +18,7 @@ export function PostBackTray() {
         className={`relative ${pillTabClass(true)}`}
       >
         ← Лента
-        <LinkNavigatePendingBackdrop />
+        <LinkPendingBackdrop />
       </Link>
     </nav>
   );

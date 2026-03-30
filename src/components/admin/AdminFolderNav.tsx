@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { pillTabClass } from "@/lib/pill-tab-styles";
+import { LinkPendingBackdrop } from "@/components/ui/LinkPendingBackdrop";
 
 export function AdminFolderNav() {
   const pathname = usePathname() || "";
@@ -17,17 +18,37 @@ export function AdminFolderNav() {
       className="flex gap-1 overflow-x-auto pb-0.5 pt-0.5 [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden"
       aria-label="Разделы админки"
     >
-      <Link href="/admin/posts" className={pillTabClass(postsActive)}>
+      <Link
+        href="/admin/posts"
+        prefetch
+        className={`relative ${pillTabClass(postsActive)}`}
+      >
         Посты
+        <LinkPendingBackdrop />
       </Link>
-      <Link href="/admin/telegram" className={pillTabClass(telegramActive)}>
+      <Link
+        href="/admin/telegram"
+        prefetch
+        className={`relative ${pillTabClass(telegramActive)}`}
+      >
         Telegram
+        <LinkPendingBackdrop />
       </Link>
-      <Link href="/admin/categories" className={pillTabClass(categoriesActive)}>
+      <Link
+        href="/admin/categories"
+        prefetch
+        className={`relative ${pillTabClass(categoriesActive)}`}
+      >
         Категории
+        <LinkPendingBackdrop />
       </Link>
-      <Link href="/admin/settings" className={pillTabClass(settingsActive)}>
+      <Link
+        href="/admin/settings"
+        prefetch
+        className={`relative ${pillTabClass(settingsActive)}`}
+      >
         Настройки
+        <LinkPendingBackdrop />
       </Link>
       <button
         type="button"

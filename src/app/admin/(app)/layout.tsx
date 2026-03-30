@@ -1,8 +1,8 @@
-import Link from "next/link";
 import type { Viewport } from "next";
 import { connection } from "next/server";
 import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { AdminFolderNav } from "@/components/admin/AdminFolderNav";
+import { AdminSiteExitLink } from "@/components/admin/AdminSiteExitLink";
 
 export const dynamic = "force-dynamic";
 
@@ -58,12 +58,7 @@ export default async function AdminAppLayout({
                 </p>
               </div>
             </div>
-            <Link
-              href="/"
-              className="shrink-0 rounded-full border border-stone-200 bg-white px-3 py-2 text-[13px] font-semibold text-stone-800 shadow-sm transition-colors hover:border-stone-300 hover:bg-stone-50 active:scale-[0.98] sm:px-4 sm:text-sm"
-            >
-              На сайт
-            </Link>
+            <AdminSiteExitLink />
           </div>
           <div className="pb-2.5 pt-0">
             <AdminFolderNav />

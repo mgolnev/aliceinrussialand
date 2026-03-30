@@ -16,7 +16,7 @@ import {
   dispatchFeedRefreshMerge,
   dispatchFeedRefreshReplace,
 } from "@/lib/feed-refresh";
-import { LinkNavigatePendingBackdrop } from "@/components/feed/PostOpenLinkOverlay";
+import { LinkPendingBackdrop } from "@/components/ui/LinkPendingBackdrop";
 
 export type AdminPostListRow = {
   id: string;
@@ -248,7 +248,7 @@ function AdminPostRow({
           href={href}
           className="relative flex min-h-0 min-w-0 flex-1 items-stretch gap-3 py-2 pl-3 pr-1 transition-[colors,transform] motion-safe:active:scale-[0.995] motion-safe:active:bg-stone-100/80 sm:gap-4 sm:py-2.5 sm:pl-4 sm:pr-2 group-hover:bg-stone-50/95"
         >
-          <LinkNavigatePendingBackdrop />
+          <LinkPendingBackdrop />
           <div className="relative z-[1] box-border flex h-full min-h-0 shrink-0 items-center self-stretch py-1 pl-0 pr-0 sm:py-1.5">
             <div className="relative aspect-square h-[88%] max-h-[7rem] min-h-[4rem] w-auto min-w-[4rem] max-w-[7rem] sm:h-[90%] sm:min-h-[4.25rem] sm:max-h-[7.25rem] sm:min-w-[4.25rem] sm:max-w-[7.25rem]">
               <PostThumb thumbUrl={p.thumbUrl} imageCount={p.imageCount} />
