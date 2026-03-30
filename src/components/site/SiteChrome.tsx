@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { chromePlaqueButtonClass } from "@/lib/pill-tab-styles";
 import { LinkPendingBackdrop } from "@/components/ui/LinkPendingBackdrop";
 
@@ -23,6 +24,9 @@ export function SiteChrome({
   contactsLabel = "Контакты",
   stickyTray,
 }: Props) {
+  const pathname = usePathname();
+  const isAboutPage = pathname === "/about";
+
   return (
     <header className="sticky top-0 z-20 border-b border-stone-200/70 bg-[#fbfaf7]/90 backdrop-blur-xl">
       <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-3 sm:gap-4 sm:px-5">
@@ -59,9 +63,27 @@ export function SiteChrome({
           <LinkPendingBackdrop />
         </Link>
 
-        <Link href="/about" className={chromePlaqueButtonClass()}>
-          {contactsLabel.trim() || "Контакты"}
-        </Link>
+        {isAboutPage ? (
+          <Link
+            href="/"
+            prefetch
+            scroll={false}
+            className={`relative ${chromePlaqueButtonClass()}`}
+            aria-label="К ленте работ"
+          >
+            К ленте
+            <LinkPendingBackdrop />
+          </Link>
+        ) : (
+          <Link
+            href="/about"
+            className={`relative ${chromePlaqueButtonClass()}`}
+            aria-label={contactsLabel.trim() || "Контакты"}
+          >
+            {contactsLabel.trim() || "Контакты"}
+            <LinkPendingBackdrop />
+          </Link>
+        )}
       </div>
       {stickyTray != null ? (
         <div className="mx-auto max-w-3xl px-3 pb-2.5 pt-0 sm:px-5">
