@@ -99,7 +99,10 @@ export async function PATCH(req: Request, ctx: Ctx) {
       publishedAt = new Date();
     }
   } else if (status === POST_STATUS.DRAFT) {
-    publishedAt = null;
+    /** Снятие с публикации — дата обнуляется. Черновик → черновик: сохраняем дату (в т.ч. из импорта Telegram). */
+    if (existing.status === POST_STATUS.PUBLISHED) {
+      publishedAt = null;
+    }
   }
 
   const data: {

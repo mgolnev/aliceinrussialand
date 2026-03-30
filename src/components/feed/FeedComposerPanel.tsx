@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -29,6 +29,7 @@ import {
   Plus,
   X,
   AlertCircle,
+  ImagePlus,
 } from "lucide-react";
 import type { UploadQueueRow } from "@/hooks/use-feed-image-upload-queue";
 
@@ -125,6 +126,11 @@ type Props = {
   };
   /** Блокировать публикацию/черновик, пока идёт или ожидает очередь загрузки */
   uploadBlocksSubmit?: boolean;
+  /** Лента: «+» с меню «фото / Telegram» вместо сразу галереи */
+  quickAddMenu?: boolean;
+  onRequestTelegramImport?: () => void;
+  /** Подсказка после импорта из Telegram */
+  importSourceHint?: string | null;
 };
 
 export function FeedComposerPanel({
@@ -152,9 +158,13 @@ export function FeedComposerPanel({
   onPostCategoryChange,
   uploadQueue,
   uploadBlocksSubmit = false,
+  quickAddMenu = false,
+  onRequestTelegramImport,
+  importSourceHint = null,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageRef = useRef<HTMLDivElement>(null);
+  const [quickMenuOpen, setQuickMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!message || !messageRef.current) return;
@@ -362,25 +372,107 @@ export function FeedComposerPanel({
           </div>
         ) : null}
 
-        <div className="mt-3 flex w-full min-w-0 flex-nowrap items-center justify-between gap-2 border-t border-stone-100 pt-3 sm:mt-4 sm:pt-3.5">
-          <button
-            type="button"
-            disabled={working}
-            onClick={() => fileInputRef.current?.click()}
-            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 active:scale-90 disabled:opacity-50"
-            aria-label={uploadPhotoBusy ? "Идёт загрузка фото" : "Добавить фото"}
-            aria-busy={uploadPhotoBusy}
+        {importSourceHint ? (
+          <p
+            className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-stone-700"
+            role="status"
           >
-            {uploadPhotoBusy ? (
-              <Loader2
-                size={20}
-                className="animate-spin text-emerald-600"
-                aria-hidden
-              />
-            ) : (
-              <ImageIcon size={20} aria-hidden />
-            )}
-          </button>
+            <span className="rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-900">
+              Telegram
+            </span>
+            <span className="text-stone-600">{importSourceHint}</span>
+          </p>
+        ) : null}
+
+        <div className="mt-3 flex w-full min-w-0 flex-nowrap items-center justify-between gap-2 border-t border-stone-100 pt-3 sm:mt-4 sm:pt-3.5">
+          {quickAddMenu ? (
+            <>
+              <button
+                type="button"
+                disabled={working || uploadBlocksSubmit}
+                onClick={() => setQuickMenuOpen(true)}
+                className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-stone-900 text-white shadow-sm transition-colors hover:bg-stone-800 active:scale-90 disabled:opacity-50"
+                aria-label="Добавить контент"
+                aria-haspopup="dialog"
+                aria-expanded={quickMenuOpen}
+              >
+                <Plus size={22} strokeWidth={2.5} aria-hidden />
+              </button>
+              {quickMenuOpen ? (
+                <div
+                  className="fixed inset-0 z-[70] flex flex-col justify-end bg-black/40 sm:items-center sm:justify-center sm:p-4"
+                  role="presentation"
+                  onClick={() => setQuickMenuOpen(false)}
+                >
+                  <div
+                    role="menu"
+                    className="w-full rounded-t-2xl border border-stone-200/80 bg-white p-2 shadow-xl sm:max-w-sm sm:rounded-2xl"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <p className="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wide text-stone-400">
+                      Добавить
+                    </p>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled={uploadPhotoBusy}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-stone-800 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
+                      onClick={() => {
+                        setQuickMenuOpen(false);
+                        fileInputRef.current?.click();
+                      }}
+                    >
+                      {uploadPhotoBusy ? (
+                        <Loader2
+                          className="h-5 w-5 shrink-0 animate-spin text-emerald-600"
+                          aria-hidden
+                        />
+                      ) : (
+                        <ImagePlus className="h-5 w-5 shrink-0 text-stone-500" />
+                      )}
+                      Добавить фото
+                    </button>
+                    {onRequestTelegramImport ? (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={uploadBlocksSubmit}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-stone-800 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
+                        onClick={() => {
+                          setQuickMenuOpen(false);
+                          onRequestTelegramImport();
+                        }}
+                      >
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-sky-100 text-[11px] font-bold text-sky-800">
+                          TG
+                        </span>
+                        Импорт из Telegram
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <button
+              type="button"
+              disabled={working}
+              onClick={() => fileInputRef.current?.click()}
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 active:scale-90 disabled:opacity-50"
+              aria-label={uploadPhotoBusy ? "Идёт загрузка фото" : "Добавить фото"}
+              aria-busy={uploadPhotoBusy}
+            >
+              {uploadPhotoBusy ? (
+                <Loader2
+                  size={20}
+                  className="animate-spin text-emerald-600"
+                  aria-hidden
+                />
+              ) : (
+                <ImageIcon size={20} aria-hidden />
+              )}
+            </button>
+          )}
           <input
             type="file"
             ref={fileInputRef}
