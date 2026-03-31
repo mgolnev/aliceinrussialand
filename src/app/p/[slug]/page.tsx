@@ -18,6 +18,7 @@ import { PostCard } from "@/components/feed/PostCard";
 import { PostReadNextCarousel } from "@/components/feed/PostReadNextCarousel";
 import type { FeedCategory, FeedPost } from "@/types/feed";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
+import { resolveSiteOrigin } from "@/lib/site-origin";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
@@ -27,11 +28,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     getPublishedPostBySlugCached(slug),
     getSiteSettings(),
   ]);
-  if (!post) return { title: "Не найдено" };
-  const siteUrl =
-    settings.siteUrl ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "http://localhost:3000";
+  if (!post) {
+    return {
+      title: "Не найдено",
+      robots: { index: false, follow: false },
+    };
+  }
+  const siteUrl = resolveSiteOrigin(settings.siteUrl);
   const metaTitleTrim = post.metaTitle?.trim() ?? "";
   const titleRaw = metaTitleTrim
     ? metaTitleTrim
@@ -81,10 +84,7 @@ export default async function PostPage({ params }: PageProps) {
   ]);
   if (!post) notFound();
 
-  const siteUrl =
-    settings.siteUrl ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "http://localhost:3000";
+  const siteUrl = resolveSiteOrigin(settings.siteUrl);
   const plausible =
     settings.plausibleDomain || process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || "";
   const yandexMetrikaId =
@@ -119,11 +119,45 @@ export default async function PostPage({ params }: PageProps) {
     })),
   };
 
+  const postUrl = absoluteUrl(siteUrl, `/p/${post.slug}`);
+  const aboutUrl = absoluteUrl(siteUrl, "/about");
+  const avatarPath = parseAvatarUrl(settings.avatarMediaPath);
+  const publisherLogo = avatarPath ? absoluteUrl(siteUrl, avatarPath) : undefined;
+  const articleDescription =
+    post.metaDescription?.trim() || excerptForMetaDescription(post.body);
+  const articleHeadline =
+    post.title?.trim() ||
+    buildImplicitPostDocumentTitle(post.title, settings.displayName, post.category?.name);
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
-    headline: post.title,
+    "@id": `${postUrl}#article`,
+    url: postUrl,
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": postUrl,
+    },
+    headline: articleHeadline,
+    description: articleDescription,
     datePublished: post.publishedAt?.toISOString(),
+    dateModified: post.updatedAt?.toISOString() ?? post.publishedAt?.toISOString(),
+    author: {
+      "@type": "Person",
+      name: settings.displayName,
+      url: aboutUrl,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: settings.displayName,
+      ...(publisherLogo
+        ? {
+            logo: {
+              "@type": "ImageObject",
+              url: publisherLogo,
+            },
+          }
+        : {}),
+    },
     image: feedPost.images
       .map((im) => {
         const path = im.variants.w1280;

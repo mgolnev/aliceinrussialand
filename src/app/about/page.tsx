@@ -10,6 +10,7 @@ import { absoluteUrl } from "@/lib/absolute-url";
 import { excerptForMetaDescription } from "@/lib/meta-excerpt";
 import { SiteChrome, SiteFooter } from "@/components/site/SiteChrome";
 import { SocialLinksSection } from "@/components/site/SocialLinksSection";
+import { resolveSiteOrigin } from "@/lib/site-origin";
 
 export const dynamic = "force-dynamic";
 
@@ -35,10 +36,7 @@ function aboutPageDescription(s: {
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSiteSettings();
-  const siteUrl =
-    s.siteUrl ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "http://localhost:3000";
+  const siteUrl = resolveSiteOrigin(s.siteUrl);
   const description = aboutPageDescription(s);
   const aboutImg = parseAboutPhotoUrl(s.aboutPhotoPath);
   const avatar = parseAvatarUrl(s.avatarMediaPath);
@@ -70,10 +68,7 @@ export default async function AboutPage() {
   const s = await getSiteSettings();
   const social = parseSocialLinks(s.socialLinksJson);
   const aboutPhotoUrl = parseAboutPhotoUrl(s.aboutPhotoPath);
-  const siteUrl =
-    s.siteUrl ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "http://localhost:3000";
+  const siteUrl = resolveSiteOrigin(s.siteUrl);
   const pageUrl = absoluteUrl(siteUrl, "/about");
   const avatarUrl = parseAvatarUrl(s.avatarMediaPath);
   const profileImageAbs = aboutPhotoUrl
@@ -99,6 +94,7 @@ export default async function AboutPage() {
         description: metaDescription,
         isPartOf: {
           "@type": "WebSite",
+          "@id": `${siteUrl.replace(/\/$/, "")}#website`,
           name: s.displayName,
           url: siteUrl.replace(/\/$/, ""),
         },

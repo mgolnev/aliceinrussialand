@@ -437,8 +437,9 @@ export function PostCard({
   }
 
   const feedMediaGrid = !standalone && post.images.length > 0;
+  const postTitle = post.title?.trim() || "";
   const openPostAria =
-    post.title?.trim() ||
+    postTitle ||
     post.body.trim().slice(0, 80) ||
     "Открыть пост";
   const articlePad =
@@ -713,6 +714,15 @@ export function PostCard({
           </div>
         ) : (
           <>
+            {standalone && postTitle ? (
+              <h2
+                className={`mb-2.5 text-xl font-semibold leading-tight tracking-tight text-stone-900 sm:mb-3 sm:text-2xl ${
+                  showPostLinkOverlay ? "pointer-events-none" : ""
+                }`}
+              >
+                {postTitle}
+              </h2>
+            ) : null}
             {post.body ? (
               <div
                 className={`min-w-0 whitespace-pre-wrap text-[15px] leading-relaxed text-stone-800 sm:text-[16px] sm:leading-8 ${

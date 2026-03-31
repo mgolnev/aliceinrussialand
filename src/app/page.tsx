@@ -6,15 +6,13 @@ import { SiteFooter } from "@/components/site/SiteChrome";
 import { HomePageClient } from "@/components/feed/HomePageClient";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 import { cookies } from "next/headers";
+import { resolveSiteOrigin } from "@/lib/site-origin";
 
 type HomeProps = { searchParams: Promise<{ category?: string }> };
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSiteSettings();
-  const siteUrl =
-    s.siteUrl ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "http://localhost:3000";
+  const siteUrl = resolveSiteOrigin(s.siteUrl);
   const description =
     s.tagline?.trim() || s.bio?.trim() || "Лента работ";
   const avatar = parseAvatarUrl(s.avatarMediaPath);
@@ -52,10 +50,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
     cookieStorePromise,
   ]);
   const { items, nextCursor, categories } = feed;
-  const siteUrl =
-    settings.siteUrl ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "http://localhost:3000";
+  const siteUrl = resolveSiteOrigin(settings.siteUrl);
   const plausible =
     settings.plausibleDomain || process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || "";
   const yandexMetrikaId =
@@ -64,9 +59,22 @@ export default async function HomePage({ searchParams }: HomeProps) {
     "";
   const session = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   const isAdmin = session ? await verifySessionToken(session) : false;
+  const siteOrigin = siteUrl.replace(/\/$/, "");
+  const webSiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${siteOrigin}#website`,
+    url: siteOrigin,
+    name: settings.displayName,
+    inLanguage: settings.defaultLocale === "en" ? "en" : "ru",
+  };
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteJsonLd) }}
+      />
       <HomePageClient
         displayName={settings.displayName}
         tagline={settings.tagline}

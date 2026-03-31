@@ -4,6 +4,7 @@ import "./globals.css";
 import { getSiteSettings } from "@/lib/site";
 import { Analytics } from "@/components/site/Analytics";
 import { ScrollMetrics } from "@/components/site/ScrollMetrics";
+import { resolveSiteOrigin } from "@/lib/site-origin";
 
 const sans = Manrope({
   subsets: ["latin", "cyrillic"],
@@ -20,10 +21,7 @@ export const viewport: Viewport = {
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSiteSettings();
-  const base =
-    s.siteUrl ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "http://localhost:3000";
+  const base = resolveSiteOrigin(s.siteUrl);
 
   return {
     metadataBase: new URL(base),
