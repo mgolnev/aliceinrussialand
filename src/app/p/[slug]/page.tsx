@@ -187,6 +187,7 @@ export default async function PostPage({ params }: PageProps) {
           yandexMetrikaId={yandexMetrikaId}
           siteUrl={siteUrl}
           canManage={isAdmin}
+          prioritizeMedia
           standalone
         />
         <PostReadNextCarousel

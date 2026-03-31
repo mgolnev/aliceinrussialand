@@ -52,7 +52,8 @@ export default async function RootLayout({
     s.yandexMetrikaId?.trim() ||
     process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID?.trim() ||
     "";
-  const hasClientMetrics = Boolean(plausible || yandexMetrikaId);
+  const hasClientMetrics =
+    process.env.NODE_ENV === "production" && Boolean(plausible || yandexMetrikaId);
   const lang = s.defaultLocale === "en" ? "en" : "ru";
 
   return (

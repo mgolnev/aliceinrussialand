@@ -16,15 +16,14 @@ export function Analytics({ plausibleDomain, yandexMetrikaId }: Props) {
     <>
       {plausibleDomain ? (
         <Script
-          defer
           data-domain={plausibleDomain}
           src="https://plausible.io/js/script.outbound-links.tagged-events.js"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
       ) : null}
       {ymId != null ? (
         <>
-          <Script id="yandex-metrika" strategy="afterInteractive">
+          <Script id="yandex-metrika" strategy="lazyOnload">
             {`
 (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
 m[i].l=1*new Date();

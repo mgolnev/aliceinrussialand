@@ -5,6 +5,8 @@ import type { CSSProperties, ReactNode } from "react";
 export type GridImage = {
   id: string;
   src?: string;
+  srcSet?: string;
+  sizes?: string;
   alt: string;
   width?: number | null;
   height?: number | null;
@@ -219,6 +221,8 @@ function renderImageFill(
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={image.src}
+      srcSet={image.srcSet}
+      sizes={image.sizes}
       alt={image.alt}
       loading={eager ? "eager" : "lazy"}
       fetchPriority={eager ? "high" : "auto"}

@@ -1,16 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Settings, X } from "lucide-react";
-import {
-  FeedComposerPanel,
-  type FeedComposerImage,
-} from "@/components/feed/FeedComposerPanel";
-import {
-  TelegramComposerPickSheet,
-  type TelegramPickItem,
-} from "@/components/feed/TelegramComposerPickSheet";
+import type { FeedComposerImage } from "@/components/feed/FeedComposerPanel";
+import type { TelegramPickItem } from "@/components/feed/TelegramComposerPickSheet";
 import { dispatchFeedRefreshMerge } from "@/lib/feed-refresh";
 import { useFeedImageUploadQueue } from "@/hooks/use-feed-image-upload-queue";
 import { adminCredentials, readAdminResponseJson } from "@/lib/admin-fetch";
@@ -19,6 +14,26 @@ import type { FeedCategory } from "@/types/feed";
 
 const TG_IMPORT_HINT =
   "Черновик из Telegram: дата на сайте совпадает с датой поста в канале (если она была в ленте). Текст и фото можно менять.";
+
+const FeedComposerPanelLazy = dynamic(
+  () =>
+    import("@/components/feed/FeedComposerPanel").then((m) => ({
+      default: m.FeedComposerPanel,
+    })),
+  {
+    ssr: false,
+  },
+);
+
+const TelegramComposerPickSheetLazy = dynamic(
+  () =>
+    import("@/components/feed/TelegramComposerPickSheet").then((m) => ({
+      default: m.TelegramComposerPickSheet,
+    })),
+  {
+    ssr: false,
+  },
+);
 
 async function ensureDraft(postId: string | null) {
   if (postId) return postId;
@@ -273,7 +288,7 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
 
   return (
     <>
-      <FeedComposerPanel
+      <FeedComposerPanelLazy
         className="mb-6"
         headerLeft="Новая публикация"
         headerRight={
@@ -342,7 +357,7 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
         importSourceHint={importHint}
       />
 
-      <TelegramComposerPickSheet
+      <TelegramComposerPickSheetLazy
         open={tgSheetOpen}
         onClose={() => setTgSheetOpen(false)}
         onSelect={(item) => onTelegramItemChosen(item)}

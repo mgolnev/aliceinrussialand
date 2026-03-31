@@ -151,6 +151,22 @@ function stripLeadingTitleFromBody(body: string, title: string): string {
   return rest || body;
 }
 
+function buildFeedGridSources(variants: Record<string, string>) {
+  const entries: Array<{ width: number; url: string }> = [640, 960, 1280]
+    .map((width) => ({ width, url: variants[`w${width}`] }))
+    .filter((item): item is { width: number; url: string } => Boolean(item.url));
+  if (!entries.length) {
+    return { src: undefined as string | undefined, srcSet: undefined as string | undefined };
+  }
+  const src =
+    variants.w960 ??
+    variants.w640 ??
+    variants.w1280 ??
+    entries[entries.length - 1]?.url;
+  const srcSet = entries.map((item) => `${item.url} ${item.width}w`).join(", ");
+  return { src, srcSet };
+}
+
 export function PostCard({
   post,
   categories = [],
@@ -184,7 +200,7 @@ export function PostCard({
     () =>
       post.images.map((im) => ({
         ...im,
-        src: im.variants.w1280 ?? im.variants.w960 ?? im.variants.w640,
+        src: im.variants.w960 ?? im.variants.w640 ?? im.variants.w1280,
       })),
     [post.images],
   );
@@ -839,7 +855,9 @@ export function PostCard({
                   eagerCount={prioritizeMedia ? 1 : 0}
                   images={imageList.map((image) => ({
                     id: image.id,
-                    src: image.src,
+                    ...buildFeedGridSources(image.variants),
+                    sizes:
+                      "(max-width: 640px) 100vw, (max-width: 1100px) 92vw, 768px",
                     alt: image.alt || post.title,
                     width: image.width,
                     height: image.height,
