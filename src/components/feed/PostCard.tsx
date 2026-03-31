@@ -86,6 +86,71 @@ function formatDate(iso: string | null) {
   }
 }
 
+function firstSentence(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const index = trimmed.search(/[.!?…]/u);
+  if (index < 0) return trimmed;
+  return trimmed.slice(0, index + 1).trim();
+}
+
+function normalizedSentence(value: string): string {
+  return value
+    .trim()
+    .replace(/[.!?…]+$/u, "")
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase("ru-RU");
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function titleAsBodyPrefixRegex(title: string): RegExp {
+  let pattern = "^";
+  for (const ch of title.trim()) {
+    if (/\s/u.test(ch)) {
+      pattern += "\\s+";
+      continue;
+    }
+    pattern += escapeRegExp(ch);
+    if (/[.!?…]/u.test(ch)) {
+      pattern += "\\s*";
+    }
+  }
+  return new RegExp(pattern, "u");
+}
+
+function stripLeadingTitleFromBody(body: string, title: string): string {
+  const trimmedBody = body.trim();
+  const trimmedTitle = title.trim();
+  if (!trimmedBody || !trimmedTitle) return body;
+
+  if (trimmedBody.startsWith(trimmedTitle)) {
+    const rest = trimmedBody.slice(trimmedTitle.length).trimStart();
+    return rest;
+  }
+
+  const byTitlePrefix = trimmedBody.match(titleAsBodyPrefixRegex(trimmedTitle));
+  if (byTitlePrefix?.[0]) {
+    const rest = trimmedBody.slice(byTitlePrefix[0].length).trimStart();
+    return rest;
+  }
+
+  const sentenceEndIndex = trimmedBody.search(/[.!?…]/u);
+  if (sentenceEndIndex < 0) return body;
+
+  const firstSentence = trimmedBody.slice(0, sentenceEndIndex + 1);
+  if (!firstSentence) return body;
+
+  if (normalizedSentence(firstSentence) !== normalizedSentence(trimmedTitle)) {
+    return body;
+  }
+
+  const rest = trimmedBody.slice(firstSentence.length).trimStart();
+  return rest || body;
+}
+
 export function PostCard({
   post,
   categories = [],
@@ -438,8 +503,13 @@ export function PostCard({
 
   const feedMediaGrid = !standalone && post.images.length > 0;
   const postTitle = post.title?.trim() || "";
+  const standaloneTitle = standalone ? firstSentence(postTitle) : postTitle;
+  const postBodyForRender =
+    standalone && standaloneTitle
+      ? stripLeadingTitleFromBody(post.body, standaloneTitle)
+      : post.body;
   const openPostAria =
-    postTitle ||
+    standaloneTitle ||
     post.body.trim().slice(0, 80) ||
     "Открыть пост";
   const articlePad =
@@ -510,9 +580,20 @@ export function PostCard({
               ) : null}
             </div>
             {post.category?.name?.trim() ? (
-              <span className="text-[13px] font-medium leading-snug text-stone-400">
-                {post.category.name.trim().toLocaleLowerCase("ru-RU")}
-              </span>
+              standalone ? (
+                <Link
+                  href={`/?category=${encodeURIComponent(post.category.slug)}`}
+                  scroll={false}
+                  prefetch
+                  className="inline-flex w-fit text-[13px] font-medium leading-snug text-stone-400 transition hover:text-stone-600"
+                >
+                  {post.category.name.trim().toLocaleLowerCase("ru-RU")}
+                </Link>
+              ) : (
+                <span className="text-[13px] font-medium leading-snug text-stone-400">
+                  {post.category.name.trim().toLocaleLowerCase("ru-RU")}
+                </span>
+              )
             ) : null}
             {canManage && editMode ? (
               <span className="mt-0.5 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
@@ -714,22 +795,38 @@ export function PostCard({
           </div>
         ) : (
           <>
-            {standalone && postTitle ? (
+            {standalone && standaloneTitle ? (
               <h2
                 className={`mb-2.5 text-xl font-semibold leading-tight tracking-tight text-stone-900 sm:mb-3 sm:text-2xl ${
                   showPostLinkOverlay ? "pointer-events-none" : ""
                 }`}
               >
-                {postTitle}
+                {standaloneTitle}
               </h2>
             ) : null}
-            {post.body ? (
+            {postBodyForRender ? (
               <div
                 className={`min-w-0 whitespace-pre-wrap text-[15px] leading-relaxed text-stone-800 sm:text-[16px] sm:leading-8 ${
                   showPostLinkOverlay ? "pointer-events-none" : ""
                 } ${feedMediaGrid ? "mb-2 sm:mb-2.5" : "mb-3 sm:mb-5"}`}
               >
-                {post.body}
+                {postBodyForRender}
+              </div>
+            ) : null}
+            {!standalone ? (
+              <div
+                className={`${
+                  postBodyForRender ? "mb-3 sm:mb-4 -mt-1" : "mb-2 sm:mb-2.5"
+                }`}
+              >
+                <Link
+                  href={postUrl}
+                  prefetch
+                  aria-label={openPostAria}
+                  className="pointer-events-auto relative z-[2] inline-flex items-center text-[11px] font-medium text-stone-400 transition hover:text-stone-600"
+                >
+                  Открыть пост
+                </Link>
               </div>
             ) : null}
 
