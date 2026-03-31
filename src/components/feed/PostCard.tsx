@@ -584,7 +584,9 @@ export function PostCard({
           >
             <div className="flex flex-wrap items-center gap-2 text-[13px] font-medium text-stone-400">
               {post.publishedAt ? (
-                <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
+                <time suppressHydrationWarning dateTime={post.publishedAt}>
+                  {formatDate(post.publishedAt)}
+                </time>
               ) : (
                 <span className="text-amber-600">Черновик</span>
               )}
