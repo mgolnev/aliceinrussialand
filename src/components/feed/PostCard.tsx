@@ -67,6 +67,7 @@ type Props = {
   yandexMetrikaId?: string;
   siteUrl: string;
   canManage?: boolean;
+  prioritizeMedia?: boolean;
   /** Страница отдельного поста — без кнопки «Открыть отдельно» */
   standalone?: boolean;
 };
@@ -92,6 +93,7 @@ export function PostCard({
   yandexMetrikaId,
   siteUrl,
   canManage = false,
+  prioritizeMedia = false,
   standalone = false,
 }: Props) {
   const router = useRouter();
@@ -727,6 +729,7 @@ export function PostCard({
                   fullBleed
                   flushCardBottom
                   layoutSeed={post.id}
+                  eagerCount={prioritizeMedia ? 1 : 0}
                   images={imageList.map((image) => ({
                     id: image.id,
                     src: image.src,
@@ -752,7 +755,7 @@ export function PostCard({
                       caption={im.caption}
                       width={im.width}
                       height={im.height}
-                      priority={i === 0}
+                      priority={prioritizeMedia && i === 0}
                       className="rounded-xl sm:rounded-[14px]"
                     />
                   </button>

@@ -16,6 +16,7 @@ type Props = {
   layoutSeed?: string;
   fullBleed?: boolean;
   flushCardBottom?: boolean;
+  eagerCount?: number;
 };
 
 type Ori = "portrait" | "landscape" | "square";
@@ -210,14 +211,17 @@ function renderImageFill(
   image: GridImage,
   globalIndex: number,
   clickable: boolean,
+  eagerCount: number,
   onImageClick?: (i: number) => void,
 ) {
+  const eager = globalIndex < eagerCount;
   const inner = image.src ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={image.src}
       alt={image.alt}
-      loading={globalIndex > 5 ? "lazy" : "eager"}
+      loading={eager ? "eager" : "lazy"}
+      fetchPriority={eager ? "high" : "auto"}
       decoding="async"
       className="absolute inset-0 h-full w-full object-cover"
     />
@@ -255,6 +259,7 @@ export function MediaGrid({
   layoutSeed,
   fullBleed = false,
   flushCardBottom = false,
+  eagerCount = 0,
 }: Props) {
   const count = images.length;
   if (count === 0) return null;
@@ -285,16 +290,16 @@ export function MediaGrid({
         }
       >
         <div className="relative row-span-3 min-h-0 min-w-0">
-          {renderImageFill(images[a], a, clickable, onImageClick)}
+          {renderImageFill(images[a], a, clickable, eagerCount, onImageClick)}
         </div>
         <div className="relative min-h-0 min-w-0">
-          {renderImageFill(images[b], b, clickable, onImageClick)}
+          {renderImageFill(images[b], b, clickable, eagerCount, onImageClick)}
         </div>
         <div className="relative min-h-0 min-w-0">
-          {renderImageFill(images[c], c, clickable, onImageClick)}
+          {renderImageFill(images[c], c, clickable, eagerCount, onImageClick)}
         </div>
         <div className="relative min-h-0 min-w-0">
-          {renderImageFill(images[d], d, clickable, onImageClick)}
+          {renderImageFill(images[d], d, clickable, eagerCount, onImageClick)}
         </div>
       </div>
     );
@@ -325,6 +330,7 @@ export function MediaGrid({
                     images[imgIdx],
                     imgIdx,
                     clickable,
+                    eagerCount,
                     onImageClick,
                   )}
                 </div>

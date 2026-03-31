@@ -78,7 +78,7 @@ export function FeedPostsBody({
       }`}
       aria-hidden={revealMask}
     >
-      {items.map((post) => (
+      {items.map((post, index) => (
         <PostCard
           key={post.id}
           post={post}
@@ -87,6 +87,7 @@ export function FeedPostsBody({
           yandexMetrikaId={yandexMetrikaId}
           siteUrl={siteUrl}
           canManage={canManage}
+          prioritizeMedia={index === 0}
         />
       ))}
       <div ref={sentinelRef} />

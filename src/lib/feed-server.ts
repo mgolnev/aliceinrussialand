@@ -68,18 +68,23 @@ export async function getFeedPage(
     return { items: [], nextCursor: null, categories: [] };
   }
 
-  const categories = await listFeedCategories();
-  let filterCategoryId: string | undefined;
-  if (categorySlug?.trim()) {
+  const normalizedCategory = categorySlug?.trim() || undefined;
+  const categoriesPromise = listFeedCategories();
+  const filterCategoryIdPromise = (async (): Promise<string | undefined> => {
+    if (!normalizedCategory) return undefined;
     const pc = postCategoryDb();
-    if (pc) {
-      const row = await pc.findUnique({
-        where: { slug: categorySlug.trim() },
-        select: { id: true },
-      });
-      if (row) filterCategoryId = row.id;
-    }
-  }
+    if (!pc) return undefined;
+    const row = await pc.findUnique({
+      where: { slug: normalizedCategory },
+      select: { id: true },
+    });
+    return row?.id;
+  })();
+
+  const [categories, filterCategoryId] = await Promise.all([
+    categoriesPromise,
+    filterCategoryIdPromise,
+  ]);
 
   const posts = await prisma.post.findMany({
     where: {

@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   },
   poweredByHeader: false,
   images: {
+    formats: ["image/avif", "image/webp"],
+    deviceSizes: [640, 960, 1280],
+    imageSizes: [96, 128, 256, 384],
     remotePatterns: [
       {
         protocol: "https",

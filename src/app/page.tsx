@@ -43,11 +43,15 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function HomePage({ searchParams }: HomeProps) {
   const sp = await searchParams;
   const categoryParam = sp.category?.trim() || undefined;
-  const settings = await getSiteSettings();
-  const { items, nextCursor, categories } = await getFeedPage(
-    undefined,
-    categoryParam,
-  );
+  const settingsPromise = getSiteSettings();
+  const feedPromise = getFeedPage(undefined, categoryParam);
+  const cookieStorePromise = cookies();
+  const [settings, feed, cookieStore] = await Promise.all([
+    settingsPromise,
+    feedPromise,
+    cookieStorePromise,
+  ]);
+  const { items, nextCursor, categories } = feed;
   const siteUrl =
     settings.siteUrl ||
     process.env.NEXT_PUBLIC_SITE_URL ||
@@ -58,7 +62,6 @@ export default async function HomePage({ searchParams }: HomeProps) {
     settings.yandexMetrikaId?.trim() ||
     process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID?.trim() ||
     "";
-  const cookieStore = await cookies();
   const session = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   const isAdmin = session ? await verifySessionToken(session) : false;
 

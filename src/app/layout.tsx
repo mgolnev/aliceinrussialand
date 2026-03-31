@@ -8,6 +8,7 @@ import { ScrollMetrics } from "@/components/site/ScrollMetrics";
 const sans = Manrope({
   subsets: ["latin", "cyrillic"],
   variable: "--font-body",
+  display: "swap",
 });
 
 export const viewport: Viewport = {
@@ -53,6 +54,7 @@ export default async function RootLayout({
     s.yandexMetrikaId?.trim() ||
     process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID?.trim() ||
     "";
+  const hasClientMetrics = Boolean(plausible || yandexMetrikaId);
   const lang = s.defaultLocale === "en" ? "en" : "ru";
 
   return (
@@ -64,14 +66,18 @@ export default async function RootLayout({
               'try { if (typeof history !== "undefined" && "scrollRestoration" in history) { history.scrollRestoration = "manual"; } } catch {}',
           }}
         />
-        <Analytics
-          plausibleDomain={plausible}
-          yandexMetrikaId={yandexMetrikaId}
-        />
-        <ScrollMetrics
-          plausibleDomain={plausible}
-          yandexMetrikaId={yandexMetrikaId}
-        />
+        {hasClientMetrics ? (
+          <>
+            <Analytics
+              plausibleDomain={plausible}
+              yandexMetrikaId={yandexMetrikaId}
+            />
+            <ScrollMetrics
+              plausibleDomain={plausible}
+              yandexMetrikaId={yandexMetrikaId}
+            />
+          </>
+        ) : null}
         {children}
       </body>
     </html>

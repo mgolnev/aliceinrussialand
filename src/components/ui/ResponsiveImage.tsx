@@ -60,6 +60,7 @@ export function ResponsiveImage({
         sizes="(max-width: 640px) 100vw, (max-width: 1100px) 92vw, 720px"
         className={`max-w-full min-w-0 h-auto w-full rounded-[22px] bg-[#f4efe8] object-contain shadow-[0_14px_34px_-26px_rgba(64,48,32,0.45)] ring-1 ring-stone-200/70 ${className}`}
         priority={priority}
+        fetchPriority={priority ? "high" : "auto"}
         decoding="async"
       />
       {caption ? (
