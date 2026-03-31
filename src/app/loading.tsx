@@ -18,12 +18,6 @@ export default async function HomeLoading() {
       />
       <div className="mx-auto min-w-0 max-w-3xl px-3 py-4 sm:px-5 sm:py-10">
         <FeedPostsSkeleton />
-        <p className="mt-8 text-center text-sm text-stone-500">
-          <span className="inline-flex items-center gap-2">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-stone-400" />
-            Загружаем ленту…
-          </span>
-        </p>
       </div>
       <SiteFooter />
     </>

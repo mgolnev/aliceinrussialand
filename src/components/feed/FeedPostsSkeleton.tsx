@@ -6,7 +6,6 @@ export function FeedPostsSkeleton() {
     <div
       className="min-w-0 space-y-4 sm:space-y-7"
       aria-busy="true"
-      aria-label="Загрузка ленты"
     >
       {[0, 1, 2, 3].map((i) => (
         <div

@@ -69,6 +69,7 @@ export function HomePageClient({
             items={feed.items}
             next={feed.next}
             loading={feed.loading}
+            feedRestorePhase={feed.feedRestorePhase}
             categoryLoading={feed.categoryLoading}
             loadMore={feed.loadMore}
             categorySlug={feed.categorySlug}

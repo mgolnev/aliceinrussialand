@@ -22,6 +22,7 @@ export function defaultSiteSettings(): SiteSettingsRow {
     siteUrl: "http://localhost:3000",
     plausibleDomain: "",
     yandexMetrikaId: "",
+    yandexVerification: "",
     updatedAt: new Date(0),
   };
 }

@@ -18,7 +18,6 @@ export default async function PostLoading() {
         <div
           className="overflow-hidden rounded-[24px] border border-stone-200/80 bg-white/95 shadow-[0_8px_30px_-10px_rgba(60,44,29,0.15)] sm:rounded-[30px]"
           aria-busy="true"
-          aria-label="Загрузка поста"
         >
           <div className="flex items-start justify-between gap-3 px-3 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-5">
             <div className="min-w-0 flex-1 space-y-2">
@@ -51,13 +50,6 @@ export default async function PostLoading() {
             </div>
           </div>
         </div>
-
-        <p className="mt-8 text-center text-sm text-stone-500">
-          <span className="inline-flex items-center gap-2">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-stone-400" />
-            Загружаем пост…
-          </span>
-        </p>
       </div>
       <SiteFooter />
     </>

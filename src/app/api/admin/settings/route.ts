@@ -46,6 +46,9 @@ export async function PATCH(req: Request) {
     const raw = str("yandexMetrikaId") ?? "";
     data.yandexMetrikaId = raw.replace(/\D/g, "");
   }
+  if (str("yandexVerification") !== undefined) {
+    data.yandexVerification = (str("yandexVerification") ?? "").trim();
+  }
 
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "Нет полей" }, { status: 400 });

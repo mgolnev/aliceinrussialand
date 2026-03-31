@@ -267,7 +267,7 @@ export function FeedComposerPanel({
           <div
             className="mt-3 rounded-xl border border-stone-200 bg-stone-50/80 px-3 py-2.5 sm:px-3.5"
             role="region"
-            aria-label="Загрузка фотографий"
+            aria-label="Фотографии"
           >
             <div className="flex flex-wrap items-center justify-between gap-2 gap-y-1">
               <p className="text-[13px] font-medium text-stone-700 sm:text-sm">
@@ -340,7 +340,7 @@ export function FeedComposerPanel({
                         {row.status === "uploading" ? (
                           <>
                             <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0 text-emerald-600" />
-                            <span className="text-emerald-800">Загрузка…</span>
+                            <span className="text-emerald-800">В обработке</span>
                           </>
                         ) : null}
                         {row.status === "error" ? (

@@ -35,6 +35,7 @@ describe("getSiteSettings + React.cache", () => {
       siteUrl: "http://localhost:3000",
       plausibleDomain: "",
       yandexMetrikaId: "",
+      yandexVerification: "",
       updatedAt: new Date(),
     };
     findUnique.mockResolvedValue(row);

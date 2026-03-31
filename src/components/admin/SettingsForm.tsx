@@ -16,6 +16,7 @@ type Props = {
     siteUrl: string;
     plausibleDomain: string;
     yandexMetrikaId: string;
+    yandexVerification: string;
     defaultLocale: string;
     social: SocialLink[];
     avatarPreviewUrl: string | null;
@@ -55,6 +56,7 @@ export function SettingsForm({ initial }: Props) {
         siteUrl: form.siteUrl,
         plausibleDomain: form.plausibleDomain,
         yandexMetrikaId: form.yandexMetrikaId,
+        yandexVerification: form.yandexVerification,
         defaultLocale: form.defaultLocale,
         socialLinksJson: JSON.stringify(form.social),
       }),
@@ -391,6 +393,29 @@ export function SettingsForm({ initial }: Props) {
             , скопируйте только цифры. Либо задайте{" "}
             <code className="rounded bg-stone-100 px-1">NEXT_PUBLIC_YANDEX_METRIKA_ID</code>{" "}
             в .env / Vercel.
+          </span>
+        </label>
+        <label className="block text-sm font-medium sm:col-span-2">
+          Яндекс.Вебмастер — код подтверждения (meta)
+          <input
+            className="mt-1 w-full rounded-2xl border border-stone-300 px-3 py-2.5 font-mono text-sm outline-none focus:border-stone-400"
+            placeholder="например ec8dcd9d05b86e4c"
+            value={form.yandexVerification}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                yandexVerification: e.target.value.trim(),
+              }))
+            }
+          />
+          <span className="mt-1 block text-xs text-stone-500">
+            Вставьте только значение из{" "}
+            <code className="rounded bg-stone-100 px-1">content</code> метатега
+            (без{" "}
+            <code className="rounded bg-stone-100 px-1">
+              {'<meta name="yandex-verification" ... />'}
+            </code>
+            ).
           </span>
         </label>
       </div>

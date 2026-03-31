@@ -31,6 +31,9 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s · ${s.displayName}`,
     },
     description: s.tagline || s.bio || "Лента работ",
+    ...(s.yandexVerification?.trim()
+      ? { verification: { yandex: s.yandexVerification.trim() } }
+      : {}),
     openGraph: {
       type: "website",
       siteName: s.displayName,
@@ -55,6 +58,12 @@ export default async function RootLayout({
   return (
     <html lang={lang} className={`${sans.variable} h-full antialiased`}>
       <body className="min-h-full bg-[#faf8f5] font-[family-name:var(--font-body)] text-stone-900">
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              'try { if (typeof history !== "undefined" && "scrollRestoration" in history) { history.scrollRestoration = "manual"; } } catch {}',
+          }}
+        />
         <Analytics
           plausibleDomain={plausible}
           yandexMetrikaId={yandexMetrikaId}

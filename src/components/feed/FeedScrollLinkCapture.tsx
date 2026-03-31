@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { saveFeedScrollPosition } from "@/lib/feed-scroll";
+import { saveFeedBackNavigation } from "@/lib/feed-scroll";
+import { getFeedScrollBridgeSnapshot } from "@/lib/feed-scroll-bridge";
 
 /**
- * Сохраняем scroll ленты только при уходе с главной на пост.
+ * Сохраняем scroll и снимок списка только при уходе с главной на пост.
  * На странице поста не пишем в sessionStorage — иначе тап по рекомендациям
  * сохраняет «низ длинного поста» и ломает восстановление при возврате на /.
  */
@@ -19,7 +20,12 @@ export function FeedScrollLinkCapture() {
       if (!href || !href.startsWith("/p/")) return;
       if (typeof window === "undefined") return;
       if (window.location.pathname.startsWith("/p/")) return;
-      saveFeedScrollPosition();
+      const snap = getFeedScrollBridgeSnapshot();
+      saveFeedBackNavigation({
+        y: window.scrollY,
+        category: snap.categorySlug,
+        postIds: snap.postIds,
+      });
     };
     document.addEventListener("pointerdown", onPointerDown, true);
     return () => document.removeEventListener("pointerdown", onPointerDown, true);

@@ -169,7 +169,6 @@ export function TelegramComposerPickSheet({
           {loading && !items?.length ? (
             <div className="flex flex-col items-center gap-3 py-16 text-stone-500">
               <Loader2 className="h-8 w-8 animate-spin text-stone-400" />
-              <p className="text-sm">Загружаем посты канала…</p>
             </div>
           ) : null}
 
@@ -271,7 +270,7 @@ export function TelegramComposerPickSheet({
                 {loadingMore ? (
                   <span className="inline-flex items-center justify-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Загрузка…
+                    Показать ещё
                   </span>
                 ) : (
                   "Показать ещё"

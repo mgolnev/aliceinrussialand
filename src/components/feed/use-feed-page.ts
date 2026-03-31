@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { FeedCategory, FeedPost } from "@/types/feed";
 import {
@@ -9,6 +9,17 @@ import {
   type FeedPostUpdateDetail,
   type FeedRefreshDetail,
 } from "@/lib/feed-refresh";
+import { setFeedScrollBridgeSnapshot } from "@/lib/feed-scroll-bridge";
+import {
+  feedRestoreApplicable,
+  feedRestoreIdsPrefixMatch,
+  feedRestoreNeedsAsync,
+  readFeedBackNavigationFromStorage,
+  readRestoreInFlightPayload,
+  removeFeedBackNavigationFromStorage,
+  removeRestoreInFlightFromStorage,
+  takeFeedBackNavigationForAsyncRestore,
+} from "@/lib/feed-scroll";
 
 function feedUrl(cursor: string | undefined, categorySlug: string | null) {
   const params = new URLSearchParams();
@@ -28,6 +39,8 @@ export type UseFeedPageArgs = {
   initialCategorySlug?: string | null;
 };
 
+export type FeedRestorePhase = "idle" | "skeleton" | "reveal";
+
 export function useFeedPage({
   initialItems,
   initialNext,
@@ -43,9 +56,19 @@ export function useFeedPage({
   const [loading, setLoading] = useState(false);
   /** Только смена таба категории — скелетон ленты, не путать с «Показать ещё». */
   const [categoryLoading, setCategoryLoading] = useState(false);
+  const [feedRestorePhase, setFeedRestorePhase] =
+    useState<FeedRestorePhase>("idle");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const nextRef = useRef(initialNext);
   const itemsRef = useRef(initialItems);
+  const scrollAfterRestoreYRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (typeof history === "undefined" || !("scrollRestoration" in history)) {
+      return;
+    }
+    history.scrollRestoration = "manual";
+  }, []);
 
   useEffect(() => {
     nextRef.current = next;
@@ -55,9 +78,127 @@ export function useFeedPage({
     itemsRef.current = items;
   }, [items]);
 
+  useEffect(() => {
+    setFeedScrollBridgeSnapshot({
+      categorySlug,
+      postIds: items.map((post) => post.id),
+    });
+  }, [categorySlug, items]);
+
+  useLayoutEffect(() => {
+    const payload = readFeedBackNavigationFromStorage();
+    if (!payload) return;
+    if (!feedRestoreApplicable(payload, initialCategorySlug, initialItems)) {
+      removeFeedBackNavigationFromStorage();
+      removeRestoreInFlightFromStorage();
+      return;
+    }
+    if (feedRestoreNeedsAsync(payload, initialItems)) {
+      const moved = takeFeedBackNavigationForAsyncRestore();
+      if (moved) setFeedRestorePhase("skeleton");
+      return;
+    }
+    if (!feedRestoreIdsPrefixMatch(initialItems, payload.postIds)) {
+      removeFeedBackNavigationFromStorage();
+      removeRestoreInFlightFromStorage();
+      return;
+    }
+    removeFeedBackNavigationFromStorage();
+    removeRestoreInFlightFromStorage();
+    const html = document.documentElement;
+    const prev = html.style.scrollBehavior;
+    html.style.scrollBehavior = "auto";
+    window.scrollTo(0, payload.y);
+    html.style.scrollBehavior = prev;
+  }, [initialCategorySlug, initialItems]);
+
+  useEffect(() => {
+    const payload = readRestoreInFlightPayload();
+    if (!payload) return;
+    if (!feedRestoreApplicable(payload, initialCategorySlug, initialItems)) {
+      removeRestoreInFlightFromStorage();
+      setFeedRestorePhase("idle");
+      return;
+    }
+    if (!feedRestoreNeedsAsync(payload, initialItems)) {
+      removeRestoreInFlightFromStorage();
+      setFeedRestorePhase("idle");
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      let cur = [...initialItems];
+      let nextCur = initialNext;
+      const targetLen = payload.postIds.length;
+      let guard = 0;
+
+      try {
+        while (cur.length < targetLen && nextCur && !cancelled && guard++ < 50) {
+          const res = await fetchFeed(feedUrl(nextCur, payload.category));
+          const data = (await res.json()) as {
+            items: FeedPost[];
+            nextCursor: string | null;
+          };
+          const seen = new Set(cur.map((post) => post.id));
+          const extra = data.items.filter((post) => !seen.has(post.id));
+          if (extra.length > 0) {
+            cur = [...cur, ...extra];
+          }
+          nextCur = data.nextCursor;
+          if (extra.length === 0 && !data.nextCursor) break;
+        }
+
+        if (cancelled) return;
+        if (!feedRestoreIdsPrefixMatch(cur, payload.postIds)) {
+          removeRestoreInFlightFromStorage();
+          setFeedRestorePhase("idle");
+          return;
+        }
+
+        scrollAfterRestoreYRef.current = payload.y;
+        setCategorySlug(payload.category);
+        setItems(cur);
+        setNext(nextCur);
+        nextRef.current = nextCur;
+        itemsRef.current = cur;
+        removeRestoreInFlightFromStorage();
+        setFeedRestorePhase("reveal");
+      } catch {
+        if (!cancelled) {
+          removeRestoreInFlightFromStorage();
+          setFeedRestorePhase("idle");
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      scrollAfterRestoreYRef.current = null;
+    };
+  }, [initialCategorySlug, initialItems, initialNext]);
+
+  useLayoutEffect(() => {
+    if (feedRestorePhase !== "reveal") return;
+    const y = scrollAfterRestoreYRef.current;
+    scrollAfterRestoreYRef.current = null;
+    const html = document.documentElement;
+    const prev = html.style.scrollBehavior;
+    html.style.scrollBehavior = "auto";
+    if (y != null && Number.isFinite(y)) {
+      window.scrollTo(0, y);
+    }
+    html.style.scrollBehavior = prev;
+    setFeedRestorePhase("idle");
+  }, [feedRestorePhase]);
+
   const applyCategory = useCallback(
     (slug: string | null) => {
       setCategorySlug(slug);
+      setFeedRestorePhase("idle");
+      removeFeedBackNavigationFromStorage();
+      removeRestoreInFlightFromStorage();
       const params = new URLSearchParams();
       if (slug) params.set("category", slug);
       const q = params.toString();
@@ -88,7 +229,7 @@ export function useFeedPage({
   );
 
   const loadMore = useCallback(async () => {
-    if (!next || loading || categoryLoading) return;
+    if (!next || loading || categoryLoading || feedRestorePhase !== "idle") return;
     setLoading(true);
     try {
       const seen = new Set(itemsRef.current.map((p) => p.id));
@@ -135,11 +276,11 @@ export function useFeedPage({
     } finally {
       setLoading(false);
     }
-  }, [next, loading, categoryLoading, categorySlug]);
+  }, [next, loading, categoryLoading, categorySlug, feedRestorePhase]);
 
   useEffect(() => {
     const node = sentinelRef.current;
-    if (!node || !next) return;
+    if (!node || !next || feedRestorePhase !== "idle") return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -152,7 +293,7 @@ export function useFeedPage({
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [loadMore, next]);
+  }, [loadMore, next, feedRestorePhase]);
 
   useEffect(() => {
     const handler = (ev: Event) => {
@@ -206,6 +347,7 @@ export function useFeedPage({
     items,
     next,
     loading,
+    feedRestorePhase,
     categoryLoading,
     loadMore,
     empty,

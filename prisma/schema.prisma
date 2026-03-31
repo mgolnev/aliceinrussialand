@@ -25,6 +25,7 @@ model SiteSettings {
   siteUrl              String  @default("http://localhost:3000")
   plausibleDomain      String  @default("")
   yandexMetrikaId      String  @default("")
+  yandexVerification   String  @default("")
   updatedAt            DateTime @updatedAt
 }
 
