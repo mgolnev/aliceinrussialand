@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { SocialKind } from "@/lib/social-link-kinds";
 import {
   siBehance,
@@ -29,7 +30,7 @@ function IconBadge({
   size: number;
   bg: string;
   className?: string;
-  children: JSX.Element;
+  children: ReactNode;
 }) {
   return (
     <svg
