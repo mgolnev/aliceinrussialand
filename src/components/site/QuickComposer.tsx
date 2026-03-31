@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Settings } from "lucide-react";
+import { Settings, X } from "lucide-react";
 import {
   FeedComposerPanel,
   type FeedComposerImage,
@@ -43,6 +43,8 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
   const [replaceItem, setReplaceItem] = useState<TelegramPickItem | null>(null);
   /** URL постов, импортированных из листа в этой сессии (пометка «уже импортировано»). */
   const [sessionTgImported, setSessionTgImported] = useState<string[]>([]);
+  /** После «В черновик» не удаляем пост с сервера при очистке редактора. */
+  const [draftCommittedToServer, setDraftCommittedToServer] = useState(false);
 
   const canSubmit = body.trim().length > 0 || images.length > 0;
 
@@ -73,6 +75,12 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
     fetchInit: adminCredentials,
     onQueueError: (msg) => setMessage(msg),
   });
+
+  const showComposerDismiss =
+    canSubmit ||
+    Boolean(importHint) ||
+    Boolean(postId) ||
+    uploadRows.length > 0;
 
   useEffect(() => {
     if (
@@ -151,6 +159,7 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
       setBody(data.body ?? "");
       setImages(data.images ?? []);
       setCategoryId(null);
+      setDraftCommittedToServer(false);
       setImportHint(TG_IMPORT_HINT);
       setTgSheetOpen(false);
       dispatchFeedRefreshMerge();
@@ -167,6 +176,45 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
       return;
     }
     return runHydrateFromTelegram(item, { replaceExisting: false });
+  }
+
+  async function discardComposer() {
+    if (working) return;
+    stopUpload();
+
+    const id = postId;
+    const shouldDeleteServer = Boolean(id) && !draftCommittedToServer;
+
+    if (shouldDeleteServer) {
+      setWorking(true);
+      setMessage(null);
+      try {
+        const res = await fetch(`/api/admin/posts/${id}`, {
+          method: "DELETE",
+          ...adminCredentials,
+        });
+        const data = (await readAdminResponseJson(res).catch(() => null)) as
+          | { error?: string }
+          | null;
+        if (!res.ok) {
+          setMessage(data?.error ?? "Не удалось удалить черновик");
+          return;
+        }
+        dispatchFeedRefreshMerge();
+        router.refresh();
+      } finally {
+        setWorking(false);
+      }
+    }
+
+    clearUploadSession();
+    setBody("");
+    setImages([]);
+    setCategoryId(null);
+    setPostId(null);
+    setMessage(null);
+    setImportHint(null);
+    setDraftCommittedToServer(false);
   }
 
   async function submit(status: "DRAFT" | "PUBLISHED") {
@@ -211,9 +259,11 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
         setPostId(null);
         setMessage(null);
         setImportHint(null);
+        setDraftCommittedToServer(false);
         dispatchFeedRefreshMerge();
         router.refresh();
       } else {
+        setDraftCommittedToServer(true);
         setMessage("Черновик сохранён");
       }
     } finally {
@@ -227,13 +277,35 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
         className="mb-6"
         headerLeft="Новая публикация"
         headerRight={
-          <a
-            href="/admin/posts"
-            className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-800"
-          >
-            <Settings size={14} />
-            Админка
-          </a>
+          <>
+            <a
+              href="/admin/posts"
+              className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-800"
+            >
+              <Settings size={14} />
+              Админка
+            </a>
+            {showComposerDismiss ? (
+              <button
+                type="button"
+                aria-label={
+                  draftCommittedToServer
+                    ? "Очистить редактор (черновик останется в админке)"
+                    : "Закрыть редактор и удалить несохранённый черновик"
+                }
+                title={
+                  draftCommittedToServer
+                    ? "Очистить поля — черновик в админке сохранится"
+                    : "Сбросить заготовку и удалить черновик с сервера"
+                }
+                disabled={working}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90 disabled:opacity-50"
+                onClick={() => void discardComposer()}
+              >
+                <X size={18} aria-hidden />
+              </button>
+            ) : null}
+          </>
         }
         body={body}
         onBodyChange={setBody}

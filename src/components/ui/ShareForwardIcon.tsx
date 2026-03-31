@@ -1,8 +1,9 @@
-import { Forward } from "lucide-react";
+import { CornerUpRight } from "lucide-react";
 import type { LucideProps } from "lucide-react";
 
 /**
- * Единая иконка «поделиться» (как в Telegram): Lucide {@link https://lucide.dev/icons/forward Forward}.
+ * Единая иконка «поделиться»: визуально как SF Symbol `arrow.turn.up.right`;
+ * в Lucide — {@link https://lucide.dev/icons/corner-up-right corner-up-right}.
  */
 export function ShareForwardIcon({
   size = 20,
@@ -10,6 +11,11 @@ export function ShareForwardIcon({
   ...rest
 }: LucideProps) {
   return (
-    <Forward size={size} strokeWidth={strokeWidth} aria-hidden {...rest} />
+    <CornerUpRight
+      size={size}
+      strokeWidth={strokeWidth}
+      aria-hidden
+      {...rest}
+    />
   );
 }

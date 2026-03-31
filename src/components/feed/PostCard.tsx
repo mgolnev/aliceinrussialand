@@ -33,7 +33,6 @@ import { useFeedImageUploadQueue } from "@/hooks/use-feed-image-upload-queue";
 import type { FeedComposerImage } from "@/components/feed/FeedComposerPanel";
 import {
   MoreHorizontal,
-  CornerUpRight,
   ExternalLink,
   Edit3,
   EyeOff,
