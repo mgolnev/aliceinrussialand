@@ -1,6 +1,18 @@
-import type { ReactNode } from "react";
 import type { SocialKind } from "@/lib/social-link-kinds";
-import { AtSign, ExternalLink, Mail, X } from "lucide-react";
+import {
+  siBehance,
+  siDribbble,
+  siFacebook,
+  siGithub,
+  siInstagram,
+  siPinterest,
+  siTelegram,
+  siThreads,
+  siTiktok,
+  siVk,
+  siX,
+  siYoutube,
+} from "simple-icons/icons";
 
 type Props = {
   kind: SocialKind;
@@ -8,21 +20,16 @@ type Props = {
   className?: string;
 };
 
-/** Обводка в стиле Instagram / Lucide. */
-function SvgFrame({
-  size = 20,
+function IconBadge({
+  size,
+  bg,
   className,
   children,
-  fill = "none",
-  stroke = "currentColor",
-  strokeWidth = 2,
 }: {
-  size?: number;
+  size: number;
+  bg: string;
   className?: string;
-  children: ReactNode;
-  fill?: string;
-  stroke?: string;
-  strokeWidth?: number;
+  children: JSX.Element;
 }) {
   return (
     <svg
@@ -30,159 +37,140 @@ function SvgFrame({
       height={size}
       viewBox="0 0 24 24"
       className={className}
-      fill={fill}
-      stroke={stroke}
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
       aria-hidden
     >
+      <circle cx="12" cy="12" r="12" fill={bg} />
       {children}
     </svg>
   );
 }
 
-/** Заливка (логотипы Simple Icons / упрощённые), читаемы в 20px. */
-function FilledPath({
+function BrandPathBadge({
+  iconPath,
+  bg,
   size,
   className,
-  d,
+  scale = 0.72,
 }: {
-  size?: number;
+  iconPath: string;
+  bg: string;
+  size: number;
   className?: string;
-  d: string;
+  scale?: number;
 }) {
+  const shift = (24 - 24 * scale) / 2;
   return (
-    <svg
-      width={size ?? 20}
-      height={size ?? 20}
-      viewBox="0 0 24 24"
-      className={className}
-      fill="currentColor"
-      aria-hidden
-    >
-      <path d={d} />
-    </svg>
+    <IconBadge size={size} bg={bg} className={className}>
+      <path
+        d={iconPath}
+        fill="#FFFFFF"
+        transform={`translate(${shift} ${shift}) scale(${scale})`}
+      />
+    </IconBadge>
   );
 }
 
-/**
- * Иконка сети для блока контактов: соответствует полю `kind` (и при необходимости
- * подобранному по URL в `parseSocialLinks`).
- */
-export function SocialBrandIcon({ kind, size = 20, className }: Props) {
-  const lucide = { size, className };
+function StrokeBadge({
+  path,
+  bg,
+  size,
+  className,
+}: {
+  path: string;
+  bg: string;
+  size: number;
+  className?: string;
+}) {
+  const scale = 0.7;
+  const shift = (24 - 24 * scale) / 2;
 
+  return (
+    <IconBadge size={size} bg={bg} className={className}>
+      <path
+        d={path}
+        fill="none"
+        stroke="#FFFFFF"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        transform={`translate(${shift} ${shift}) scale(${scale})`}
+      />
+    </IconBadge>
+  );
+}
+
+export function SocialBrandIcon({ kind, size = 20, className }: Props) {
   switch (kind) {
     case "email":
-      return <Mail {...lucide} aria-hidden />;
-
+      return (
+        <StrokeBadge
+          path="M3 6h18v12H3z M3 7l9 6 9-6"
+          size={size}
+          bg="#6B7280"
+          className={className}
+        />
+      );
     case "x":
-      return <X {...lucide} aria-hidden />;
-
+      return <BrandPathBadge iconPath={siX.path} bg="#111111" size={size} className={className} />;
     case "threads":
-      return <AtSign {...lucide} aria-hidden />;
-
+      return <BrandPathBadge iconPath={siThreads.path} bg="#111111" size={size} className={className} />;
     case "other":
-      return <ExternalLink {...lucide} aria-hidden />;
-
+      return (
+        <StrokeBadge
+          path="M14 3h7v7 M21 3l-9 9 M19 14v7H3V5h7"
+          size={size}
+          bg="#6B7280"
+          className={className}
+        />
+      );
     case "instagram":
       return (
-        <SvgFrame size={size} className={className}>
-          <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-          <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-        </SvgFrame>
+        <BrandPathBadge iconPath={siInstagram.path} bg="#E4405F" size={size} className={className} />
       );
-
     case "telegram":
       return (
-        <FilledPath
-          size={size}
-          className={className}
-          d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"
-        />
+        <BrandPathBadge iconPath={siTelegram.path} bg="#229ED9" size={size} className={className} />
       );
-
     case "youtube":
       return (
-        <FilledPath
-          size={size}
-          className={className}
-          d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
-        />
+        <BrandPathBadge iconPath={siYoutube.path} bg="#FF0000" size={size} className={className} />
       );
-
     case "pinterest":
       return (
-        <FilledPath
-          size={size}
-          className={className}
-          d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.55.535 6.607 0 11.985-5.365 11.985-11.987C23.97 5.39 18.592.026 11.985.026L12.017 0z"
-        />
+        <BrandPathBadge iconPath={siPinterest.path} bg="#E60023" size={size} className={className} />
       );
-
-    case "behance":
-      return (
-        <FilledPath
-          size={size}
-          className={className}
-          d="M22 7h-7V5h7v2zm1.726 10c-.442 1.297-2.029 3-5.101 3-3.074 0-5.564-1.729-5.564-5.675 0-3.91 2.325-5.92 5.466-5.92 3.082 0 4.964 1.782 5.375 4.426.078.506.109 1.188.095 2.14H15.97c.13 3.211 3.483 3.312 4.588 2.029h3.168zm-7.686-4h4.965c-.105-1.547-1.136-2.219-2.477-2.219-1.466 0-2.277.768-2.488 2.219zm-9.574 6.988H0V5.237h5.769c4.11 0 5.728 1.875 5.728 4.898 0 2.645-1.903 4.727-4.719 4.96V16.28c1.633.2 2.218 1.033 2.789 2.874H8.089c-.6-1.725-1.38-1.98-3.299-1.98h-1.24l.012 5.688zM5.848 7.217H2.957v3.198h2.615c1.582 0 2.43-.662 2.43-1.714 0-1.072-.756-1.484-2.155-1.484z"
-        />
-      );
-
     case "vk":
       return (
-        <FilledPath
-          size={size}
-          className={className}
-          d="M15.684 0H8.316C1.592 0 0 1.592 0 8.316v7.368C0 22.408 1.592 24 8.316 24h7.368C22.408 24 24 22.408 24 15.684V8.316C24 1.592 22.38 0 15.684 0zm3.692 17.123h-1.744c-.66 0-.864-.525-2.05-1.727-1.033-1-1.49-1.135-1.744-1.135-.356 0-.458.102-.458.593v1.575c0 .424-.135.678-1.253.678-1.846 0-3.896-1.118-5.335-3.202C4.624 10.857 4.03 8.57 4.03 8.096c0-.254.102-.491.593-.491h1.744c.44 0 .61.203.78.678.863 2.495 2.303 4.678 2.883 4.678.22 0 .322-.102.322-.66V9.721c-.068-1.186-.695-1.287-.695-1.71 0-.203.17-.407.44-.407h2.744c.373 0 .508.203.508.643v4.426c0 .372.17.508.271.508.22 0 .407-.136.813-.542 1.254-1.406 2.151-3.574 2.151-3.574.119-.287.322-.508.763-.508h1.744c.525 0 .644.27.525.643-.254 1.17-2.718 4.607-2.718 4.607-.356.593-.483.813 0 1.491.356.508 1.525 1.49 2.303 2.495.678.847 1.52 2.343 1.792 3.033.17.407 0 .618-.407.618z"
-        />
+        <BrandPathBadge iconPath={siVk.path} bg="#0077FF" size={size} className={className} />
       );
-
     case "facebook":
       return (
-        <FilledPath
-          size={size}
-          className={className}
-          d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
-        />
+        <BrandPathBadge iconPath={siFacebook.path} bg="#1877F2" size={size} className={className} />
       );
-
     case "linkedin":
       return (
-        <FilledPath
-          size={size}
-          className={className}
-          d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"
-        />
+        <IconBadge size={size} bg="#0A66C2" className={className}>
+          <path
+            d="M6.74 9.07a1.65 1.65 0 1 1 0-3.3 1.65 1.65 0 0 1 0 3.3Zm-1.3 1.08h2.59v8.08H5.44v-8.08Zm4.06 0h2.48v1.1h.04c.35-.65 1.2-1.33 2.46-1.33 2.63 0 3.12 1.73 3.12 3.98v4.33h-2.59v-3.84c0-.91-.02-2.09-1.27-2.09-1.27 0-1.46 1-1.46 2.02v3.91H9.5v-8.08Z"
+            fill="#FFFFFF"
+          />
+        </IconBadge>
       );
-
+    case "behance":
+      return (
+        <BrandPathBadge iconPath={siBehance.path} bg="#1769FF" size={size} className={className} />
+      );
     case "dribbble":
       return (
-        <SvgFrame size={size} className={className}>
-          <circle cx="12" cy="12" r="10" />
-          <path d="M6.5 4.5c3 4 6.5 7 11 8.5M18 5c-2 4-5 8-10 9M19.5 13c-8 .5-12-1-14-3" />
-        </SvgFrame>
+        <BrandPathBadge iconPath={siDribbble.path} bg="#EA4C89" size={size} className={className} />
       );
-
     case "tiktok":
       return (
-        <FilledPath
-          size={size}
-          className={className}
-          d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.63-5.71-.02-.5-.01-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48.02 2.96.02 4.44-.9-.24-1.92-.2-2.75.22-.96.52-1.57 1.6-1.6 2.68-.02.42-.01.85.08 1.25.24 1.06 1.11 1.98 2.15 2.26 1.06.31 2.27.04 3.06-.74.83-.78 1.14-1.94 1.1-3.04-.03-2.97.01-5.94-.02-8.91z"
-        />
+        <BrandPathBadge iconPath={siTiktok.path} bg="#111111" size={size} className={className} />
       );
-
     case "github":
       return (
-        <FilledPath
-          size={size}
-          className={className}
-          d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"
-        />
+        <BrandPathBadge iconPath={siGithub.path} bg="#111111" size={size} className={className} />
       );
-
   }
 }
