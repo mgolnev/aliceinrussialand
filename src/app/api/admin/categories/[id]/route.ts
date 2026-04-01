@@ -85,6 +85,11 @@ export async function PATCH(req: Request, ctx: Ctx) {
         "PostCategory",
         "description",
       );
+      if (!hasDescriptionColumn[0]?.exists) {
+        throw new Error(
+          'Поле "description" отсутствует в таблице PostCategory. Примените миграции Prisma.',
+        );
+      }
       await prisma.$executeRawUnsafe(
         'UPDATE "PostCategory" SET "description" = $1 WHERE "id" = $2',
         description,
