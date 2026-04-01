@@ -3,7 +3,8 @@ import { absoluteUrl } from "@/lib/absolute-url";
 import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { resolveSiteOrigin } from "@/lib/site-origin";
 import { getArchivePostsPage, parsePageNumber } from "@/lib/seo-content";
-import { SiteChrome, SiteFooter } from "@/components/site/SiteChrome";
+import { SiteChrome } from "@/components/site/SiteChrome";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { SeoPostList } from "@/components/seo/SeoPostList";
 import { SeoPager } from "@/components/seo/SeoPager";
 

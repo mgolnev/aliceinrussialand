@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { getFeedPage } from "@/lib/feed-server";
 import { absoluteUrl } from "@/lib/absolute-url";
-import { SiteFooter } from "@/components/site/SiteChrome";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { HomePageClient } from "@/components/feed/HomePageClient";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 import { cookies } from "next/headers";

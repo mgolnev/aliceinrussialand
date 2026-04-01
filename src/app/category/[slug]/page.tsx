@@ -9,7 +9,8 @@ import {
   getSeoCategoryPostsPage,
   parsePageNumber,
 } from "@/lib/seo-content";
-import { SiteChrome, SiteFooter } from "@/components/site/SiteChrome";
+import { SiteChrome } from "@/components/site/SiteChrome";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { SeoPostList } from "@/components/seo/SeoPostList";
 import { SeoPager } from "@/components/seo/SeoPager";
 

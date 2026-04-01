@@ -8,7 +8,8 @@ import {
 } from "@/lib/site";
 import { absoluteUrl } from "@/lib/absolute-url";
 import { excerptForMetaDescription } from "@/lib/meta-excerpt";
-import { SiteChrome, SiteFooter } from "@/components/site/SiteChrome";
+import { SiteChrome } from "@/components/site/SiteChrome";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { SocialLinksSection } from "@/components/site/SocialLinksSection";
 import { resolveSiteOrigin } from "@/lib/site-origin";
 

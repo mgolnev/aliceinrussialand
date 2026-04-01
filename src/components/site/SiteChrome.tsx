@@ -93,11 +93,3 @@ export function SiteChrome({
     </header>
   );
 }
-
-export function SiteFooter() {
-  return (
-    <footer className="mt-14 border-t border-stone-200/70 bg-white/65 py-10 text-center text-sm text-stone-500 backdrop-blur-sm">
-      <p>© {new Date().getFullYear()} · авторская лента</p>
-    </footer>
-  );
-}

@@ -1,4 +1,5 @@
-import { SiteChrome, SiteFooter } from "@/components/site/SiteChrome";
+import { SiteChrome } from "@/components/site/SiteChrome";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { FeedHeaderTraySkeleton } from "@/components/feed/FeedHeaderTraySkeleton";
 import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
 
