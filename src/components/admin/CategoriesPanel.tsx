@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
+import Link from "next/link";
 import {
   DndContext,
   PointerSensor,
@@ -17,6 +25,13 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useRouter } from "next/navigation";
+import {
+  Edit3,
+  ExternalLink,
+  MoreHorizontal,
+  Trash2,
+  X,
+} from "lucide-react";
 
 export type CategoryRow = {
   id: string;
@@ -61,6 +76,68 @@ function SortableItem({
   }, [row.name, row.description, editing]);
 
   const rowBusy = busy || savingId === row.id;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(
+    null,
+  );
+
+  function updateMenuPosition() {
+    const el = menuTriggerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const gap = 8;
+    setMenuPos({
+      top: rect.bottom + gap,
+      right: Math.max(8, window.innerWidth - rect.right),
+    });
+  }
+
+  useLayoutEffect(() => {
+    if (!menuOpen) {
+      setMenuPos(null);
+      return;
+    }
+    updateMenuPosition();
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onReposition = () => updateMenuPosition();
+    window.addEventListener("scroll", onReposition, true);
+    window.addEventListener("resize", onReposition);
+    return () => {
+      window.removeEventListener("scroll", onReposition, true);
+      window.removeEventListener("resize", onReposition);
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onPointerDown(e: PointerEvent) {
+      const t = e.target as Node;
+      if (menuTriggerRef.current?.contains(t)) return;
+      if (menuPanelRef.current?.contains(t)) return;
+      setMenuOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () =>
+      document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (editing) setMenuOpen(false);
+  }, [editing]);
 
   async function saveCategory() {
     const nextName = draft.trim();
@@ -99,110 +176,191 @@ function SortableItem({
     }
   }
 
+  const menuDisabled = rowBusy;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="flex flex-wrap items-center gap-3 rounded-2xl border border-stone-200 bg-white px-3 py-2.5 shadow-sm sm:flex-nowrap"
+      className="grid grid-cols-[auto_minmax(0,1fr)] items-stretch overflow-hidden rounded-[24px] border border-stone-200/80 bg-white/95 shadow-[0_8px_30px_-10px_rgba(60,44,29,0.15)] backdrop-blur-sm sm:rounded-[30px]"
     >
-      <button
-        type="button"
-        className="cursor-grab touch-none rounded-lg px-1 text-stone-400 hover:text-stone-600 disabled:cursor-not-allowed disabled:opacity-40"
-        disabled={editing}
-        {...attributes}
-        {...listeners}
-        aria-label="Перетащить"
-      >
-        ⋮⋮
-      </button>
-      <div className="min-w-0 flex-1">
+      <div className="flex w-9 shrink-0 flex-col items-center pt-3 sm:w-10 sm:pt-4">
+        <button
+          type="button"
+          className="cursor-grab touch-none rounded-md px-1 py-2 text-stone-400 transition hover:text-stone-600 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={editing}
+          {...attributes}
+          {...listeners}
+          aria-label="Перетащить"
+        >
+          <span className="select-none text-sm leading-none tracking-tighter">
+            ⋮⋮
+          </span>
+        </button>
+      </div>
+
+      <div className="relative min-w-0 overflow-x-hidden">
         {editing ? (
-          <div className="flex w-full flex-col gap-3">
-            <input
-              className="w-full min-w-0 rounded-xl border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-stone-400"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              disabled={rowBusy}
-              autoFocus
-              placeholder="Название категории"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                  void saveCategory();
-                }
-                if (e.key === "Escape") {
-                  setEditing(false);
-                  setDraft(row.name);
-                  setDraftDescription(row.description || "");
-                }
-              }}
-            />
-            <textarea
-              className="w-full min-w-0 rounded-xl border border-stone-300 px-3 py-2.5 text-sm leading-6 outline-none focus:border-stone-400"
-              value={draftDescription}
-              onChange={(e) => setDraftDescription(e.target.value)}
-              disabled={rowBusy}
-              rows={3}
-              placeholder="Короткое описание категории для SEO (2-3 предложения)"
-            />
-            <div className="flex flex-wrap gap-2">
+          <>
+            <header className="flex items-center justify-between gap-3 border-b border-stone-100 px-3 pb-2.5 pt-3 sm:px-5 sm:pb-3 sm:pt-4">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+                Редактирование категории
+              </span>
               <button
                 type="button"
-                disabled={rowBusy || !draft.trim()}
-                className="rounded-full bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-800 disabled:opacity-50"
-                onClick={() => void saveCategory()}
-              >
-                Сохранить
-              </button>
-              <button
-                type="button"
+                aria-label="Закрыть редактирование"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90"
                 disabled={rowBusy}
-                className="rounded-full border border-stone-200 px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-50 disabled:opacity-50"
                 onClick={() => {
                   setEditing(false);
                   setDraft(row.name);
                   setDraftDescription(row.description || "");
                 }}
               >
-                Отмена
+                <X size={18} />
               </button>
+            </header>
+            <div className="flex flex-col gap-3 px-3 py-3 sm:px-5 sm:py-4">
+              <input
+                className="w-full min-w-0 rounded-xl border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-stone-400"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                disabled={rowBusy}
+                autoFocus
+                placeholder="Название категории"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                    void saveCategory();
+                  }
+                  if (e.key === "Escape") {
+                    setEditing(false);
+                    setDraft(row.name);
+                    setDraftDescription(row.description || "");
+                  }
+                }}
+              />
+              <textarea
+                className="w-full min-w-0 rounded-xl border border-stone-300 px-3 py-2.5 text-sm leading-6 outline-none focus:border-stone-400"
+                value={draftDescription}
+                onChange={(e) => setDraftDescription(e.target.value)}
+                disabled={rowBusy}
+                rows={4}
+                placeholder="Короткое описание категории для SEO (2-3 предложения)"
+              />
+              <div className="mt-1 flex w-full min-w-0 flex-nowrap items-center justify-between gap-2 border-t border-stone-100 pt-3 sm:mt-2 sm:pt-3.5">
+                <button
+                  type="button"
+                  disabled={rowBusy}
+                  className="shrink-0 whitespace-nowrap rounded-full px-2.5 py-2 text-[13px] font-medium text-stone-500 transition-colors hover:bg-stone-100 active:scale-95 disabled:opacity-50 sm:px-4 sm:text-sm"
+                  onClick={() => {
+                    setEditing(false);
+                    setDraft(row.name);
+                    setDraftDescription(row.description || "");
+                  }}
+                >
+                  Отмена
+                </button>
+                <button
+                  type="button"
+                  disabled={rowBusy || !draft.trim()}
+                  className="flex shrink-0 items-center rounded-full bg-stone-900 px-3 py-2 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50 sm:px-5 sm:text-sm"
+                  onClick={() => void saveCategory()}
+                >
+                  Сохранить
+                </button>
+              </div>
             </div>
-            <p className="text-xs text-stone-500">
-              Для быстрого сохранения: Cmd/Ctrl + Enter
-            </p>
-          </div>
-        ) : (
-          <>
-            <p className="font-medium text-stone-900">{row.name}</p>
-            <p className="truncate font-mono text-xs text-stone-500">{row.slug}</p>
-            {row.description?.trim() ? (
-              <p className="mt-1 text-xs leading-5 text-stone-600">
-                {row.description.trim()}
-              </p>
-            ) : (
-              <p className="mt-1 text-xs text-stone-400">SEO-описание не задано</p>
-            )}
           </>
+        ) : (
+          <div className="px-3 py-3 sm:px-5 sm:py-5">
+            <header className="relative mb-4 flex items-center justify-between gap-3">
+              <div className="min-w-0 flex flex-col gap-0.5">
+                <p className="text-[15px] font-semibold leading-snug text-stone-900 sm:text-base">
+                  {row.name}
+                </p>
+                <p
+                  className="truncate font-mono text-[13px] text-stone-400"
+                  title={row.slug}
+                >
+                  {row.slug}
+                </p>
+              </div>
+              <div className="relative flex shrink-0 items-center gap-1.5">
+                <button
+                  ref={menuTriggerRef}
+                  type="button"
+                  aria-expanded={menuOpen}
+                  aria-haspopup="menu"
+                  aria-label="Действия"
+                  disabled={menuDisabled}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90 disabled:opacity-50"
+                  onClick={() => setMenuOpen((v) => !v)}
+                >
+                  <MoreHorizontal size={18} />
+                </button>
+                {menuOpen && menuPos
+                  ? createPortal(
+                      <div
+                        ref={menuPanelRef}
+                        className="fixed z-[100] w-56 overflow-hidden rounded-2xl border border-stone-200 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100"
+                        style={{
+                          top: menuPos.top,
+                          right: menuPos.right,
+                        }}
+                        role="menu"
+                      >
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100"
+                          role="menuitem"
+                          onClick={() => {
+                            setMenuOpen(false);
+                            setEditing(true);
+                          }}
+                        >
+                          <Edit3 size={16} className="text-stone-400" />
+                          Редактировать
+                        </button>
+                        <button
+                          type="button"
+                          disabled={menuDisabled}
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-red-600 hover:bg-red-50 active:bg-red-100 disabled:opacity-50"
+                          role="menuitem"
+                          onClick={() => {
+                            setMenuOpen(false);
+                            onDelete();
+                          }}
+                        >
+                          <Trash2 size={16} className="text-red-400" />
+                          Удалить
+                        </button>
+                        <div className="my-1.5 h-px bg-stone-100" />
+                        <Link
+                          href={`/category/${encodeURIComponent(row.slug)}`}
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-stone-700 hover:bg-stone-50 active:bg-stone-100"
+                          role="menuitem"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          <ExternalLink size={16} className="text-stone-400" />
+                          Открыть раздел
+                        </Link>
+                      </div>,
+                      document.body,
+                    )
+                  : null}
+              </div>
+            </header>
+            {row.description?.trim() ? (
+              <div className="min-w-0 whitespace-pre-wrap text-pretty text-[15px] leading-relaxed text-stone-800 sm:text-[16px] sm:leading-8">
+                {row.description.trim()}
+              </div>
+            ) : (
+              <div className="min-w-0 text-pretty text-[15px] leading-relaxed text-stone-400 sm:text-[16px] sm:leading-8">
+                SEO-описание не задано
+              </div>
+            )}
+          </div>
         )}
-      </div>
-      <div className="ml-auto flex shrink-0 items-center gap-2 sm:ml-0">
-        {!editing ? (
-          <button
-            type="button"
-            disabled={busy}
-            className="rounded-full px-3 py-1.5 text-sm text-stone-600 hover:bg-stone-100 disabled:opacity-50"
-            onClick={() => setEditing(true)}
-          >
-            Редактировать
-          </button>
-        ) : null}
-        <button
-          type="button"
-          disabled={busy || editing || !!savingId}
-          className="rounded-full px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
-          onClick={onDelete}
-        >
-          Удалить
-        </button>
       </div>
     </div>
   );
@@ -313,33 +471,30 @@ export function CategoriesPanel({ initial }: { initial: CategoryRow[] }) {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-stone-600">
-        Порядок вкладок в ленте совпадает с порядком строк ниже. Пост без категории
-        виден только во «Все».
-      </p>
-
       <div className="rounded-[24px] border border-stone-200/80 bg-white/90 p-4 shadow-sm sm:p-5">
-        <h2 className="text-sm font-semibold text-stone-900">Новая категория</h2>
-        <div className="mt-3 grid gap-2">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+          Новая категория
+        </h2>
+        <div className="mt-3 flex flex-col gap-3">
           <input
-            className="min-w-[200px] flex-1 rounded-2xl border border-stone-300 px-4 py-2.5 text-sm outline-none focus:border-stone-400"
+            className="w-full min-w-0 rounded-xl border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-stone-400"
             placeholder="Название"
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={busy || !!savingId}
           />
           <textarea
-            className="min-h-20 w-full rounded-2xl border border-stone-300 px-4 py-2.5 text-sm leading-6 outline-none focus:border-stone-400"
+            className="min-h-20 w-full min-w-0 rounded-xl border border-stone-300 px-3 py-2.5 text-sm leading-6 outline-none focus:border-stone-400"
             placeholder="SEO-описание (опционально, 2-3 предложения)"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             disabled={busy || !!savingId}
           />
-          <div>
+          <div className="mt-1 flex w-full min-w-0 flex-nowrap items-center justify-end gap-2 border-t border-stone-100 pt-3 sm:mt-2 sm:pt-3.5">
             <button
               type="button"
               disabled={busy || !!savingId || !name.trim()}
-              className="rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-stone-800 disabled:opacity-50"
+              className="flex shrink-0 items-center rounded-full bg-stone-900 px-3 py-2 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50 sm:px-5 sm:text-sm"
               onClick={() => void addCategory()}
             >
               Добавить

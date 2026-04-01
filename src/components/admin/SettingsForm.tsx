@@ -479,14 +479,19 @@ export function SettingsForm({ initial }: Props) {
       </div>
     </div>
 
-    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200/80 bg-[#fffdf9]/95 shadow-[0_-10px_40px_-16px_rgba(60,44,29,0.14)] backdrop-blur-xl supports-[backdrop-filter]:bg-[#fffdf9]/88">
-      <div className="mx-auto flex max-w-5xl flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-3.5">
-        <p
-          className={`min-h-[1.25rem] text-sm sm:flex-1 ${message ? "text-stone-600" : "text-transparent"}`}
-          aria-live="polite"
-        >
-          {message ?? "\u00a0"}
-        </p>
+    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200/80 bg-[#fffdf9]/95 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] shadow-[0_-10px_40px_-16px_rgba(60,44,29,0.14)] backdrop-blur-xl supports-[backdrop-filter]:bg-[#fffdf9]/88">
+      <div className="mx-auto flex max-w-5xl flex-col gap-3 px-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6">
+        {message ? (
+          <p
+            className="text-sm text-stone-600 sm:min-w-0 sm:flex-1"
+            role="status"
+            aria-live="polite"
+          >
+            {message}
+          </p>
+        ) : (
+          <div className="hidden sm:block sm:min-w-0 sm:flex-1" aria-hidden />
+        )}
         <button
           type="button"
           className="w-full shrink-0 rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-stone-800 active:scale-[0.99] sm:w-auto"
@@ -495,10 +500,6 @@ export function SettingsForm({ initial }: Props) {
           Сохранить настройки
         </button>
       </div>
-      <div
-        className="h-[env(safe-area-inset-bottom,0px)] shrink-0 bg-[#fffdf9]/95 supports-[backdrop-filter]:bg-[#fffdf9]/88"
-        aria-hidden
-      />
     </div>
     </>
   );

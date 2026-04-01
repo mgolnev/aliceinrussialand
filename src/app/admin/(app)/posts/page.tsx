@@ -20,7 +20,7 @@ function thumbUrlFromVariantsJson(variantsJson: string): string | null {
 }
 
 export default async function AdminPostsPage() {
-  const [posts, settings] = await Promise.all([
+  const [posts, settings, categories] = await Promise.all([
     prisma.post.findMany({
       orderBy: { updatedAt: "desc" },
       take: 100,
@@ -42,6 +42,10 @@ export default async function AdminPostsPage() {
       },
     }),
     getSiteSettings(),
+    prisma.postCategory.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, slug: true, sortOrder: true },
+    }),
   ]);
 
   const siteUrl =
@@ -67,11 +71,23 @@ export default async function AdminPostsPage() {
     };
   });
 
-  return rows.length === 0 ? (
-    <div className="rounded-xl border border-dashed border-stone-300 bg-white/75 px-4 py-8 text-center text-[14px] leading-relaxed text-stone-500">
-      Пока нет постов. Новую запись можно начать в ленте на главной.
+  return (
+    <div className="space-y-6">
+      <div className="rounded-[28px] border border-stone-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-40px_rgba(60,44,29,0.35)]">
+        <h1 className="text-3xl font-semibold tracking-tight">Посты</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600">
+          Обзор последних записей: превью, статус и меню. Текст, фото, slug и
+          SEO можно править прямо здесь (пункт «Редактировать») или в ленте на
+          главной.
+        </p>
+      </div>
+      {rows.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-stone-300 bg-white/75 px-4 py-8 text-center text-[14px] leading-relaxed text-stone-500">
+          Пока нет постов. Новую запись можно начать в ленте на главной.
+        </div>
+      ) : (
+        <AdminPostsList posts={rows} siteUrl={siteUrl} categories={categories} />
+      )}
     </div>
-  ) : (
-    <AdminPostsList posts={rows} siteUrl={siteUrl} />
   );
 }
