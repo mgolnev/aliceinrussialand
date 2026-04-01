@@ -22,6 +22,7 @@ export type CategoryRow = {
   id: string;
   slug: string;
   name: string;
+  description: string;
   sortOrder: number;
 };
 
@@ -50,18 +51,27 @@ function SortableItem({
   };
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(row.name);
+  const [draftDescription, setDraftDescription] = useState(row.description || "");
 
   useEffect(() => {
-    if (!editing) setDraft(row.name);
-  }, [row.name, editing]);
+    if (!editing) {
+      setDraft(row.name);
+      setDraftDescription(row.description || "");
+    }
+  }, [row.name, row.description, editing]);
 
   const rowBusy = busy || savingId === row.id;
 
-  async function saveName() {
+  async function saveCategory() {
     const nextName = draft.trim();
-    if (!nextName || nextName === row.name) {
+    const nextDescription = draftDescription.trim();
+    const prevDescription = (row.description || "").trim();
+    const unchanged =
+      nextName === row.name && nextDescription === prevDescription;
+    if (!nextName || unchanged) {
       setEditing(false);
       setDraft(row.name);
+      setDraftDescription(row.description || "");
       return;
     }
     onSavingChange(row.id);
@@ -69,11 +79,16 @@ function SortableItem({
       const res = await fetch(`/api/admin/categories/${row.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: nextName }),
+        body: JSON.stringify({
+          name: nextName,
+          description: nextDescription,
+        }),
       });
       if (!res.ok) {
         const d = (await res.json().catch(() => null)) as { error?: string };
-        onRenameError(d?.error ?? "Не удалось сохранить");
+        onRenameError(
+          d?.error?.trim() || "Не удалось сохранить. Попробуйте обновить страницу.",
+        );
         return;
       }
       const updated = (await res.json()) as CategoryRow;
@@ -102,27 +117,39 @@ function SortableItem({
       </button>
       <div className="min-w-0 flex-1">
         {editing ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex w-full flex-col gap-3">
             <input
-              className="w-full min-w-0 rounded-xl border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-400"
+              className="w-full min-w-0 rounded-xl border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-stone-400"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               disabled={rowBusy}
               autoFocus
+              placeholder="Название категории"
               onKeyDown={(e) => {
-                if (e.key === "Enter") void saveName();
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  void saveCategory();
+                }
                 if (e.key === "Escape") {
                   setEditing(false);
                   setDraft(row.name);
+                  setDraftDescription(row.description || "");
                 }
               }}
             />
-            <div className="flex shrink-0 gap-2">
+            <textarea
+              className="w-full min-w-0 rounded-xl border border-stone-300 px-3 py-2.5 text-sm leading-6 outline-none focus:border-stone-400"
+              value={draftDescription}
+              onChange={(e) => setDraftDescription(e.target.value)}
+              disabled={rowBusy}
+              rows={3}
+              placeholder="Короткое описание категории для SEO (2-3 предложения)"
+            />
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 disabled={rowBusy || !draft.trim()}
                 className="rounded-full bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-800 disabled:opacity-50"
-                onClick={() => void saveName()}
+                onClick={() => void saveCategory()}
               >
                 Сохранить
               </button>
@@ -133,16 +160,27 @@ function SortableItem({
                 onClick={() => {
                   setEditing(false);
                   setDraft(row.name);
+                  setDraftDescription(row.description || "");
                 }}
               >
                 Отмена
               </button>
             </div>
+            <p className="text-xs text-stone-500">
+              Для быстрого сохранения: Cmd/Ctrl + Enter
+            </p>
           </div>
         ) : (
           <>
             <p className="font-medium text-stone-900">{row.name}</p>
             <p className="truncate font-mono text-xs text-stone-500">{row.slug}</p>
+            {row.description?.trim() ? (
+              <p className="mt-1 text-xs leading-5 text-stone-600">
+                {row.description.trim()}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-stone-400">SEO-описание не задано</p>
+            )}
           </>
         )}
       </div>
@@ -154,7 +192,7 @@ function SortableItem({
             className="rounded-full px-3 py-1.5 text-sm text-stone-600 hover:bg-stone-100 disabled:opacity-50"
             onClick={() => setEditing(true)}
           >
-            Переименовать
+            Редактировать
           </button>
         ) : null}
         <button
@@ -174,6 +212,7 @@ export function CategoriesPanel({ initial }: { initial: CategoryRow[] }) {
   const router = useRouter();
   const [rows, setRows] = useState(initial);
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -225,16 +264,22 @@ export function CategoriesPanel({ initial }: { initial: CategoryRow[] }) {
       const res = await fetch("/api/admin/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim(),
+        }),
       });
       if (!res.ok) {
         const d = (await res.json().catch(() => null)) as { error?: string };
-        setMessage(d?.error ?? "Ошибка");
+        setMessage(
+          d?.error?.trim() || "Не удалось создать категорию. Попробуйте снова.",
+        );
         return;
       }
       const row = (await res.json()) as CategoryRow;
       setRows((prev) => [...prev, row].sort((a, b) => a.sortOrder - b.sortOrder));
       setName("");
+      setDescription("");
       router.refresh();
     } finally {
       setBusy(false);
@@ -275,7 +320,7 @@ export function CategoriesPanel({ initial }: { initial: CategoryRow[] }) {
 
       <div className="rounded-[24px] border border-stone-200/80 bg-white/90 p-4 shadow-sm sm:p-5">
         <h2 className="text-sm font-semibold text-stone-900">Новая категория</h2>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 grid gap-2">
           <input
             className="min-w-[200px] flex-1 rounded-2xl border border-stone-300 px-4 py-2.5 text-sm outline-none focus:border-stone-400"
             placeholder="Название"
@@ -283,14 +328,23 @@ export function CategoriesPanel({ initial }: { initial: CategoryRow[] }) {
             onChange={(e) => setName(e.target.value)}
             disabled={busy || !!savingId}
           />
-          <button
-            type="button"
-            disabled={busy || !!savingId || !name.trim()}
-            className="rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-stone-800 disabled:opacity-50"
-            onClick={() => void addCategory()}
-          >
-            Добавить
-          </button>
+          <textarea
+            className="min-h-20 w-full rounded-2xl border border-stone-300 px-4 py-2.5 text-sm leading-6 outline-none focus:border-stone-400"
+            placeholder="SEO-описание (опционально, 2-3 предложения)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            disabled={busy || !!savingId}
+          />
+          <div>
+            <button
+              type="button"
+              disabled={busy || !!savingId || !name.trim()}
+              className="rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-stone-800 disabled:opacity-50"
+              onClick={() => void addCategory()}
+            >
+              Добавить
+            </button>
+          </div>
         </div>
       </div>
 

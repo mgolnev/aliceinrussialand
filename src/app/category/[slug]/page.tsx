@@ -25,6 +25,17 @@ function pagePath(slug: string, page: number): string {
   return `/category/${slug}?page=${page}`;
 }
 
+function descriptionParagraphs(text: string): string[] {
+  const sentences =
+    text
+      .split(/(?<=[.!?…])\s+/u)
+      .map((part) => part.trim())
+      .filter(Boolean) ?? [];
+  if (sentences.length <= 1) return [text];
+  if (sentences.length === 2) return sentences;
+  return [sentences.slice(0, 2).join(" "), sentences.slice(2).join(" ")];
+}
+
 export async function generateMetadata({
   params,
   searchParams,
@@ -35,7 +46,8 @@ export async function generateMetadata({
     getSiteSettings(),
   ]);
   const page = parsePageNumber(sp.page);
-  const category = await getSeoCategoryBySlug(slug, settings.tagline || settings.bio || "");
+  const siteContext = [settings.tagline, settings.bio].filter(Boolean).join(" ");
+  const category = await getSeoCategoryBySlug(slug, siteContext);
   if (!category || category.postCount === 0) {
     return {
       title: "Категория не найдена",
@@ -43,25 +55,25 @@ export async function generateMetadata({
     };
   }
 
-  const titleBase = `${category.name} — категория`;
+  const titleBase = `${category.name} — категория | ${settings.displayName}`;
   const title = page > 1 ? `${titleBase}, стр. ${page}` : titleBase;
   const canonicalPath = pagePath(category.slug, page);
   const siteUrl = resolveSiteOrigin(settings.siteUrl);
 
   return {
     title,
-    description: category.description,
+    description: category.metaDescription,
     alternates: { canonical: canonicalPath },
     openGraph: {
       title,
-      description: category.description,
+      description: category.metaDescription,
       url: absoluteUrl(siteUrl, canonicalPath),
       type: "website",
     },
     twitter: {
       card: "summary",
       title,
-      description: category.description,
+      description: category.metaDescription,
     },
   };
 }
@@ -73,7 +85,8 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
     getSiteSettings(),
   ]);
   const page = parsePageNumber(sp.page);
-  const category = await getSeoCategoryBySlug(slug, settings.tagline || settings.bio || "");
+  const siteContext = [settings.tagline, settings.bio].filter(Boolean).join(" ");
+  const category = await getSeoCategoryBySlug(slug, siteContext);
   if (!category || category.postCount === 0) notFound();
 
   const postsPage = await getSeoCategoryPostsPage(category.id, page);
@@ -99,7 +112,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       />
       <main className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-8">
         <h1 className="text-2xl font-semibold tracking-tight text-stone-900">{category.name}</h1>
-        <p className="mt-2 text-sm leading-6 text-stone-600">{category.description}</p>
+        <div className="mt-2 space-y-2 text-sm leading-6 text-stone-600">
+          {descriptionParagraphs(category.description).map((paragraph, idx) => (
+            <p key={`${category.slug}-seo-${idx}`}>{paragraph}</p>
+          ))}
+        </div>
         <p className="mt-3 text-sm text-stone-600">
           В категории {category.postCount} публикаций.{" "}
           <Link href={`/?category=${encodeURIComponent(category.slug)}`} className="underline">

@@ -25,3 +25,11 @@
 - Метаданные и canonical управляем в серверных `generateMetadata`.
 - Усиление перелинковки делаем через дополнительные текстовые ссылки, а не заменой текущей навигации.
 
+## Минимальный scope для category SEO
+
+- Изменения ограничиваем только category SEO-слоем:
+  - `src/app/category/[slug]/page.tsx`
+  - `src/lib/seo-content.ts`
+  - category admin CRUD/API для ручного SEO-описания.
+- Не меняем feed UX, карточки и клиентские переходы.
+

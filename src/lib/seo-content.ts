@@ -11,7 +11,10 @@ export type SeoCategory = {
   name: string;
   updatedAt: Date;
   postCount: number;
+  /** Текст для видимого SEO-блока на странице категории. */
   description: string;
+  /** Короткая версия для meta/OG/Twitter. */
+  metaDescription: string;
 };
 
 export type SeoPostListItem = {
@@ -23,27 +26,58 @@ export type SeoPostListItem = {
   publishedAt: Date | null;
 };
 
-function buildCategoryDescription(
-  categoryName: string,
-  rawDescription: string | null | undefined,
-  siteTagline: string,
-): string {
-  const safeRaw = stripEmojiForSeo(rawDescription?.trim() ?? "");
-  if (safeRaw) return excerptForMetaDescription(safeRaw, 180);
-  const safeTagline = stripEmojiForSeo(siteTagline.trim());
-  if (safeTagline) {
-    return `${categoryName} — ${excerptForMetaDescription(safeTagline, 130)}`;
-  }
-  return `Подборка публикаций в категории «${categoryName}».`;
+function normalizeReadableText(value: string): string {
+  return stripEmojiForSeo(value).replace(/\s+/g, " ").trim();
 }
 
-export async function listSeoCategories(siteTagline: string): Promise<SeoCategory[]> {
+function buildCategoryDescriptions(
+  categoryName: string,
+  rawDescription: string | null | undefined,
+  siteContext: string,
+): { description: string; metaDescription: string } {
+  const safeRaw = normalizeReadableText(rawDescription ?? "");
+  const safeContext = normalizeReadableText(siteContext);
+  const contextSentence = safeContext
+    ? excerptForMetaDescription(safeContext, 120)
+    : "";
+  const genericSecondSentence =
+    "На странице собраны материалы по теме в удобном формате для чтения.";
+  if (safeRaw) {
+    const description =
+      safeRaw.length >= 90
+        ? safeRaw
+        : contextSentence
+          ? `${safeRaw} ${contextSentence}`
+          : `${safeRaw} ${genericSecondSentence}`;
+    return {
+      description,
+      metaDescription: excerptForMetaDescription(description, 180),
+    };
+  }
+
+  if (contextSentence) {
+    const description = `Категория «${categoryName}» объединяет тематические публикации и новые работы. ${contextSentence}`;
+    return {
+      description,
+      metaDescription: excerptForMetaDescription(description, 180),
+    };
+  }
+
+  const description = `Категория «${categoryName}» объединяет тематические публикации и новые работы. ${genericSecondSentence}`;
+  return {
+    description,
+    metaDescription: excerptForMetaDescription(description, 180),
+  };
+}
+
+export async function listSeoCategories(siteContext: string): Promise<SeoCategory[]> {
   const rows = await prisma.postCategory.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: {
       id: true,
       slug: true,
       name: true,
+      description: true,
       updatedAt: true,
       posts: {
         where: { status: POST_STATUS.PUBLISHED },
@@ -53,20 +87,28 @@ export async function listSeoCategories(siteTagline: string): Promise<SeoCategor
   });
 
   return rows
-    .map((row) => ({
-      id: row.id,
-      slug: row.slug,
-      name: row.name,
-      updatedAt: row.updatedAt,
-      postCount: row.posts.length,
-      description: buildCategoryDescription(row.name, null, siteTagline),
-    }))
+    .map((row) => {
+      const resolved = buildCategoryDescriptions(
+        row.name,
+        row.description,
+        siteContext,
+      );
+      return {
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        updatedAt: row.updatedAt,
+        postCount: row.posts.length,
+        description: resolved.description,
+        metaDescription: resolved.metaDescription,
+      };
+    })
     .filter((row) => row.postCount > 0);
 }
 
 export async function getSeoCategoryBySlug(
   slug: string,
-  siteTagline: string,
+  siteContext: string,
 ): Promise<SeoCategory | null> {
   const row = await prisma.postCategory.findUnique({
     where: { slug },
@@ -74,6 +116,7 @@ export async function getSeoCategoryBySlug(
       id: true,
       slug: true,
       name: true,
+      description: true,
       updatedAt: true,
       posts: {
         where: { status: POST_STATUS.PUBLISHED },
@@ -83,13 +126,19 @@ export async function getSeoCategoryBySlug(
   });
   if (!row) return null;
 
+  const resolved = buildCategoryDescriptions(
+    row.name,
+    row.description,
+    siteContext,
+  );
   return {
     id: row.id,
     slug: row.slug,
     name: row.name,
     updatedAt: row.updatedAt,
     postCount: row.posts.length,
-    description: buildCategoryDescription(row.name, null, siteTagline),
+    description: resolved.description,
+    metaDescription: resolved.metaDescription,
   };
 }
 

@@ -20,7 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         where: { status: POST_STATUS.PUBLISHED },
         select: { slug: true, updatedAt: true, publishedAt: true },
       }),
-      listSeoCategories(settings.tagline || settings.bio || ""),
+      listSeoCategories([settings.tagline, settings.bio].filter(Boolean).join(" ")),
       prisma.post.count({ where: { status: POST_STATUS.PUBLISHED } }),
     ]);
     const archivePages = Math.ceil(postsCount / SEO_PAGE_SIZE);

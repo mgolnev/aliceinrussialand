@@ -23,10 +23,13 @@ export async function generateMetadata({
   const avatar = parseAvatarUrl(s.avatarMediaPath);
   const og = avatar ? absoluteUrl(siteUrl, avatar) : undefined;
   if (categoryParam) {
-    const category = await getSeoCategoryBySlug(categoryParam, s.tagline || s.bio || "");
+    const siteContext = [s.tagline, s.bio].filter(Boolean).join(" ");
+    const category = await getSeoCategoryBySlug(categoryParam, siteContext);
     const canonicalPath = category ? `/category/${category.slug}` : "/";
-    const title = category ? `${category.name} — категория` : s.displayName;
-    const description = category?.description || defaultDescription;
+    const title = category
+      ? `${category.name} — категория | ${s.displayName}`
+      : s.displayName;
+    const description = category?.metaDescription || defaultDescription;
 
     return {
       title: { absolute: title },
