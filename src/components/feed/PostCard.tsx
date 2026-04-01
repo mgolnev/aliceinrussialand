@@ -600,7 +600,7 @@ export function PostCard({
             {post.category?.name?.trim() ? (
               standalone ? (
                 <Link
-                  href={`/?category=${encodeURIComponent(post.category.slug)}`}
+                  href={`/category/${encodeURIComponent(post.category.slug)}`}
                   scroll={false}
                   prefetch
                   className="inline-flex w-fit text-[13px] font-medium leading-snug text-stone-400 transition hover:text-stone-600"
