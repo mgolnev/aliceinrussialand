@@ -682,53 +682,6 @@ export function AdminPostRow({
                 </button>
               </header>
 
-              <details className="mb-3 rounded-xl border border-stone-200/80 bg-stone-50/50 px-3 py-2">
-                <summary className="cursor-pointer text-sm font-medium text-stone-800">
-                  Slug и SEO
-                </summary>
-                <div className="mt-3 space-y-3 pb-1">
-                  <label className="block text-[14px] font-medium text-stone-800">
-                    Slug (путь URL)
-                    <input
-                      className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2.5 font-mono text-[14px] outline-none focus:border-stone-400"
-                      value={editSlug}
-                      onChange={(e) => setEditSlug(e.target.value)}
-                      disabled={working}
-                      autoComplete="off"
-                      onFocus={handleMobileEditableFocus}
-                      onBlur={handleMobileEditableBlur}
-                    />
-                  </label>
-                  <label className="block text-[14px] font-medium text-stone-800">
-                    SEO title
-                    <input
-                      className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2.5 text-[14px] outline-none focus:border-stone-400"
-                      value={editMetaTitle}
-                      onChange={(e) => setEditMetaTitle(e.target.value)}
-                      disabled={working}
-                      placeholder="Пусто — подставится заголовок поста"
-                      onFocus={handleMobileEditableFocus}
-                      onBlur={handleMobileEditableBlur}
-                    />
-                  </label>
-                  <label className="block text-[14px] font-medium text-stone-800">
-                    SEO description
-                    <textarea
-                      className="mt-1 min-h-[100px] w-full rounded-xl border border-stone-300 px-3 py-2.5 text-[14px] leading-snug outline-none focus:border-stone-400"
-                      style={{ fontSize: "max(14px, 0.875rem)" }}
-                      value={editMetaDescription}
-                      onChange={(e) =>
-                        setEditMetaDescription(e.target.value)
-                      }
-                      disabled={working}
-                      placeholder="Пусто — возьмётся начало текста"
-                      onFocus={handleMobileEditableFocus}
-                      onBlur={handleMobileEditableBlur}
-                    />
-                  </label>
-                </div>
-              </details>
-
               <FeedComposerPanelLazy
                 variant="embedded"
                 headerLeft=""
@@ -785,6 +738,53 @@ export function AdminPostRow({
                   categories.length > 0 ? setEditCategoryId : undefined
                 }
               />
+
+              <details className="mt-5 overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-sm ring-1 ring-stone-100/80">
+                <summary className="cursor-pointer list-none px-4 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-stone-500 transition hover:bg-stone-50/90 [&::-webkit-details-marker]:hidden">
+                  Slug и SEO
+                </summary>
+                <div className="space-y-3.5 border-t border-stone-100 bg-stone-50/40 px-4 py-4">
+                  <label className="block text-[13px] font-medium text-stone-700">
+                    Slug (путь URL)
+                    <input
+                      className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 font-mono text-sm outline-none transition focus:border-stone-400"
+                      value={editSlug}
+                      onChange={(e) => setEditSlug(e.target.value)}
+                      disabled={working}
+                      autoComplete="off"
+                      onFocus={handleMobileEditableFocus}
+                      onBlur={handleMobileEditableBlur}
+                    />
+                  </label>
+                  <label className="block text-[13px] font-medium text-stone-700">
+                    SEO title
+                    <input
+                      className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-stone-400"
+                      value={editMetaTitle}
+                      onChange={(e) => setEditMetaTitle(e.target.value)}
+                      disabled={working}
+                      placeholder="Пусто — подставится заголовок поста"
+                      onFocus={handleMobileEditableFocus}
+                      onBlur={handleMobileEditableBlur}
+                    />
+                  </label>
+                  <label className="block text-[13px] font-medium text-stone-700">
+                    SEO description
+                    <textarea
+                      className="mt-1.5 min-h-[96px] w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm leading-relaxed outline-none transition focus:border-stone-400"
+                      style={{ fontSize: "max(14px, 0.875rem)" }}
+                      value={editMetaDescription}
+                      onChange={(e) =>
+                        setEditMetaDescription(e.target.value)
+                      }
+                      disabled={working}
+                      placeholder="Пусто — возьмётся начало текста"
+                      onFocus={handleMobileEditableFocus}
+                      onBlur={handleMobileEditableBlur}
+                    />
+                  </label>
+                </div>
+              </details>
             </>
           ) : null}
         </div>
