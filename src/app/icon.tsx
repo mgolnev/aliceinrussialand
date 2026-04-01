@@ -11,6 +11,7 @@ export const size = {
 
 export const contentType = "image/png";
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 async function toPngDataUrl(bytes: ArrayBuffer): Promise<string> {
   const pngBuffer = await sharp(Buffer.from(bytes))
