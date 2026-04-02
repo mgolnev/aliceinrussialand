@@ -41,6 +41,28 @@ export async function getPublishedPostBySlug(slug: string) {
   });
 }
 
+/** Полные варианты URL картинок опубликованного поста (для лайтбокса из ленты). */
+export async function getPublishedPostMediaBySlug(slug: string): Promise<{
+  images: Array<{ id: string; variants: Record<string, string> }>;
+} | null> {
+  const post = await prisma.post.findFirst({
+    where: { slug, status: POST_STATUS.PUBLISHED },
+    select: {
+      images: {
+        orderBy: { sortOrder: "asc" },
+        select: { id: true, variantsJson: true },
+      },
+    },
+  });
+  if (!post) return null;
+  return {
+    images: post.images.map((im) => ({
+      id: im.id,
+      variants: parseVariants(im.variantsJson),
+    })),
+  };
+}
+
 /** Дедуп вызова в `generateMetadata` и `PostPage` в одном запросе. */
 export const getPublishedPostBySlugCached = cache(getPublishedPostBySlug);
 

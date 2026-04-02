@@ -106,6 +106,16 @@ function buildFeedGridSources(variants: Record<string, string>) {
   return { src, srcSet };
 }
 
+function pickLightboxSlideSrc(variants: Record<string, string>): string {
+  return (
+    variants.w1280 ??
+    variants.w960 ??
+    variants.w640 ??
+    variants.w512 ??
+    ""
+  );
+}
+
 export function PostCard({
   post,
   categories = [],
@@ -135,15 +145,70 @@ export function PostCard({
     null,
   );
 
-  const imageList = useMemo(
-    () =>
-      post.images.map((im) => ({
-        ...im,
-        src: im.variants.w960 ?? im.variants.w640 ?? im.variants.w1280,
-      })),
+  const [lightboxMediaById, setLightboxMediaById] = useState<
+    Record<string, Record<string, string>>
+  >({});
+  const lightboxMediaReadySlugRef = useRef<string | null>(null);
+
+  const lightboxNeedsFullVariants = useMemo(
+    () => post.images.some((im) => !im.variants.w1280),
     [post.images],
   );
-  const viewerImage = viewerIndex === null ? null : imageList[viewerIndex];
+
+  const lightboxSlides = useMemo(
+    () =>
+      post.images.map((im) => {
+        const variants = {
+          ...im.variants,
+          ...(lightboxMediaById[im.id] ?? {}),
+        };
+        return {
+          src: pickLightboxSlideSrc(variants),
+          alt: im.alt || post.title,
+          caption: im.caption || undefined,
+        };
+      }),
+    [post.images, post.title, lightboxMediaById],
+  );
+
+  useEffect(() => {
+    lightboxMediaReadySlugRef.current = null;
+    setLightboxMediaById({});
+  }, [post.id]);
+
+  useEffect(() => {
+    if (viewerIndex === null) return;
+    if (!lightboxNeedsFullVariants) return;
+    if (lightboxMediaReadySlugRef.current === post.slug) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(
+          `/api/posts/${encodeURIComponent(post.slug)}/media`,
+        );
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as {
+          images: Array<{ id: string; variants: Record<string, string> }>;
+        };
+        if (cancelled) return;
+        lightboxMediaReadySlugRef.current = post.slug;
+        setLightboxMediaById((prev) => {
+          const next = { ...prev };
+          for (const row of data.images) {
+            next[row.id] = row.variants;
+          }
+          return next;
+        });
+      } catch {
+        /* сеть / JSON */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [viewerIndex, post.slug, lightboxNeedsFullVariants]);
 
   useEffect(() => {
     setEditBody(post.body);
@@ -794,7 +859,7 @@ export function PostCard({
                   flushCardBottom
                   layoutSeed={post.id}
                   eagerCount={prioritizeMedia ? 1 : 0}
-                  images={imageList.map((image) => ({
+                  images={post.images.map((image) => ({
                     id: image.id,
                     ...buildFeedGridSources(image.variants),
                     sizes:
@@ -833,13 +898,9 @@ export function PostCard({
         </div>
       </article>
 
-      {viewerIndex !== null && viewerImage?.src ? (
+      {viewerIndex !== null && lightboxSlides[viewerIndex]?.src ? (
         <ImageLightbox
-          slides={imageList.map((im) => ({
-            src: im.src ?? "",
-            alt: im.alt || post.title,
-            caption: im.caption || undefined,
-          }))}
+          slides={lightboxSlides}
           index={viewerIndex}
           onClose={() => setViewerIndex(null)}
           onIndexChange={setViewerIndex}

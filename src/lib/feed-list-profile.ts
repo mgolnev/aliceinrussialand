@@ -9,12 +9,14 @@ export const FEED_PUBLIC_MAX_IMAGES_PER_POST = 12;
 /** Ограничение текста в ленте: снижает HTML/RSC и вес гидрации; полный текст на /p/[slug]. */
 export const FEED_PUBLIC_BODY_MAX_CHARS = 10_000;
 
-/** Только пресеты, которые реально отдаём в ленте (меньше JSON). */
-export const FEED_PUBLIC_IMAGE_VARIANT_KEYS = [
-  "w640",
-  "w960",
-  "w1280",
-] as const;
+/**
+ * Пресеты URL в JSON ленты для гостей: чем меньше ключей, тем легче RSC/HTML.
+ * Грид в ленте собирает src/srcSet из 640+960 — этого достаточно для превью;
+ * на странице поста по-прежнему полный набор из БД.
+ *
+ * Откат: верни `"w1280"` в массив ниже.
+ */
+export const FEED_PUBLIC_IMAGE_VARIANT_KEYS = ["w640", "w960"] as const;
 
 export type FeedRequestProfile = "public" | "admin";
 

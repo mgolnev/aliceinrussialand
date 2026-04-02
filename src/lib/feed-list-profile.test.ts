@@ -25,7 +25,7 @@ function samplePost(overrides: Partial<FeedPost> = {}): FeedPost {
 }
 
 describe("feed list profile (public)", () => {
-  it("trimImageVariantsForPublicList оставляет только w640/w960/w1280", () => {
+  it("trimImageVariantsForPublicList оставляет только w640/w960 (без w1280 в ленте)", () => {
     expect(
       trimImageVariantsForPublicList({
         w512: "/a",
@@ -34,7 +34,7 @@ describe("feed list profile (public)", () => {
         w1280: "/d",
         extra: "/x",
       }),
-    ).toEqual({ w640: "/b", w960: "/c", w1280: "/d" });
+    ).toEqual({ w640: "/b", w960: "/c" });
   });
 
   it("truncateBodyForPublicFeed не режет короткий текст", () => {
