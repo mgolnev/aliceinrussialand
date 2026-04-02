@@ -51,24 +51,18 @@ describe("feed list profile (public)", () => {
   it("applyPublicFeedListLimits режет images до N и body", () => {
     const post = samplePost({
       body: "y".repeat(FEED_PUBLIC_BODY_MAX_CHARS + 10),
-      images: [
-        {
-          id: "i1",
-          caption: "",
-          alt: "",
-          variants: { w640: "/1", w512: "/bad" },
-          width: 100,
-          height: 100,
+      images: Array.from({ length: 15 }, (_, i) => ({
+        id: `i${i}`,
+        caption: "",
+        alt: "",
+        variants: {
+          w512: `/bad-${i}`,
+          w640: `/1-${i}`,
+          w960: `/2-${i}`,
         },
-        {
-          id: "i2",
-          caption: "",
-          alt: "",
-          variants: { w960: "/2" },
-          width: 100,
-          height: 100,
-        },
-      ],
+        width: 100,
+        height: 100,
+      })),
     });
     const slim = applyPublicFeedListLimits(post);
     expect(slim.images).toHaveLength(FEED_PUBLIC_MAX_IMAGES_PER_POST);
@@ -79,7 +73,7 @@ describe("feed list profile (public)", () => {
   it("публичный слой JSON строго легче «толстого» при том же посте", () => {
     const fat = samplePost({
       body: "z".repeat(25_000),
-      images: Array.from({ length: 5 }, (_, i) => ({
+      images: Array.from({ length: 20 }, (_, i) => ({
         id: `im${i}`,
         caption: "",
         alt: "",

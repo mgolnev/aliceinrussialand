@@ -7,6 +7,7 @@ import { CACHE_TAG_FEED_CATEGORIES } from "./cache-tags";
 import { isNextProductionBuild } from "./site-settings-db";
 import {
   applyPublicFeedListLimits,
+  FEED_PUBLIC_MAX_IMAGES_PER_POST,
   type FeedRequestProfile,
 } from "./feed-list-profile";
 
@@ -108,7 +109,10 @@ export async function getFeedPage(
       images:
         feedProfile === "admin"
           ? { orderBy: { sortOrder: "asc" } }
-          : { orderBy: { sortOrder: "asc" }, take: 1 },
+          : {
+              orderBy: { sortOrder: "asc" },
+              take: FEED_PUBLIC_MAX_IMAGES_PER_POST,
+            },
       category: { select: { id: true, name: true, slug: true } },
     },
   });
