@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { getSiteSettings } from "@/lib/site";
 import { Analytics } from "@/components/site/Analytics";
@@ -78,6 +79,7 @@ export default async function RootLayout({
           </>
         ) : null}
         {children}
+        <SpeedInsights />
       </body>
     </html>
   );
