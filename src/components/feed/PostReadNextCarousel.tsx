@@ -1,24 +1,7 @@
 "use client";
 
 import type { FeedCategory, PostCarouselItem } from "@/types/feed";
-import {
-  WatchNextContinuation,
-  type WatchNextCard,
-} from "./WatchNextContinuation";
-
-function itemToWatchCard(item: PostCarouselItem): WatchNextCard {
-  const letter = item.title.trim().slice(0, 1).toUpperCase() || "•";
-  return {
-    slug: item.slug,
-    preview: item.preview,
-    displayLetter: letter,
-    categoryName: item.categoryName,
-    variants: item.variants,
-    width: item.width,
-    height: item.height,
-    alt: item.alt,
-  };
-}
+import { WatchNextEditorialFlow } from "./WatchNextEditorialFlow";
 
 type Props = {
   items: PostCarouselItem[];
@@ -27,7 +10,7 @@ type Props = {
   currentPostCategoryId: string | null;
 };
 
-/** Блок «Смотреть дальше» после поста: та же вёрстка, что в конце категории; подборка — getPostCarouselPeers. */
+/** Editorial flow после поста: hero + продолжение + темы. */
 export function PostReadNextCarousel({
   items,
   categories,
@@ -35,17 +18,18 @@ export function PostReadNextCarousel({
 }: Props) {
   if (items.length === 0) return null;
 
-  const featured = itemToWatchCard(items[0]!);
-  const more = items.slice(1, 7).map(itemToWatchCard);
+  const featured = items[0] ?? null;
+  const continuation = items.slice(1, 5);
   const topics = categories
     .filter((c) => c.id !== currentPostCategoryId)
     .slice(0, 5);
 
   return (
-    <WatchNextContinuation
+    <WatchNextEditorialFlow
       featured={featured}
-      more={more}
+      continuation={continuation}
       topics={topics}
+      currentPostCategoryId={currentPostCategoryId}
       sectionHeadingId="post-read-next-heading"
     />
   );
