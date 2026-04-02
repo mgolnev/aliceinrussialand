@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { absoluteUrl } from "@/lib/absolute-url";
@@ -24,6 +25,16 @@ export const dynamic = "force-dynamic";
 function pagePath(slug: string, page: number): string {
   if (page <= 1) return `/category/${slug}`;
   return `/category/${slug}?page=${page}`;
+}
+
+function publicationsLabel(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "публикация";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) {
+    return "публикации";
+  }
+  return "публикаций";
 }
 
 function descriptionParagraphs(text: string): string[] {
@@ -118,13 +129,23 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
             <p key={`${category.slug}-seo-${idx}`}>{paragraph}</p>
           ))}
         </div>
-        <p className="mt-3 text-sm text-stone-600">
-          В категории {category.postCount} публикаций.{" "}
-          <Link href={`/?category=${encodeURIComponent(category.slug)}`} className="underline">
-            Открыть в режиме ленты
-          </Link>
+        <p className="mt-4 text-sm text-stone-600">
+          В категории {category.postCount} {publicationsLabel(category.postCount)}.
         </p>
-        <section className="mt-5">
+        <div className="mt-4 sm:mt-5">
+          <Link
+            href={`/?category=${encodeURIComponent(category.slug)}`}
+            className="inline-flex w-full min-h-11 items-center justify-center gap-2 rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-stone-800 active:scale-[0.99] sm:w-auto sm:min-h-0 sm:py-2.5"
+          >
+            Смотреть в ленте
+            <ChevronRight
+              className="h-4 w-4 shrink-0 opacity-90"
+              strokeWidth={2.25}
+              aria-hidden
+            />
+          </Link>
+        </div>
+        <section className="mt-6 sm:mt-8">
           <SeoPostList items={postsPage.items} emptyText="В этой категории пока нет опубликованных материалов." />
           <SeoPager
             basePath={`/category/${category.slug}`}

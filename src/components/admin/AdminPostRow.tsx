@@ -552,7 +552,7 @@ export function AdminPostRow({
         )}
 
         {!editMode ? (
-          <div className="relative z-10 flex w-11 shrink-0 flex-col items-center justify-center self-stretch border-l border-stone-200/40 bg-white/80 group-hover:bg-stone-50/90 sm:w-12">
+          <div className="relative z-10 flex w-11 shrink-0 flex-col items-center justify-start self-stretch bg-white/80 pt-3 group-hover:bg-stone-50/90 sm:w-12 sm:pt-3.5">
             <button
               ref={menuTriggerRef}
               type="button"

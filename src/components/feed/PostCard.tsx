@@ -32,6 +32,10 @@ import {
 import { useFeedImageUploadQueue } from "@/hooks/use-feed-image-upload-queue";
 import type { FeedComposerImage } from "@/components/feed/FeedComposerPanel";
 import {
+  firstSentence,
+  stripLeadingTitleFromBody,
+} from "@/lib/post-title-body-split";
+import {
   MoreHorizontal,
   ExternalLink,
   Edit3,
@@ -84,71 +88,6 @@ function formatDate(iso: string | null) {
   } catch {
     return "";
   }
-}
-
-function firstSentence(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  const index = trimmed.search(/[.!?…]/u);
-  if (index < 0) return trimmed;
-  return trimmed.slice(0, index + 1).trim();
-}
-
-function normalizedSentence(value: string): string {
-  return value
-    .trim()
-    .replace(/[.!?…]+$/u, "")
-    .replace(/\s+/g, " ")
-    .toLocaleLowerCase("ru-RU");
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function titleAsBodyPrefixRegex(title: string): RegExp {
-  let pattern = "^";
-  for (const ch of title.trim()) {
-    if (/\s/u.test(ch)) {
-      pattern += "\\s+";
-      continue;
-    }
-    pattern += escapeRegExp(ch);
-    if (/[.!?…]/u.test(ch)) {
-      pattern += "\\s*";
-    }
-  }
-  return new RegExp(pattern, "u");
-}
-
-function stripLeadingTitleFromBody(body: string, title: string): string {
-  const trimmedBody = body.trim();
-  const trimmedTitle = title.trim();
-  if (!trimmedBody || !trimmedTitle) return body;
-
-  if (trimmedBody.startsWith(trimmedTitle)) {
-    const rest = trimmedBody.slice(trimmedTitle.length).trimStart();
-    return rest;
-  }
-
-  const byTitlePrefix = trimmedBody.match(titleAsBodyPrefixRegex(trimmedTitle));
-  if (byTitlePrefix?.[0]) {
-    const rest = trimmedBody.slice(byTitlePrefix[0].length).trimStart();
-    return rest;
-  }
-
-  const sentenceEndIndex = trimmedBody.search(/[.!?…]/u);
-  if (sentenceEndIndex < 0) return body;
-
-  const firstSentence = trimmedBody.slice(0, sentenceEndIndex + 1);
-  if (!firstSentence) return body;
-
-  if (normalizedSentence(firstSentence) !== normalizedSentence(trimmedTitle)) {
-    return body;
-  }
-
-  const rest = trimmedBody.slice(firstSentence.length).trimStart();
-  return rest || body;
 }
 
 function buildFeedGridSources(variants: Record<string, string>) {
