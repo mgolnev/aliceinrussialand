@@ -75,14 +75,17 @@ export async function generateMetadata({
 export default async function HomePage({ searchParams }: HomeProps) {
   const sp = await searchParams;
   const categoryParam = sp.category?.trim() || undefined;
-  const settingsPromise = getSiteSettings();
-  const feedPromise = getFeedPage(undefined, categoryParam);
-  const cookieStorePromise = cookies();
-  const [settings, feed, cookieStore] = await Promise.all([
-    settingsPromise,
-    feedPromise,
-    cookieStorePromise,
+  const [settings, cookieStore] = await Promise.all([
+    getSiteSettings(),
+    cookies(),
   ]);
+  const session = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const isAdmin = session ? await verifySessionToken(session) : false;
+  const feed = await getFeedPage(
+    undefined,
+    categoryParam,
+    isAdmin ? "admin" : "public",
+  );
   const { items, nextCursor, categories } = feed;
   const siteUrl = resolveSiteOrigin(settings.siteUrl);
   const plausible =
@@ -91,8 +94,6 @@ export default async function HomePage({ searchParams }: HomeProps) {
     settings.yandexMetrikaId?.trim() ||
     process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID?.trim() ||
     "";
-  const session = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const isAdmin = session ? await verifySessionToken(session) : false;
   const siteOrigin = siteUrl.replace(/\/$/, "");
   const webSiteJsonLd = {
     "@context": "https://schema.org",

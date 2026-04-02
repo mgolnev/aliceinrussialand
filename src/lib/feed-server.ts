@@ -5,6 +5,10 @@ import { parseVariants } from "./posts-query";
 import type { FeedCategory, FeedPost } from "@/types/feed";
 import { CACHE_TAG_FEED_CATEGORIES } from "./cache-tags";
 import { isNextProductionBuild } from "./site-settings-db";
+import {
+  applyPublicFeedListLimits,
+  type FeedRequestProfile,
+} from "./feed-list-profile";
 
 const take = 8;
 
@@ -59,6 +63,7 @@ export async function listFeedCategories(): Promise<FeedCategory[]> {
 export async function getFeedPage(
   cursor?: string,
   categorySlug?: string | null,
+  feedProfile: FeedRequestProfile = "public",
 ): Promise<{
   items: FeedPost[];
   nextCursor: string | null;
@@ -100,7 +105,10 @@ export async function getFeedPage(
         }
       : {}),
     include: {
-      images: { orderBy: { sortOrder: "asc" } },
+      images:
+        feedProfile === "admin"
+          ? { orderBy: { sortOrder: "asc" } }
+          : { orderBy: { sortOrder: "asc" }, take: 1 },
       category: { select: { id: true, name: true, slug: true } },
     },
   });
@@ -109,25 +117,28 @@ export async function getFeedPage(
   const slice = hasMore ? posts.slice(0, take) : posts;
   const nextCursor = hasMore ? (slice[slice.length - 1]?.id ?? null) : null;
 
-  const items: FeedPost[] = slice.map((p) => ({
-    id: p.id,
-    slug: p.slug,
-    title: p.title,
-    body: p.body,
-    displayMode: p.displayMode === "STACK" ? "STACK" : "GRID",
-    publishedAt: p.publishedAt?.toISOString() ?? null,
-    pinned: p.pinned,
-    categoryId: p.categoryId,
-    category: p.category,
-    images: p.images.map((im) => ({
-      id: im.id,
-      caption: im.caption,
-      alt: im.alt,
-      variants: parseVariants(im.variantsJson),
-      width: im.width,
-      height: im.height,
-    })),
-  }));
+  const items: FeedPost[] = slice.map((p) => {
+    const row: FeedPost = {
+      id: p.id,
+      slug: p.slug,
+      title: p.title,
+      body: p.body,
+      displayMode: p.displayMode === "STACK" ? "STACK" : "GRID",
+      publishedAt: p.publishedAt?.toISOString() ?? null,
+      pinned: p.pinned,
+      categoryId: p.categoryId,
+      category: p.category,
+      images: p.images.map((im) => ({
+        id: im.id,
+        caption: im.caption,
+        alt: im.alt,
+        variants: parseVariants(im.variantsJson),
+        width: im.width,
+        height: im.height,
+      })),
+    };
+    return feedProfile === "public" ? applyPublicFeedListLimits(row) : row;
+  });
 
   return { items, nextCursor, categories };
 }
