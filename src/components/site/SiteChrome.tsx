@@ -5,6 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { chromePlaqueButtonClass } from "@/lib/pill-tab-styles";
 import { LinkPendingBackdrop } from "@/components/ui/LinkPendingBackdrop";
+import {
+  removeFeedBackNavigationFromStorage,
+  removeRestoreInFlightFromStorage,
+} from "@/lib/feed-scroll";
 
 type Props = {
   displayName: string;
@@ -26,6 +30,10 @@ export function SiteChrome({
 }: Props) {
   const pathname = usePathname();
   const isAboutPage = pathname === "/about";
+  const onHomeTap = () => {
+    removeFeedBackNavigationFromStorage();
+    removeRestoreInFlightFromStorage();
+  };
 
   return (
     <header className="sticky top-0 z-20 border-b border-stone-200/70 bg-[#fbfaf7]/90 backdrop-blur-xl">
@@ -34,6 +42,7 @@ export function SiteChrome({
           href="/"
           prefetch
           scroll={false}
+          onClick={onHomeTap}
           className="group relative flex min-w-0 flex-1 items-center gap-3 transition-transform active:scale-[0.98]"
         >
           {avatarUrl ? (
@@ -68,6 +77,7 @@ export function SiteChrome({
             href="/"
             prefetch
             scroll={false}
+            onClick={onHomeTap}
             className={`relative ${chromePlaqueButtonClass()}`}
             aria-label="К ленте работ"
           >
