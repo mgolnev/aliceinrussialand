@@ -14,6 +14,12 @@ const FROM_HISTORY_KEY = "alice:post-from-history";
 
 const READ_NEXT_SECTION_ID = "post-read-next-heading";
 
+type WindowNavigationEvent = Event & { navigationType?: string };
+type WindowNavigationApi = {
+  addEventListener: (type: "navigate", listener: (event: Event) => void) => void;
+  removeEventListener: (type: "navigate", listener: (event: Event) => void) => void;
+};
+
 function scheduleAfterLayout(cb: () => void) {
   queueMicrotask(() => {
     requestAnimationFrame(() => {
@@ -109,12 +115,14 @@ export function PostRouteScrollToTop() {
   /** Сброс флага только при push (переход по ссылке). Next после back делает replace — его не трогаем. */
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
-    const nav = window.navigation;
+    const nav = (
+      window as Window & { navigation?: WindowNavigationApi }
+    ).navigation;
     if (!nav?.addEventListener || navigationPatchedRef.current) return;
     navigationPatchedRef.current = true;
 
     const onNavigate = (event: Event) => {
-      const e = event as Event & { navigationType?: string };
+      const e = event as WindowNavigationEvent;
       const t = e.navigationType;
       const clearsFlag = t === "push";
       /** popstate в логах часто не успевает до layout; traverse приходит раньше (см. пост-фикс логи). */
