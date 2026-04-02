@@ -27,12 +27,8 @@ export function FeedScrollLinkCapture() {
         postIds: snap.postIds,
       });
     };
-    document.addEventListener("pointerdown", onPointerDown, {
-      capture: true,
-      passive: true,
-    });
-    return () =>
-      document.removeEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, []);
 
   return null;

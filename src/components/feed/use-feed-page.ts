@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { FeedCategory, FeedPost } from "@/types/feed";
 import {
@@ -61,7 +54,6 @@ export function useFeedPage({
   const [items, setItems] = useState(initialItems);
   const [next, setNext] = useState(initialNext);
   const [loading, setLoading] = useState(false);
-  const [, startTransition] = useTransition();
   /** Только смена таба категории — скелетон ленты, не путать с «Показать ещё». */
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [feedRestorePhase, setFeedRestorePhase] =
@@ -204,11 +196,7 @@ export function useFeedPage({
   const applyCategory = useCallback(
     (slug: string | null) => {
       setCategorySlug(slug);
-      // Ререндер ленты после переключения категории довольно тяжёлый.
-      // Делегируем его в transition, чтобы INP на тапающих устройствах был лучше.
-      startTransition(() => {
-        setFeedRestorePhase("idle");
-      });
+      setFeedRestorePhase("idle");
       removeFeedBackNavigationFromStorage();
       removeRestoreInFlightFromStorage();
       const params = new URLSearchParams();
@@ -222,9 +210,7 @@ export function useFeedPage({
         window.scrollTo(0, 0);
         html.style.scrollBehavior = prev;
       }
-      startTransition(() => {
-        setCategoryLoading(true);
-      });
+      setCategoryLoading(true);
       void fetchFeed(feedUrl(undefined, slug))
         .then((r) => r.json())
         .then(
@@ -233,10 +219,8 @@ export function useFeedPage({
             nextCursor: string | null;
             categories?: FeedCategory[];
           }) => {
-            startTransition(() => {
-              setItems(data.items);
-              setNext(data.nextCursor);
-            });
+            setItems(data.items);
+            setNext(data.nextCursor);
           },
         )
         .finally(() => setCategoryLoading(false));
