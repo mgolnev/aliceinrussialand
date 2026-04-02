@@ -21,6 +21,7 @@ export type PostCarouselItem = {
 /** Карточка в блоке «ещё вдохновения» в конце категории. */
 export type CategoryExplorePost = {
   slug: string;
+  title: string;
   preview: string;
   displayLetter: string;
   categoryName: string;

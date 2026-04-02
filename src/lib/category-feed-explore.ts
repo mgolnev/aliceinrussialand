@@ -37,6 +37,7 @@ function mapExplorePost(p: {
   const letter = title.trim().slice(0, 1).toUpperCase() || "•";
   return {
     slug: p.slug,
+    title,
     preview,
     displayLetter: letter,
     categoryName: p.category?.name?.trim() || "Без темы",

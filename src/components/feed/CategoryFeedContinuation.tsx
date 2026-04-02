@@ -4,21 +4,23 @@ import { useEffect, useState } from "react";
 import type {
   CategoryExplorePost,
   CategoryFeedExplorePayload,
+  PostCarouselItem,
 } from "@/types/feed";
-import { WatchNextContinuation, type WatchNextCard } from "./WatchNextContinuation";
+import { WatchNextEditorialFlow } from "./WatchNextEditorialFlow";
 
 type Props = {
   categorySlug: string;
   onSelectCategory: (slug: string | null) => void;
 };
 
-function exploreToWatch(p: CategoryExplorePost): WatchNextCard {
+function exploreToCarousel(p: CategoryExplorePost): PostCarouselItem {
   return {
     slug: p.slug,
+    title: p.title,
     preview: p.preview,
-    displayLetter: p.displayLetter,
     categoryName: p.categoryName,
-    variants: p.variants,
+    categorySlug: p.categorySlug,
+    variants: p.variants ?? {},
     width: p.width,
     height: p.height,
     alt: p.alt,
@@ -53,17 +55,18 @@ export function CategoryFeedContinuation({
 
   if (!loading && !data) return null;
 
-  const featured = data?.featured ? exploreToWatch(data.featured) : null;
-  const more: WatchNextCard[] = data?.more.map(exploreToWatch) ?? [];
+  const featured = data?.featured ? exploreToCarousel(data.featured) : null;
+  const continuation: PostCarouselItem[] =
+    data?.more.map(exploreToCarousel) ?? [];
 
   return (
-    <WatchNextContinuation
+    <WatchNextEditorialFlow
       featured={featured}
-      more={more}
+      continuation={continuation}
       topics={data?.topics ?? []}
       onSelectCategory={onSelectCategory}
-      sectionHeadingId="category-feed-continuation-heading"
-      loading={loading}
+      sectionHeadingId="category-feed-read-next-heading"
+      currentPostCategoryId={undefined}
     />
   );
 }
