@@ -67,6 +67,7 @@ export function CategoryFeedContinuation({
       onSelectCategory={onSelectCategory}
       sectionHeadingId="category-feed-read-next-heading"
       currentPostCategoryId={undefined}
+      horizontalArticleFlow
     />
   );
 }
