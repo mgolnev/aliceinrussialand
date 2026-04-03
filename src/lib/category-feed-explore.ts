@@ -5,6 +5,7 @@ import { derivePostTitle } from "./post-text";
 import { listFeedCategories } from "./feed-server";
 import { isNextProductionBuild } from "./site-settings-db";
 import { compareCarouselQuality, diversifyByCategoryRoundRobin } from "./rec-diversify";
+import { indexFromSeed, shuffleDeterministic } from "./rec-seed";
 import type { CategoryExplorePost, CategoryFeedExplorePayload, FeedCategory } from "@/types/feed";
 
 const firstImageInclude = {
@@ -98,20 +99,26 @@ export async function getCategoryFeedExplore(
     const tops = await Promise.all(neighborIds.map((id) => bestPostInCategory(id)));
     const candidates = tops.filter(Boolean) as NonNullable<(typeof tops)[number]>[];
     if (candidates.length > 0) {
-      featuredRow = candidates.reduce((best, cur) =>
-        compareCarouselQuality(cur, best) < 0 ? cur : best,
-      );
+      const ranked = [...candidates].sort((a, b) => compareCarouselQuality(a, b));
+      const window = Math.min(4, ranked.length);
+      featuredRow = ranked[indexFromSeed(`${slug}:rec-feat`, window)]!;
     }
   }
   if (!featuredRow) {
-    featuredRow = await prisma.post.findFirst({
+    const pool = await prisma.post.findMany({
       where: {
         status: POST_STATUS.PUBLISHED,
         categoryId: notCurrent,
       },
       orderBy: carouselOrder,
+      take: 14,
       include: postInclude,
     });
+    if (pool.length > 0) {
+      const ranked = [...pool].sort((a, b) => compareCarouselQuality(a, b));
+      const window = Math.min(5, ranked.length);
+      featuredRow = ranked[indexFromSeed(`${slug}:rec-feat-fb`, window)]!;
+    }
   }
 
   const excludeIds = featuredRow ? [featuredRow.id] : [];
@@ -122,10 +129,11 @@ export async function getCategoryFeedExplore(
       ...(excludeIds.length ? { id: { notIn: excludeIds } } : {}),
     },
     orderBy: carouselOrder,
-    take: 28,
+    take: 48,
     include: postInclude,
   });
-  const moreRows = diversifyByCategoryRoundRobin(moreCandidates, 6);
+  const moreShuffled = shuffleDeterministic(moreCandidates, `${slug}:rec-more`);
+  const moreRows = diversifyByCategoryRoundRobin(moreShuffled, 6);
 
   const topics: FeedCategory[] = categories
     .filter((c) => c.id !== current.id)

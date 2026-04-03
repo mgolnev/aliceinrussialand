@@ -4,6 +4,7 @@ import { prisma } from "./prisma";
 import { POST_STATUS } from "./constants";
 import { derivePostTitle } from "./post-text";
 import { diversifyByCategoryRoundRobin } from "./rec-diversify";
+import { shuffleDeterministic, stringToSeed32 } from "./rec-seed";
 import type { PostCarouselItem } from "@/types/feed";
 
 const imageSelect = {
@@ -121,8 +122,9 @@ async function listCategoryIdsByFeedOrder(): Promise<string[]> {
 }
 
 /**
- * Карусель после поста: слоты из той же категории, затем хвост с приоритетом
- * соседних тем (по sortOrder) и раунд-робином по категориям, чтобы не заливать одной рубрикой.
+ * Карусель после поста: слоты из той же категории (скользящее окно по пулу из 24),
+ * затем хвост: пулы соседей/остальных по 48, детерминированное перемешивание по id поста,
+ * склейка [соседи → остальные] и раунд-робин по категориям.
  */
 export async function getPostCarouselPeers(
   currentPostId: string,
@@ -138,7 +140,8 @@ export async function getPostCarouselPeers(
   } as const;
   type CarouselRow = Prisma.PostGetPayload<{ include: typeof carouselInclude }>;
 
-  const sameCategory = categoryId
+  const SAME_CATEGORY_POOL_CAP = 24;
+  const sameCategoryPool = categoryId
     ? await prisma.post.findMany({
         where: {
           status: POST_STATUS.PUBLISHED,
@@ -146,10 +149,21 @@ export async function getPostCarouselPeers(
           categoryId,
         },
         orderBy: carouselOrderBy,
-        take: categoryFirst,
+        take: SAME_CATEGORY_POOL_CAP,
         include: carouselInclude,
       })
     : [];
+
+  let sameCategory: CarouselRow[] = [];
+  if (categoryId && sameCategoryPool.length > 0) {
+    const takeN = Math.min(categoryFirst, sameCategoryPool.length);
+    const maxOffset = Math.max(0, sameCategoryPool.length - takeN);
+    const offset =
+      maxOffset === 0
+        ? 0
+        : stringToSeed32(`${currentPostId}:rec-same`) % (maxOffset + 1);
+    sameCategory = sameCategoryPool.slice(offset, offset + takeN);
+  }
 
   const excludeIds = [currentPostId, ...sameCategory.map((p) => p.id)];
   const remaining = Math.max(0, totalLimit - sameCategory.length);
@@ -173,7 +187,7 @@ export async function getPostCarouselPeers(
               categoryId: { in: neighborIds },
             },
             orderBy: carouselOrderBy,
-            take: 40,
+            take: 48,
             include: carouselInclude,
           })
         : [];
@@ -201,11 +215,16 @@ export async function getPostCarouselPeers(
     const otherRows = await prisma.post.findMany({
       where: otherWhere,
       orderBy: carouselOrderBy,
-      take: 40,
+      take: 48,
       include: carouselInclude,
     });
 
-    const merged: CarouselRow[] = [...neighborRows, ...otherRows];
+    const shuffledNeighbors = shuffleDeterministic(
+      neighborRows,
+      `${currentPostId}:rec-n`,
+    );
+    const shuffledOthers = shuffleDeterministic(otherRows, `${currentPostId}:rec-o`);
+    const merged: CarouselRow[] = [...shuffledNeighbors, ...shuffledOthers];
     tail = diversifyByCategoryRoundRobin(merged, remaining);
   }
 
