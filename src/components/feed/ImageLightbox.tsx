@@ -400,7 +400,7 @@ export function ImageLightbox({
 
   const ui = (
     <div
-      className="fixed inset-0 z-[200] flex flex-col bg-black/95 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[200] grid grid-rows-[auto_minmax(0,1fr)] bg-black/95 backdrop-blur-md animate-in fade-in duration-200"
       style={{
         overscrollBehavior: "none",
         touchAction: "none",
@@ -464,10 +464,10 @@ export function ImageLightbox({
         </div>
       </div>
 
-      {/* Область фото: flex-1 + min-h-0; снизу safe-area для «домика» iOS */}
+      {/* Ячейка grid minmax(0,1fr): гарантированная высота под панелью; без лишнего overflow у корня ячейки */}
       <div
         ref={viewportRef}
-        className="relative flex min-h-0 flex-1 flex-col px-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]"
+        className="relative flex min-h-0 min-w-0 flex-col px-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]"
         style={{ touchAction: "none" }}
         onClick={(ev) => ev.stopPropagation()}
         onTouchStart={onTouchStart}
@@ -475,21 +475,23 @@ export function ImageLightbox({
         onTouchEnd={onTouchEnd}
         onWheel={onWheel}
       >
-        <div className="flex min-h-0 flex-1 items-center justify-center">
-          <div
-            className="flex max-h-full max-w-full items-center justify-center will-change-transform"
-            style={{
-              transform: `translate(${panX}px, ${panY}px) scale(${scale})`,
-              transformOrigin: "center center",
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={slide.src}
-              alt={slide.alt}
-              className="max-h-full max-w-full select-none rounded-lg object-contain shadow-2xl"
-              draggable={false}
-            />
+        <div className="relative min-h-0 min-w-0 flex-1">
+          <div className="absolute inset-0 min-h-0 min-w-0 overflow-hidden">
+            <div
+              className="flex h-full w-full min-h-0 min-w-0 items-center justify-center will-change-transform"
+              style={{
+                transform: `translate(${panX}px, ${panY}px) scale(${scale})`,
+                transformOrigin: "center center",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={slide.src}
+                alt={slide.alt}
+                className="h-full w-full select-none rounded-lg object-contain object-center shadow-2xl"
+                draggable={false}
+              />
+            </div>
           </div>
         </div>
 
