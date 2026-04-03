@@ -413,10 +413,61 @@ export function ImageLightbox({
       onClick={onClose}
       role="presentation"
     >
-      {/* Область фото: flex-1 + min-h-0 — картинка вписывается целиком, без подложек поверх неё */}
+      {/* Панель сверху — не наезжает на фото; safe-area сверху здесь */}
+      <div
+        className="flex shrink-0 items-center gap-2 border-b border-white/10 bg-black/40 px-3 py-2.5 backdrop-blur-md sm:px-4 sm:py-3"
+        style={{
+          paddingTop: "max(0.625rem, env(safe-area-inset-top, 0px))",
+          paddingLeft: "max(0.75rem, env(safe-area-inset-left, 0px))",
+          paddingRight: "max(0.75rem, env(safe-area-inset-right, 0px))",
+        }}
+        onClick={(ev) => ev.stopPropagation()}
+      >
+        <div className="relative flex w-1/3 min-w-0 justify-start">
+          <button
+            type="button"
+            aria-label="Поделиться фотографией"
+            disabled={shareBusy}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-[15px] font-medium text-white/90 shadow-sm backdrop-blur-md transition hover:bg-white/15 active:scale-90 disabled:opacity-50"
+            onClick={() => void shareCurrentPhoto()}
+          >
+            <ShareForwardIcon size={20} className="text-white/90" />
+          </button>
+          {shareHint ? (
+            <p className="absolute left-0 top-full z-10 mt-2 max-w-[min(100vw-2rem,16rem)] rounded-lg bg-black/70 px-2 py-1.5 text-[13px] leading-snug text-white/90 backdrop-blur-sm">
+              {shareHint}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="flex w-1/3 min-w-0 justify-center">
+          {slides.length > 1 ? (
+            <p
+              className="flex min-h-9 items-center justify-center px-2 text-[15px] font-medium tabular-nums leading-none text-white/90"
+              aria-live="polite"
+            >
+              {index + 1} / {slides.length}
+            </p>
+          ) : (
+            <span className="inline-flex min-h-9 min-w-0 items-center" aria-hidden />
+          )}
+        </div>
+
+        <div className="flex w-1/3 min-w-0 justify-end">
+          <button
+            type="button"
+            className="flex min-h-9 items-center rounded-full px-3 text-[15px] font-medium leading-none text-white/90 transition hover:bg-white/10 active:bg-white/15"
+            onClick={onClose}
+          >
+            Закрыть
+          </button>
+        </div>
+      </div>
+
+      {/* Область фото: flex-1 + min-h-0; снизу safe-area для «домика» iOS */}
       <div
         ref={viewportRef}
-        className="relative flex min-h-0 flex-1 flex-col px-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))]"
+        className="relative flex min-h-0 flex-1 flex-col px-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]"
         style={{ touchAction: "none" }}
         onClick={(ev) => ev.stopPropagation()}
         onTouchStart={onTouchStart}
@@ -452,58 +503,6 @@ export function ImageLightbox({
             </p>
           </div>
         ) : null}
-      </div>
-
-      {/* Панель управления снизу — не наезжает на фото; типографика и цвет как единый ряд */}
-      <div
-        className="flex shrink-0 items-center gap-2 border-t border-white/10 bg-black/40 px-3 py-2.5 backdrop-blur-md sm:px-4 sm:py-3"
-        style={{
-          paddingBottom: "max(0.625rem, env(safe-area-inset-bottom, 0px))",
-          paddingLeft: "max(0.75rem, env(safe-area-inset-left, 0px))",
-          paddingRight: "max(0.75rem, env(safe-area-inset-right, 0px))",
-        }}
-        onClick={(ev) => ev.stopPropagation()}
-      >
-        {/* Как в PostCard: круглая кнопка + ShareForwardIcon 20px; на тёмном фоне — светлая обводка/заливка */}
-        <div className="relative flex w-1/3 min-w-0 justify-start">
-          <button
-            type="button"
-            aria-label="Поделиться фотографией"
-            disabled={shareBusy}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-[15px] font-medium text-white/90 shadow-sm backdrop-blur-md transition hover:bg-white/15 active:scale-90 disabled:opacity-50"
-            onClick={() => void shareCurrentPhoto()}
-          >
-            <ShareForwardIcon size={20} className="text-white/90" />
-          </button>
-          {shareHint ? (
-            <p className="absolute bottom-full left-0 z-10 mb-2 max-w-[min(100vw-2rem,16rem)] rounded-lg bg-black/70 px-2 py-1.5 text-[13px] leading-snug text-white/90 backdrop-blur-sm">
-              {shareHint}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="flex w-1/3 min-w-0 justify-center">
-          {slides.length > 1 ? (
-            <p
-              className="flex min-h-9 items-center justify-center px-2 text-[15px] font-medium tabular-nums leading-none text-white/90"
-              aria-live="polite"
-            >
-              {index + 1} / {slides.length}
-            </p>
-          ) : (
-            <span className="inline-flex min-h-9 min-w-0 items-center" aria-hidden />
-          )}
-        </div>
-
-        <div className="flex w-1/3 min-w-0 justify-end">
-          <button
-            type="button"
-            className="flex min-h-9 items-center rounded-full px-3 text-[15px] font-medium leading-none text-white/90 transition hover:bg-white/10 active:bg-white/15"
-            onClick={onClose}
-          >
-            Закрыть
-          </button>
-        </div>
       </div>
     </div>
   );
