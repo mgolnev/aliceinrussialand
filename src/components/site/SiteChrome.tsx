@@ -9,6 +9,7 @@ import {
   removeFeedBackNavigationFromStorage,
   removeRestoreInFlightFromStorage,
 } from "@/lib/feed-scroll";
+import { clearNavigationState } from "@/lib/navigation-state";
 
 type Props = {
   displayName: string;
@@ -31,8 +32,11 @@ export function SiteChrome({
   const pathname = usePathname();
   const isAboutPage = pathname === "/about";
   const onHomeTap = () => {
+    // Очищаем старое состояние ленты
     removeFeedBackNavigationFromStorage();
     removeRestoreInFlightFromStorage();
+    // Очищаем новое состояние навигации
+    clearNavigationState();
   };
 
   return (

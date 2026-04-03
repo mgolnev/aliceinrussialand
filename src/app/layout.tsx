@@ -4,6 +4,7 @@ import "./globals.css";
 import { getSiteSettings } from "@/lib/site";
 import { Analytics } from "@/components/site/Analytics";
 import { ScrollMetrics } from "@/components/site/ScrollMetrics";
+import { GlobalScrollManager } from "@/components/navigation/GlobalScrollManager";
 import { resolveSiteOrigin } from "@/lib/site-origin";
 
 const sans = Manrope({
@@ -77,6 +78,7 @@ export default async function RootLayout({
             />
           </>
         ) : null}
+        <GlobalScrollManager />
         {children}
       </body>
     </html>
