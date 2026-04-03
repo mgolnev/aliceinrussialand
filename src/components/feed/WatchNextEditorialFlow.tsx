@@ -11,8 +11,12 @@ import {
 } from "@/lib/image-variants";
 import {
   firstSentence as postFirstSentence,
+  firstSentenceWithCharCap,
   stripLeadingTitleFromBody,
 } from "@/lib/post-title-body-split";
+
+/** Превью тела в полосах после статьи: целое первое предложение или обрезка по символам. */
+const WIDE_BAND_PREVIEW_MAX_CHARS = 280;
 import { LinkPendingBackdrop } from "@/components/ui/LinkPendingBackdrop";
 
 type Props = {
@@ -25,10 +29,10 @@ type Props = {
   onSelectCategory?: (slug: string | null) => void;
   sectionHeadingId: string;
   /**
-   * `grid` — карточки продолжения в две колонки (как после поста).
-   * `stack` — по одной в ряд (лента категории и по умолчанию).
+   * После статьи: один столбец широких «полос» (~5:4, почти квадрат по высоте), тот же язык карточки
+   * (фото на всю ширину, градиент, текст поверх). Без карусели и без горизонтального скролла.
    */
-  continuationLayout?: "stack" | "grid";
+  horizontalArticleFlow?: boolean;
 };
 
 function ExploreThumb({
@@ -87,6 +91,50 @@ function isPortraitImage(item: PostCarouselItem) {
   const h = item.height ?? null;
   if (!w || !h) return false;
   return h / w >= 1.2;
+}
+
+/** Единая «editorial band» после поста: широкий ландшафт, без портретных башен и без split-layout. */
+function EditorialWideBandCard({
+  item,
+  showPreview,
+}: {
+  item: PostCarouselItem;
+  showPreview: boolean;
+}) {
+  const { heading, text } = buildHeadingAndText(item);
+  const label = item.categoryName?.trim() || "Без темы";
+
+  return (
+    <Link
+      href={`/p/${item.slug}`}
+      className="group relative block overflow-hidden rounded-3xl bg-[#fffdf9]/90 shadow-[0_14px_40px_-36px_rgba(60,44,29,0.5)] ring-1 ring-stone-200/60"
+      aria-label={`Открыть: ${item.title}`}
+    >
+      <LinkPendingBackdrop />
+      <div className="relative">
+        <ExploreThumb
+          variants={item.variants}
+          alt={item.alt}
+          width={item.width}
+          height={item.height}
+          sizes="(max-width: 768px) 94vw, 800px"
+          className="aspect-[5/4] w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/78 via-black/42 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 p-3.5 sm:p-4">
+          <div className="text-xs font-semibold tracking-wide text-white/90">{label}</div>
+          <div className="mt-0.5 line-clamp-2 text-base font-semibold leading-tight text-white sm:text-lg">
+            {heading}
+          </div>
+          {showPreview ? (
+            <div className="mt-1 line-clamp-5 text-sm leading-snug text-white/85">
+              {firstSentenceWithCharCap(text, WIDE_BAND_PREVIEW_MAX_CHARS)}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </Link>
+  );
 }
 
 function detectCardKind(item: PostCarouselItem): "hero" | "imageLed" | "textLed" | "visualOnly" | "quoteFragment" {
@@ -156,13 +204,25 @@ function TopicsBlock({
   );
 }
 
-function HeroStory({ item }: { item: PostCarouselItem }) {
+function HeroStory({
+  item,
+  horizontalArticleFlow,
+}: {
+  item: PostCarouselItem;
+  horizontalArticleFlow?: boolean;
+}) {
   const kind = detectCardKind(item);
   const hasImage = Boolean(pickDefaultVariantUrl(item.variants));
   const portrait = isPortraitImage(item);
 
   const { heading, text } = buildHeadingAndText(item);
   const label = item.categoryName?.trim() || "Без темы";
+
+  if (horizontalArticleFlow && hasImage) {
+    return (
+      <EditorialWideBandCard item={item} showPreview={kind !== "visualOnly"} />
+    );
+  }
 
   return (
     <Link
@@ -237,20 +297,14 @@ function HeroStory({ item }: { item: PostCarouselItem }) {
   );
 }
 
-/** Подбор варианта изображения: в сетке 2×N ячейка ~половина ширины колонки контента. */
-const IMG_SIZES_FULL = "(max-width: 768px) 94vw, 800px";
-const IMG_SIZES_GRID_CELL = "(max-width: 768px) 46vw, 420px";
-const IMG_SIZES_GRID_SPLIT = "(max-width: 768px) 24vw, 260px";
-
 function StoryCard({
   item,
   index,
-  gridCell = false,
+  horizontalArticleFlow,
 }: {
   item: PostCarouselItem;
   index: number;
-  /** Узкая ячейка в `grid-cols-2` — только корректные `sizes` для next/image. */
-  gridCell?: boolean;
+  horizontalArticleFlow?: boolean;
 }) {
   const kind = detectCardKind(item);
   const hasImage = Boolean(pickDefaultVariantUrl(item.variants));
@@ -258,11 +312,13 @@ function StoryCard({
   const label = item.categoryName?.trim() || "Без темы";
   const { heading, text } = buildHeadingAndText(item);
   const preview = text.trim();
-  const sizesMain = gridCell ? IMG_SIZES_GRID_CELL : IMG_SIZES_FULL;
-  const sizesSplit = gridCell ? IMG_SIZES_GRID_SPLIT : "(max-width: 768px) 45vw, 320px";
 
   // Вариативность размеров: чередуем компоновки, чтобы не выглядело “плиткой”.
   const altSize = index % 2 === 1;
+
+  if (horizontalArticleFlow && hasImage) {
+    return <EditorialWideBandCard item={item} showPreview={kind !== "visualOnly"} />;
+  }
 
   if (!hasImage && (kind === "quoteFragment" || preview.length <= 140)) {
     return (
@@ -305,7 +361,7 @@ function StoryCard({
             alt={item.alt}
             width={item.width}
             height={item.height}
-            sizes={sizesMain}
+            sizes="(max-width: 768px) 94vw, 800px"
             className={`w-full object-cover transition duration-300 group-hover:scale-[1.015] ${
               portrait
                 ? "aspect-[3/4]"
@@ -367,7 +423,7 @@ function StoryCard({
             alt={item.alt}
             width={item.width}
             height={item.height}
-            sizes={sizesMain}
+            sizes="(max-width: 768px) 94vw, 800px"
             className="aspect-[3/4] w-full object-cover transition duration-300 group-hover:scale-[1.01]"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/25 to-transparent" />
@@ -404,7 +460,7 @@ function StoryCard({
             alt={item.alt}
             width={item.width}
             height={item.height}
-            sizes={sizesSplit}
+            sizes="(max-width: 768px) 45vw, 320px"
             className="h-full w-full object-cover"
           />
         </div>
@@ -437,7 +493,7 @@ function StoryCard({
           alt={item.alt}
           width={item.width}
           height={item.height}
-          sizes={sizesMain}
+          sizes="(max-width: 768px) 94vw, 800px"
           className="aspect-[16/10] w-full object-cover transition duration-300 group-hover:scale-[1.01]"
         />
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 via-black/18 to-transparent" />
@@ -467,13 +523,12 @@ export function WatchNextEditorialFlow({
   currentPostCategoryId,
   onSelectCategory,
   sectionHeadingId,
-  continuationLayout = "stack",
+  horizontalArticleFlow = false,
 }: Props) {
   const hasStories = Boolean(featured) || continuation.length > 0;
   if (!hasStories && topics.length === 0) return null;
 
-  const continuationSlice = continuation.slice(0, 4);
-  const gridContinuation = continuationLayout === "grid";
+  const bandGap = horizontalArticleFlow ? "space-y-4" : "space-y-3";
 
   return (
     <div className="mt-8 sm:mt-10">
@@ -487,30 +542,28 @@ export function WatchNextEditorialFlow({
         <div className="h-px bg-stone-200/70" />
       </div>
 
-      <section className="mt-4 px-1">
-        <div className="space-y-3">
+      <section
+        className={
+          horizontalArticleFlow
+            ? "mt-5 px-1 sm:mt-6"
+            : "mt-4 px-1"
+        }
+      >
+        <div className={bandGap}>
           {featured ? (
             <div>
-              <HeroStory item={featured} />
+              <HeroStory item={featured} horizontalArticleFlow={horizontalArticleFlow} />
             </div>
           ) : null}
 
-          <div
-            className={
-              gridContinuation
-                ? "grid grid-cols-2 gap-2.5 sm:gap-3"
-                : "flex flex-col gap-3"
-            }
-          >
-            {continuationSlice.map((it, idx) => (
-              <StoryCard
-                key={it.slug}
-                item={it}
-                index={idx}
-                gridCell={gridContinuation}
-              />
-            ))}
-          </div>
+          {continuation.slice(0, 4).map((it, idx) => (
+            <StoryCard
+              key={it.slug}
+              item={it}
+              index={idx}
+              horizontalArticleFlow={horizontalArticleFlow}
+            />
+          ))}
         </div>
 
         <TopicsBlock

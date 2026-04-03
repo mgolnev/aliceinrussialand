@@ -31,7 +31,7 @@ export function PostReadNextCarousel({
       topics={topics}
       currentPostCategoryId={currentPostCategoryId}
       sectionHeadingId="post-read-next-heading"
-      continuationLayout="grid"
+      horizontalArticleFlow
     />
   );
 }

@@ -11,6 +11,25 @@ export function firstSentence(value: string): string {
   return trimmed.slice(0, index + 1).trim();
 }
 
+/**
+ * Первое предложение целиком (как {@link firstSentence}).
+ * Если оно длиннее `maxChars` — обрезка по символам с «…» (без переноса середины слова, если удаётся отступить к пробелу).
+ */
+export function firstSentenceWithCharCap(value: string, maxChars: number): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const index = trimmed.search(/[.!?…]/u);
+  const sentence = index < 0 ? trimmed : trimmed.slice(0, index + 1).trim();
+  if (sentence.length <= maxChars) return sentence;
+
+  let cut = sentence.slice(0, maxChars);
+  const lastSpace = cut.lastIndexOf(" ");
+  if (lastSpace > Math.floor(maxChars * 0.55)) {
+    cut = cut.slice(0, lastSpace);
+  }
+  return `${cut.trimEnd()}…`;
+}
+
 function normalizedSentence(value: string): string {
   return value
     .trim()
