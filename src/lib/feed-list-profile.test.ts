@@ -51,7 +51,7 @@ describe("feed list profile (public)", () => {
   it("applyPublicFeedListLimits режет images до N и body", () => {
     const post = samplePost({
       body: "y".repeat(FEED_PUBLIC_BODY_MAX_CHARS + 10),
-      images: Array.from({ length: 15 }, (_, i) => ({
+      images: Array.from({ length: FEED_PUBLIC_MAX_IMAGES_PER_POST + 3 }, (_, i) => ({
         id: `i${i}`,
         caption: "",
         alt: "",

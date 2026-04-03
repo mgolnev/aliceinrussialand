@@ -4,7 +4,7 @@ import type { FeedPost } from "@/types/feed";
  * Публичная лента: ограничиваем число картинок (меньше JSON/RSC), но достаточно для
  * «плиточного» MediaGrid в ленте (несколько фото в карточке). Остальные — на /p/[slug].
  */
-export const FEED_PUBLIC_MAX_IMAGES_PER_POST = 12;
+export const FEED_PUBLIC_MAX_IMAGES_PER_POST = 18;
 
 /** Ограничение текста в ленте: снижает HTML/RSC и вес гидрации; полный текст на /p/[slug]. */
 export const FEED_PUBLIC_BODY_MAX_CHARS = 10_000;

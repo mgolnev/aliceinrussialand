@@ -862,8 +862,6 @@ export function PostCard({
                   images={post.images.map((image) => ({
                     id: image.id,
                     ...buildFeedGridSources(image.variants),
-                    sizes:
-                      "(max-width: 640px) 100vw, (max-width: 1100px) 92vw, 768px",
                     alt: image.alt || post.title,
                     width: image.width,
                     height: image.height,

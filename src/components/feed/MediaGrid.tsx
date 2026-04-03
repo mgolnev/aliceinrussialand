@@ -6,7 +6,6 @@ export type GridImage = {
   id: string;
   src?: string;
   srcSet?: string;
-  sizes?: string;
   alt: string;
   width?: number | null;
   height?: number | null;
@@ -39,6 +38,23 @@ function hashSeed(seed: string | undefined): number {
     h = Math.imul(h, 16777619);
   }
   return h >>> 0;
+}
+
+/**
+ * Ширина «карточки» с медиа в ленте (full-bleed) — те же брейкпоинты, что раньше
+ * передавали в каждую ячейку как 100vw / 92vw / 768px.
+ * Доля — ширина ячейки относительно ряда (flexᵢ / Σflex).
+ */
+const FEED_CARD_VW_MOBILE = 100;
+const FEED_CARD_VW_TABLET = 92;
+const FEED_CARD_PX_WIDE = 768;
+
+export function slotSizesFromWidthFraction(widthFraction: number): string {
+  const f = Math.min(1, Math.max(0.05, widthFraction));
+  const mob = Math.round(FEED_CARD_VW_MOBILE * f * 100) / 100;
+  const tab = Math.round(FEED_CARD_VW_TABLET * f * 100) / 100;
+  const desk = Math.max(48, Math.round(FEED_CARD_PX_WIDE * f));
+  return `(max-width: 640px) ${mob}vw, (max-width: 1100px) ${tab}vw, ${desk}px`;
 }
 
 /** Высота ряда: одинаковая для всех ячеек в ряду (как в Telegram). */
@@ -214,7 +230,8 @@ function renderImageFill(
   globalIndex: number,
   clickable: boolean,
   eagerCount: number,
-  onImageClick?: (i: number) => void,
+  onImageClick: ((i: number) => void) | undefined,
+  slotSizes: string,
 ) {
   const eager = globalIndex < eagerCount;
   const inner = image.src ? (
@@ -222,7 +239,7 @@ function renderImageFill(
     <img
       src={image.src}
       srcSet={image.srcSet}
-      sizes={image.sizes}
+      sizes={slotSizes}
       alt={image.alt}
       loading={eager ? "eager" : "lazy"}
       fetchPriority={eager ? "high" : "auto"}
@@ -283,6 +300,8 @@ export function MediaGrid({
 
   if (layout.kind === "grid4") {
     const [a, b, c, d] = layout.indices;
+    const wide = slotSizesFromWidthFraction(2 / 3);
+    const narrow = slotSizesFromWidthFraction(1 / 3);
     body = (
       <div
         className="grid min-h-[200px] w-full min-w-0 gap-px bg-stone-200/90 [aspect-ratio:3/4] sm:min-h-[240px] sm:[aspect-ratio:4/5]"
@@ -294,16 +313,16 @@ export function MediaGrid({
         }
       >
         <div className="relative row-span-3 min-h-0 min-w-0">
-          {renderImageFill(images[a], a, clickable, eagerCount, onImageClick)}
+          {renderImageFill(images[a], a, clickable, eagerCount, onImageClick, wide)}
         </div>
         <div className="relative min-h-0 min-w-0">
-          {renderImageFill(images[b], b, clickable, eagerCount, onImageClick)}
+          {renderImageFill(images[b], b, clickable, eagerCount, onImageClick, narrow)}
         </div>
         <div className="relative min-h-0 min-w-0">
-          {renderImageFill(images[c], c, clickable, eagerCount, onImageClick)}
+          {renderImageFill(images[c], c, clickable, eagerCount, onImageClick, narrow)}
         </div>
         <div className="relative min-h-0 min-w-0">
-          {renderImageFill(images[d], d, clickable, eagerCount, onImageClick)}
+          {renderImageFill(images[d], d, clickable, eagerCount, onImageClick, narrow)}
         </div>
       </div>
     );
@@ -315,6 +334,7 @@ export function MediaGrid({
           const cols = row.flex
             .map((w) => `minmax(0,${w}fr)`)
             .join(" ");
+          const flexSum = row.flex.reduce((acc, w) => acc + w, 0);
           return (
             <div
               key={ri}
@@ -325,7 +345,7 @@ export function MediaGrid({
                 } as CSSProperties
               }
             >
-              {row.indices.map((imgIdx) => (
+              {row.indices.map((imgIdx, col) => (
                 <div
                   key={images[imgIdx].id}
                   className="min-h-0 min-w-0"
@@ -336,6 +356,7 @@ export function MediaGrid({
                     clickable,
                     eagerCount,
                     onImageClick,
+                    slotSizesFromWidthFraction(row.flex[col]! / flexSum),
                   )}
                 </div>
               ))}
