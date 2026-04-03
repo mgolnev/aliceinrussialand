@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { POST_STATUS } from "@/lib/constants";
 import { draftSlug } from "@/lib/slug";
@@ -51,5 +52,6 @@ export async function POST() {
       status: POST_STATUS.DRAFT,
     },
   });
+  revalidatePath("/admin/posts");
   return NextResponse.json({ id: post.id, slug: post.slug });
 }

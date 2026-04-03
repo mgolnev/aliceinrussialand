@@ -6,9 +6,14 @@ export const ALICE_FEED_REFRESH = "alice-feed-refresh";
 /** Точечное обновление карточки после PATCH поста (без ожидания кэша /api/feed). */
 export const ALICE_FEED_POST_UPDATE = "alice-feed-post-update";
 
+/** Удаление карточки из ленты без полной перезагрузки списка (сохраняет скролл и «хвост»). */
+export const ALICE_FEED_POST_REMOVE = "alice-feed-post-remove";
+
 export type FeedRefreshDetail = { mode: "merge" | "replace" };
 
 export type FeedPostUpdateDetail = { post: FeedPost };
+
+export type FeedPostRemoveDetail = { postId: string };
 
 export function dispatchFeedRefreshMerge() {
   if (typeof window !== "undefined") {
@@ -36,6 +41,16 @@ export function dispatchFeedPostUpdate(post: FeedPost) {
     window.dispatchEvent(
       new CustomEvent<FeedPostUpdateDetail>(ALICE_FEED_POST_UPDATE, {
         detail: { post },
+      }),
+    );
+  }
+}
+
+export function dispatchFeedPostRemove(postId: string) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent<FeedPostRemoveDetail>(ALICE_FEED_POST_REMOVE, {
+        detail: { postId },
       }),
     );
   }

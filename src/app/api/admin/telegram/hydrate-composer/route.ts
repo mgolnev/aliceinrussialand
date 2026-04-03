@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { nanoid } from "nanoid";
 import { prisma } from "@/lib/prisma";
 import { POST_STATUS } from "@/lib/constants";
@@ -128,6 +129,8 @@ export async function POST(req: Request) {
       where: { postId },
       orderBy: { sortOrder: "asc" },
     });
+
+    revalidatePath("/admin/posts");
 
     return NextResponse.json({
       id: postId,

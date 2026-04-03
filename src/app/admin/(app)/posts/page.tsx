@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getSiteSettings } from "@/lib/site";
+
+/** Список постов всегда с актуальными данными после импорта / сохранения (router.refresh + revalidatePath). */
+export const dynamic = "force-dynamic";
 import { parseVariants } from "@/lib/posts-query";
 import { adminPostListPreview } from "@/lib/admin-post-list-preview";
 import {
@@ -30,7 +33,9 @@ export default async function AdminPostsPage() {
         title: true,
         body: true,
         status: true,
+        pinned: true,
         publishedAt: true,
+        createdAt: true,
         updatedAt: true,
         _count: { select: { images: true } },
         category: { select: { name: true } },
@@ -61,9 +66,12 @@ export default async function AdminPostsPage() {
     return {
       id: p.id,
       slug: p.slug,
+      title: p.title,
       preview: adminPostListPreview(p.title, p.body),
       status: p.status,
+      pinned: p.pinned,
       publishedAt: p.publishedAt?.toISOString() ?? null,
+      createdAt: p.createdAt.toISOString(),
       updatedAt: p.updatedAt.toISOString(),
       imageCount: p._count.images,
       thumbUrl,

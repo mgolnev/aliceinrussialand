@@ -20,9 +20,9 @@ import type { FeedCategory, FeedPost } from "@/types/feed";
 import { MediaGrid } from "./MediaGrid";
 import { ImageLightbox } from "./ImageLightbox";
 import {
+  dispatchFeedPostRemove,
   dispatchFeedPostUpdate,
   dispatchFeedRefreshMerge,
-  dispatchFeedRefreshReplace,
 } from "@/lib/feed-refresh";
 import { feedPostFromAdminPatchJson } from "@/lib/feed-post-from-admin-patch";
 import {
@@ -369,8 +369,9 @@ export function PostCard({
       if (standalone) {
         router.push("/");
       } else {
-        dispatchFeedRefreshReplace();
-        router.refresh();
+        const updated = feedPostFromAdminPatchJson(data);
+        if (updated) dispatchFeedPostUpdate(updated);
+        dispatchFeedRefreshMerge();
       }
     } catch {
       window.alert("Нет сети или сервер не ответил. Попробуйте снова.");
@@ -402,8 +403,7 @@ export function PostCard({
       if (standalone) {
         router.push("/");
       } else {
-        dispatchFeedRefreshReplace();
-        router.refresh();
+        dispatchFeedPostRemove(post.id);
       }
     } catch {
       window.alert("Нет сети или сервер не ответил.");
@@ -429,7 +429,6 @@ export function PostCard({
       const updated = feedPostFromAdminPatchJson(data);
       if (updated) dispatchFeedPostUpdate(updated);
       dispatchFeedRefreshMerge();
-      router.refresh();
     } catch {
       /* тихо: пин не критичен */
     } finally {
@@ -483,7 +482,6 @@ export function PostCard({
         setMenuOpen(false);
         setEditMessage(null);
         dispatchFeedRefreshMerge();
-        router.refresh();
         return;
       }
       const apiErr =

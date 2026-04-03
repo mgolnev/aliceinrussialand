@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
 import { Settings, X } from "lucide-react";
 import type { FeedComposerImage } from "@/components/feed/FeedComposerPanel";
 import type { TelegramPickItem } from "@/components/feed/TelegramComposerPickSheet";
@@ -46,7 +45,6 @@ async function ensureDraft(postId: string | null) {
 }
 
 export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
-  const router = useRouter();
   const [postId, setPostId] = useState<string | null>(null);
   const [body, setBody] = useState("");
   const [images, setImages] = useState<FeedComposerImage[]>([]);
@@ -178,7 +176,6 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
       setImportHint(TG_IMPORT_HINT);
       setTgSheetOpen(false);
       dispatchFeedRefreshMerge();
-      router.refresh();
     } finally {
       setWorking(false);
     }
@@ -216,7 +213,6 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
           return;
         }
         dispatchFeedRefreshMerge();
-        router.refresh();
       } finally {
         setWorking(false);
       }
@@ -276,7 +272,6 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
         setImportHint(null);
         setDraftCommittedToServer(false);
         dispatchFeedRefreshMerge();
-        router.refresh();
       } else {
         setDraftCommittedToServer(true);
         setMessage("Черновик сохранён");

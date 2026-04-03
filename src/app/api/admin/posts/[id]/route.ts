@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { POST_STATUS } from "@/lib/constants";
@@ -203,6 +204,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
       },
     });
 
+    revalidatePath("/admin/posts");
+
     return NextResponse.json({
       ...fresh,
       publishedAt: fresh?.publishedAt?.toISOString() ?? null,
@@ -238,5 +241,6 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   }
 
   await prisma.post.delete({ where: { id } });
+  revalidatePath("/admin/posts");
   return NextResponse.json({ ok: true });
 }

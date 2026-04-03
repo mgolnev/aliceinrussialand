@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Check } from "lucide-react";
+import { dispatchFeedRefreshMerge } from "@/lib/feed-refresh";
 import {
   sortTelegramItemsNewestFirst,
   type TelegramFeedListItem,
@@ -33,7 +36,53 @@ function mergeImportedHrefs(prev: string[], next: string[]): string[] {
 const telegramCheckboxClass =
   "h-5 w-5 shrink-0 cursor-pointer rounded-full border-2 border-stone-300 bg-white accent-stone-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400/45 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40";
 
+/** Фиксированная ширина подписи: без скачка при смене текста (loading / idle). */
+function ButtonLabelSwap({
+  idle,
+  busy,
+  busyActive,
+}: {
+  idle: string;
+  busy: string;
+  busyActive: boolean;
+}) {
+  return (
+    <span className="inline-grid place-items-center">
+      <span className="invisible col-start-1 row-start-1">{idle}</span>
+      <span className="col-start-1 row-start-1">{busyActive ? busy : idle}</span>
+    </span>
+  );
+}
+
+/** Подпись кнопки импорта: ширина не ниже «Импортировать»; успех — галочка + «Готово». */
+function ImportButtonLabel({
+  importing,
+  successFlash,
+}: {
+  importing: boolean;
+  successFlash: boolean;
+}) {
+  return (
+    <span className="inline-grid place-items-center">
+      <span className="invisible col-start-1 row-start-1">Импортировать</span>
+      <span className="col-start-1 row-start-1 inline-flex items-center justify-center gap-1.5">
+        {importing ? (
+          "Импорт…"
+        ) : successFlash ? (
+          <>
+            <Check className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />
+            Готово
+          </>
+        ) : (
+          "Импортировать"
+        )}
+      </span>
+    </span>
+  );
+}
+
 export function TelegramImportPanel({ defaultChannel }: Props) {
+  const router = useRouter();
   const [channel, setChannel] = useState(defaultChannel);
   const [items, setItems] = useState<TgItem[] | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
@@ -46,6 +95,19 @@ export function TelegramImportPanel({ defaultChannel }: Props) {
   const [nextBefore, setNextBefore] = useState<string | null>(null);
   /** Нормализованные `href`, уже есть в БД как `telegramSourceUrl`. */
   const [importedHrefs, setImportedHrefs] = useState<string[]>([]);
+  const [importSuccessFlash, setImportSuccessFlash] = useState(false);
+  const importSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  useEffect(() => {
+    return () => {
+      if (importSuccessTimerRef.current) {
+        clearTimeout(importSuccessTimerRef.current);
+        importSuccessTimerRef.current = null;
+      }
+    };
+  }, []);
 
   async function loadList(reset = true) {
     if (reset) {
@@ -124,6 +186,11 @@ export function TelegramImportPanel({ defaultChannel }: Props) {
       return;
     }
     setImporting(true);
+    setImportSuccessFlash(false);
+    if (importSuccessTimerRef.current) {
+      clearTimeout(importSuccessTimerRef.current);
+      importSuccessTimerRef.current = null;
+    }
     setError(null);
     setDone(null);
     const res = await fetch("/api/admin/telegram/import", {
@@ -156,6 +223,16 @@ export function TelegramImportPanel({ defaultChannel }: Props) {
       return n;
     });
     setDone(`Импортировано постов: ${data.createdIds?.length ?? 0}`);
+    if (importSuccessTimerRef.current) {
+      clearTimeout(importSuccessTimerRef.current);
+    }
+    setImportSuccessFlash(true);
+    importSuccessTimerRef.current = setTimeout(() => {
+      setImportSuccessFlash(false);
+      importSuccessTimerRef.current = null;
+    }, 2000);
+    dispatchFeedRefreshMerge();
+    router.refresh();
   }
 
   const importedSet = new Set(importedHrefs);
@@ -186,7 +263,11 @@ export function TelegramImportPanel({ defaultChannel }: Props) {
                 className="flex shrink-0 items-center rounded-full bg-stone-900 px-3 py-2 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50 sm:px-5 sm:text-sm"
                 onClick={() => void loadList()}
               >
-                {loading ? "Загрузка…" : "Загрузить список"}
+                <ButtonLabelSwap
+                  idle="Загрузить список"
+                  busy="Загрузка…"
+                  busyActive={loading}
+                />
               </button>
             </div>
           </div>
@@ -280,16 +361,27 @@ export function TelegramImportPanel({ defaultChannel }: Props) {
                 className="shrink-0 whitespace-nowrap rounded-full border border-stone-300 bg-white px-3 py-2 text-[13px] font-medium text-stone-700 shadow-sm transition hover:bg-stone-50 disabled:opacity-60 sm:px-4 sm:py-2.5 sm:text-sm"
                 onClick={() => void loadList(false)}
               >
-                {loadingMore ? "Загрузка…" : "Загрузить ещё"}
+                <ButtonLabelSwap
+                  idle="Загрузить ещё"
+                  busy="Загрузка…"
+                  busyActive={loadingMore}
+                />
               </button>
             ) : null}
             <button
               type="button"
               disabled={importing}
-              className="shrink-0 whitespace-nowrap rounded-full bg-stone-900 px-3 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:bg-stone-800 active:scale-[0.99] disabled:opacity-60 sm:px-4 sm:py-2.5 sm:text-sm"
+              className={`shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-[13px] font-semibold text-white shadow-sm transition-colors duration-300 disabled:opacity-60 sm:px-4 sm:py-2.5 sm:text-sm ${
+                importSuccessFlash
+                  ? "bg-emerald-600 hover:bg-emerald-600 active:bg-emerald-700"
+                  : "bg-stone-900 hover:bg-stone-800 active:scale-[0.99]"
+              }`}
               onClick={() => void runImport()}
             >
-              {importing ? "Импорт…" : "Импортировать"}
+              <ImportButtonLabel
+                importing={importing}
+                successFlash={importSuccessFlash}
+              />
             </button>
           </div>
         </div>

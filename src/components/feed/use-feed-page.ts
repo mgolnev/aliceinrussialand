@@ -4,8 +4,10 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { usePathname, useRouter } from "next/navigation";
 import type { FeedCategory, FeedPost } from "@/types/feed";
 import {
+  ALICE_FEED_POST_REMOVE,
   ALICE_FEED_POST_UPDATE,
   ALICE_FEED_REFRESH,
+  type FeedPostRemoveDetail,
   type FeedPostUpdateDetail,
   type FeedRefreshDetail,
 } from "@/lib/feed-refresh";
@@ -62,6 +64,8 @@ export function useFeedPage({
   const nextRef = useRef(initialNext);
   const itemsRef = useRef(initialItems);
   const scrollAfterRestoreYRef = useRef<number | null>(null);
+  /** После merge/replace ленты с API — вернуть window.scrollY (без «прыжка»). */
+  const scrollRestoreAfterFeedFetchRef = useRef<number | null>(null);
 
   useLayoutEffect(() => {
     if (typeof history === "undefined" || !("scrollRestoration" in history)) {
@@ -193,6 +197,17 @@ export function useFeedPage({
     setFeedRestorePhase("idle");
   }, [feedRestorePhase]);
 
+  useLayoutEffect(() => {
+    const y = scrollRestoreAfterFeedFetchRef.current;
+    if (y === null) return;
+    scrollRestoreAfterFeedFetchRef.current = null;
+    const html = document.documentElement;
+    const prev = html.style.scrollBehavior;
+    html.style.scrollBehavior = "auto";
+    window.scrollTo(0, y);
+    html.style.scrollBehavior = prev;
+  }, [items]);
+
   const applyCategory = useCallback(
     (slug: string | null) => {
       setCategorySlug(slug);
@@ -308,6 +323,7 @@ export function useFeedPage({
             items: FeedPost[];
             nextCursor: string | null;
           }) => {
+            scrollRestoreAfterFeedFetchRef.current = window.scrollY;
             if (mode === "replace") {
               setItems(data.items);
               setNext(data.nextCursor);
@@ -323,7 +339,10 @@ export function useFeedPage({
               nextBeforeRefresh === null ? null : data.nextCursor,
             );
           },
-        );
+        )
+        .catch(() => {
+          scrollRestoreAfterFeedFetchRef.current = null;
+        });
     };
     window.addEventListener(ALICE_FEED_REFRESH, handler);
     return () => window.removeEventListener(ALICE_FEED_REFRESH, handler);
@@ -337,6 +356,17 @@ export function useFeedPage({
     };
     window.addEventListener(ALICE_FEED_POST_UPDATE, onPostUpdate);
     return () => window.removeEventListener(ALICE_FEED_POST_UPDATE, onPostUpdate);
+  }, []);
+
+  useEffect(() => {
+    const onPostRemove = (ev: Event) => {
+      const postId = (ev as CustomEvent<FeedPostRemoveDetail>).detail?.postId;
+      if (!postId) return;
+      setItems((prev) => prev.filter((p) => p.id !== postId));
+    };
+    window.addEventListener(ALICE_FEED_POST_REMOVE, onPostRemove);
+    return () =>
+      window.removeEventListener(ALICE_FEED_POST_REMOVE, onPostRemove);
   }, []);
 
   const empty = !items.length && !next;
