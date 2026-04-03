@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
 import { ShareForwardIcon } from "@/components/ui/ShareForwardIcon";
 
 export type LightboxSlide = {
@@ -414,25 +413,10 @@ export function ImageLightbox({
       onClick={onClose}
       role="presentation"
     >
-      <div
-        className="absolute inset-x-0 top-0 z-20 border-b border-white/15 bg-black/75 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md"
-        onClick={(ev) => ev.stopPropagation()}
-      >
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="flex min-w-0 items-center gap-2 rounded-full px-3 py-2.5 text-[15px] font-semibold text-white transition active:bg-white/15"
-            onClick={onClose}
-          >
-            <X size={20} strokeWidth={2.25} aria-hidden />
-            <span className="hidden sm:inline">Закрыть</span>
-          </button>
-        </div>
-      </div>
-
+      {/* Область фото: flex-1 + min-h-0 — картинка вписывается целиком, без подложек поверх неё */}
       <div
         ref={viewportRef}
-        className="relative flex min-h-0 flex-1 items-center justify-center px-2 pt-14 pb-24"
+        className="relative flex min-h-0 flex-1 flex-col px-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))]"
         style={{ touchAction: "none" }}
         onClick={(ev) => ev.stopPropagation()}
         onTouchStart={onTouchStart}
@@ -440,62 +424,87 @@ export function ImageLightbox({
         onTouchEnd={onTouchEnd}
         onWheel={onWheel}
       >
-        <div
-          className="flex max-h-full max-w-full items-center justify-center will-change-transform"
-          style={{
-            transform: `translate(${panX}px, ${panY}px) scale(${scale})`,
-            transformOrigin: "center center",
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={slide.src}
-            alt={slide.alt}
-            className="max-h-[min(85dvh,85vh)] max-w-full select-none rounded-lg object-contain shadow-2xl"
-            draggable={false}
-          />
+        <div className="flex min-h-0 flex-1 items-center justify-center">
+          <div
+            className="flex max-h-full max-w-full items-center justify-center will-change-transform"
+            style={{
+              transform: `translate(${panX}px, ${panY}px) scale(${scale})`,
+              transformOrigin: "center center",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={slide.src}
+              alt={slide.alt}
+              className="max-h-full max-w-full select-none rounded-lg object-contain shadow-2xl"
+              draggable={false}
+            />
+          </div>
         </div>
-      </div>
 
-      {slide.caption ? (
-        <div
-          className="pointer-events-none absolute bottom-safe-offset-8 left-4 right-4 mx-auto max-w-2xl"
-          onClick={(ev) => ev.stopPropagation()}
-        >
-          <p className="rounded-2xl bg-black/40 p-4 text-center text-[15px] leading-relaxed text-white/90 backdrop-blur-md">
-            {slide.caption}
-          </p>
-        </div>
-      ) : null}
-
-      <div
-        className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] z-30 flex flex-col items-start gap-1"
-        onClick={(ev) => ev.stopPropagation()}
-      >
-        <button
-          type="button"
-          aria-label="Поделиться фотографией"
-          disabled={shareBusy}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-md transition hover:bg-white/10 active:bg-white/15 disabled:opacity-50"
-          onClick={() => void shareCurrentPhoto()}
-        >
-          <ShareForwardIcon size={22} className="text-white" />
-        </button>
-        {shareHint ? (
-          <p className="max-w-[min(100vw-2rem,16rem)] rounded-lg bg-black/60 px-2 py-1.5 text-xs text-white/90 backdrop-blur-sm">
-            {shareHint}
-          </p>
+        {slide.caption ? (
+          <div
+            className="shrink-0 px-2 pb-2 pt-1"
+            onClick={(ev) => ev.stopPropagation()}
+          >
+            <p className="mx-auto max-w-2xl rounded-2xl bg-black/40 p-3 text-center text-[15px] leading-relaxed text-white/90 backdrop-blur-md">
+              {slide.caption}
+            </p>
+          </div>
         ) : null}
       </div>
 
-      {slides.length > 1 ? (
-        <div
-          className="pointer-events-none absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-30 -translate-x-1/2 rounded-full bg-black/45 px-3 py-1.5 text-sm tabular-nums text-white/85 backdrop-blur-md"
-          aria-live="polite"
-        >
-          {index + 1} / {slides.length}
+      {/* Панель управления снизу — не наезжает на фото; типографика и цвет как единый ряд */}
+      <div
+        className="flex shrink-0 items-center gap-2 border-t border-white/10 bg-black/40 px-3 py-2.5 backdrop-blur-md sm:px-4 sm:py-3"
+        style={{
+          paddingBottom: "max(0.625rem, env(safe-area-inset-bottom, 0px))",
+          paddingLeft: "max(0.75rem, env(safe-area-inset-left, 0px))",
+          paddingRight: "max(0.75rem, env(safe-area-inset-right, 0px))",
+        }}
+        onClick={(ev) => ev.stopPropagation()}
+      >
+        {/* Как в PostCard: круглая кнопка + ShareForwardIcon 20px; на тёмном фоне — светлая обводка/заливка */}
+        <div className="relative flex w-1/3 min-w-0 justify-start">
+          <button
+            type="button"
+            aria-label="Поделиться фотографией"
+            disabled={shareBusy}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-[15px] font-medium text-white/90 shadow-sm backdrop-blur-md transition hover:bg-white/15 active:scale-90 disabled:opacity-50"
+            onClick={() => void shareCurrentPhoto()}
+          >
+            <ShareForwardIcon size={20} className="text-white/90" />
+          </button>
+          {shareHint ? (
+            <p className="absolute bottom-full left-0 z-10 mb-2 max-w-[min(100vw-2rem,16rem)] rounded-lg bg-black/70 px-2 py-1.5 text-[13px] leading-snug text-white/90 backdrop-blur-sm">
+              {shareHint}
+            </p>
+          ) : null}
         </div>
-      ) : null}
+
+        <div className="flex w-1/3 min-w-0 justify-center">
+          {slides.length > 1 ? (
+            <p
+              className="flex min-h-9 items-center justify-center px-2 text-[15px] font-medium tabular-nums leading-none text-white/90"
+              aria-live="polite"
+            >
+              {index + 1} / {slides.length}
+            </p>
+          ) : (
+            <span className="inline-flex min-h-9 min-w-0 items-center" aria-hidden />
+          )}
+        </div>
+
+        <div className="flex w-1/3 min-w-0 justify-end">
+          <button
+            type="button"
+            className="flex min-h-9 items-center rounded-full px-3 text-[15px] font-medium leading-none text-white/90 transition hover:bg-white/10 active:bg-white/15"
+            onClick={onClose}
+          >
+            Закрыть
+          </button>
+        </div>
+      </div>
     </div>
   );
 
