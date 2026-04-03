@@ -100,17 +100,39 @@ export async function getCategoryFeedExplore(
     });
   }
 
-  const excludeIds = featuredRow ? [featuredRow.id] : [];
-  const moreRows = await prisma.post.findMany({
-    where: {
-      status: POST_STATUS.PUBLISHED,
-      categoryId: notCurrent,
-      ...(excludeIds.length ? { id: { notIn: excludeIds } } : {}),
-    },
-    orderBy: [{ pinned: "desc" }, { publishedAt: "desc" }, { id: "desc" }],
-    take: 6,
-    include: postInclude,
-  });
+  const excludeIds: string[] = featuredRow ? [featuredRow.id] : [];
+  const moreCap = 8;
+  const moreRows: NonNullable<typeof featuredRow>[] = [];
+
+  if (neighborIds.length > 0) {
+    const neighborMore = await prisma.post.findMany({
+      where: {
+        status: POST_STATUS.PUBLISHED,
+        categoryId: { in: neighborIds },
+        id: { notIn: excludeIds },
+      },
+      orderBy: [{ pinned: "desc" }, { publishedAt: "desc" }, { id: "desc" }],
+      take: 4,
+      include: postInclude,
+    });
+    moreRows.push(...neighborMore);
+    excludeIds.push(...neighborMore.map((p) => p.id));
+  }
+
+  const restTake = Math.max(0, moreCap - moreRows.length);
+  if (restTake > 0) {
+    const rest = await prisma.post.findMany({
+      where: {
+        status: POST_STATUS.PUBLISHED,
+        categoryId: notCurrent,
+        id: { notIn: excludeIds },
+      },
+      orderBy: [{ pinned: "desc" }, { publishedAt: "desc" }, { id: "desc" }],
+      take: restTake,
+      include: postInclude,
+    });
+    moreRows.push(...rest);
+  }
 
   const topics: FeedCategory[] = categories
     .filter((c) => c.id !== current.id)

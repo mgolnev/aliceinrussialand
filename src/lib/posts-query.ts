@@ -2,7 +2,7 @@ import { cache } from "react";
 import { prisma } from "./prisma";
 import { POST_STATUS } from "./constants";
 import { derivePostTitle } from "./post-text";
-import type { PostCarouselItem } from "@/types/feed";
+import type { PostCarouselItem, PostReadNextPayload } from "@/types/feed";
 
 const imageSelect = {
   id: true,
@@ -110,17 +110,24 @@ function mapPostToCarouselItem(p: {
   };
 }
 
+const postReadNextInclude = {
+  images: firstImageInclude,
+  category: { select: { name: true, slug: true } },
+} as const;
+
 /**
- * Карусель после поста: до 5 публикаций из той же категории, затем остальные
- * опубликованные (как в ленте: закреплённые и новее выше), без текущего поста.
+ * Рекомендации после поста: сначала рубрика текущего материала, затем отдельный
+ * пул из соседних рубрик (по порядку в настройках) и общей ленты — без смешивания
+ * в одну простыню и без циклического импорта с `feed-server` (соседей передают с page).
  */
-export async function getPostCarouselPeers(
+export async function getPostReadNextForPostPage(
   currentPostId: string,
   categoryId: string | null,
-  opts?: { categoryFirst?: number; totalLimit?: number },
-): Promise<PostCarouselItem[]> {
-  const categoryFirst = opts?.categoryFirst ?? 5;
-  const totalLimit = opts?.totalLimit ?? 16;
+  neighborCategoryIds: string[],
+  opts?: { inCategoryLimit?: number; beyondLimit?: number },
+): Promise<PostReadNextPayload> {
+  const inCategoryLimit = opts?.inCategoryLimit ?? 5;
+  const beyondLimit = opts?.beyondLimit ?? 8;
 
   const sameCategory = categoryId
     ? await prisma.post.findMany({
@@ -130,36 +137,59 @@ export async function getPostCarouselPeers(
           categoryId,
         },
         orderBy: carouselOrderBy,
-        take: categoryFirst,
-        include: {
-          images: firstImageInclude,
-          category: { select: { name: true, slug: true } },
-        },
+        take: inCategoryLimit,
+        include: postReadNextInclude,
       })
     : [];
 
-  const excludeIds = [currentPostId, ...sameCategory.map((p) => p.id)];
-  const remaining = Math.max(0, totalLimit - sameCategory.length);
-  const general =
-    remaining > 0
-      ? await prisma.post.findMany({
-          where: {
-            status: POST_STATUS.PUBLISHED,
-            id: { notIn: excludeIds },
-          },
-          orderBy: carouselOrderBy,
-          take: remaining,
-          include: {
-            images: firstImageInclude,
-            category: { select: { name: true, slug: true } },
-          },
-        })
-      : [];
+  const excludeIds = new Set<string>([
+    currentPostId,
+    ...sameCategory.map((p) => p.id),
+  ]);
 
-  return [...sameCategory, ...general].map(mapPostToCarouselItem);
+  type Row = (typeof sameCategory)[number];
+  const beyondRows: Row[] = [];
+
+  const neighborIds = neighborCategoryIds.filter(Boolean);
+  const neighborCap = Math.min(4, beyondLimit);
+  if (neighborIds.length > 0 && neighborCap > 0) {
+    const neighborPosts = await prisma.post.findMany({
+      where: {
+        status: POST_STATUS.PUBLISHED,
+        id: { notIn: [...excludeIds] },
+        categoryId: { in: neighborIds },
+      },
+      orderBy: carouselOrderBy,
+      take: neighborCap,
+      include: postReadNextInclude,
+    });
+    for (const p of neighborPosts) {
+      beyondRows.push(p);
+      excludeIds.add(p.id);
+    }
+  }
+
+  const remaining = beyondLimit - beyondRows.length;
+  if (remaining > 0) {
+    const rest = await prisma.post.findMany({
+      where: {
+        status: POST_STATUS.PUBLISHED,
+        id: { notIn: [...excludeIds] },
+      },
+      orderBy: carouselOrderBy,
+      take: remaining,
+      include: postReadNextInclude,
+    });
+    beyondRows.push(...rest);
+  }
+
+  return {
+    inCategory: sameCategory.map(mapPostToCarouselItem),
+    beyond: beyondRows.map(mapPostToCarouselItem),
+  };
 }
 
-export const getPostCarouselPeersCached = cache(getPostCarouselPeers);
+export const getPostReadNextForPostPageCached = cache(getPostReadNextForPostPage);
 
 export function parseVariants(json: string): Record<string, string> {
   try {

@@ -18,6 +18,12 @@ export type PostCarouselItem = {
   alt: string;
 };
 
+/** Два слоя рекомендаций на странице поста: своя рубрика и «открытие» соседних/ленты. */
+export type PostReadNextPayload = {
+  inCategory: PostCarouselItem[];
+  beyond: PostCarouselItem[];
+};
+
 /** Карточка в блоке «ещё вдохновения» в конце категории. */
 export type CategoryExplorePost = {
   slug: string;

@@ -27,6 +27,28 @@ function exploreToCarousel(p: CategoryExplorePost): PostCarouselItem {
   };
 }
 
+function ReadNextSkeleton() {
+  return (
+    <div
+      className="relative mt-8 animate-pulse sm:mt-10"
+      aria-busy
+      aria-label="Загрузка рекомендаций"
+    >
+      <div className="absolute -top-3 left-0 right-0 h-px bg-stone-200/80 sm:-top-4" />
+      <div className="px-1 pt-1">
+        <div className="h-6 max-w-[11rem] rounded-md bg-stone-200/90" />
+        <div className="mt-3 h-px bg-stone-200/70" />
+      </div>
+      <div className="mt-5 space-y-3 px-1">
+        <div className="h-3 max-w-[18rem] rounded bg-stone-100" />
+        <div className="h-48 rounded-3xl bg-stone-100 sm:h-56" />
+        <div className="h-28 rounded-3xl bg-stone-100" />
+        <div className="h-28 rounded-3xl bg-stone-100 sm:hidden" />
+      </div>
+    </div>
+  );
+}
+
 export function CategoryFeedContinuation({
   categorySlug,
   onSelectCategory,
@@ -53,19 +75,28 @@ export function CategoryFeedContinuation({
     return () => ac.abort();
   }, [categorySlug]);
 
-  if (!loading && !data) return null;
+  if (loading) return <ReadNextSkeleton />;
+  if (!data) return null;
 
-  const featured = data?.featured ? exploreToCarousel(data.featured) : null;
-  const continuation: PostCarouselItem[] =
-    data?.more.map(exploreToCarousel) ?? [];
+  const featured = data.featured ? exploreToCarousel(data.featured) : null;
+  const continuation: PostCarouselItem[] = data.more.map(exploreToCarousel);
+  if (!featured && continuation.length === 0 && data.topics.length === 0) {
+    return null;
+  }
 
   return (
     <WatchNextEditorialFlow
-      featured={featured}
-      continuation={continuation}
-      topics={data?.topics ?? []}
+      blocks={[
+        {
+          overline: `Не только «${data.currentCategoryName}»`,
+          featured,
+          continuation,
+        },
+      ]}
+      topics={data.topics}
       onSelectCategory={onSelectCategory}
       sectionHeadingId="category-feed-read-next-heading"
+      intro={null}
       currentPostCategoryId={undefined}
     />
   );
