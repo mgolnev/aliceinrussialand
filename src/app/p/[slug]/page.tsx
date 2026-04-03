@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import {
-  getPostReadNextForPostPageCached,
+  getPostCarouselPeersCached,
   getPublishedPostBySlugCached,
   parseVariants,
 } from "@/lib/posts-query";
@@ -22,19 +22,6 @@ import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 import { resolveSiteOrigin } from "@/lib/site-origin";
 
 type PageProps = { params: Promise<{ slug: string }> };
-
-function neighborCategoryIds(
-  categories: FeedCategory[],
-  categoryId: string | null,
-): string[] {
-  if (!categoryId) return [];
-  const idx = categories.findIndex((c) => c.id === categoryId);
-  if (idx < 0) return [];
-  const ids: string[] = [];
-  if (idx > 0) ids.push(categories[idx - 1]!.id);
-  if (idx < categories.length - 1) ids.push(categories[idx + 1]!.id);
-  return ids;
-}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
@@ -107,12 +94,11 @@ export default async function PostPage({ params }: PageProps) {
     "";
   const session = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   const isAdmin = session ? await verifySessionToken(session) : false;
-  const allFeedCategories: FeedCategory[] = await listFeedCategories();
-  const readNext = await getPostReadNextForPostPageCached(
+  const readNextItems = await getPostCarouselPeersCached(
     post.id,
     post.categoryId,
-    neighborCategoryIds(allFeedCategories, post.categoryId),
   );
+  const allFeedCategories: FeedCategory[] = await listFeedCategories();
 
   const feedPost: FeedPost = {
     id: post.id,
@@ -206,9 +192,7 @@ export default async function PostPage({ params }: PageProps) {
           standalone
         />
         <PostReadNextCarousel
-          inCategory={readNext.inCategory}
-          beyond={readNext.beyond}
-          categoryLabel={post.category?.name?.trim() ?? null}
+          items={readNextItems}
           categories={allFeedCategories}
           currentPostCategoryId={post.categoryId}
         />

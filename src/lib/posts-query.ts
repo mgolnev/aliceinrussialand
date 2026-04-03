@@ -1,8 +1,10 @@
 import { cache } from "react";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { POST_STATUS } from "./constants";
 import { derivePostTitle } from "./post-text";
-import type { PostCarouselItem, PostReadNextPayload } from "@/types/feed";
+import { diversifyByCategoryRoundRobin } from "./rec-diversify";
+import type { PostCarouselItem } from "@/types/feed";
 
 const imageSelect = {
   id: true,
@@ -110,24 +112,31 @@ function mapPostToCarouselItem(p: {
   };
 }
 
-const postReadNextInclude = {
-  images: firstImageInclude,
-  category: { select: { name: true, slug: true } },
-} as const;
+async function listCategoryIdsByFeedOrder(): Promise<string[]> {
+  const rows = await prisma.postCategory.findMany({
+    orderBy: { sortOrder: "asc" },
+    select: { id: true },
+  });
+  return rows.map((r) => r.id);
+}
 
 /**
- * Рекомендации после поста: сначала рубрика текущего материала, затем отдельный
- * пул из соседних рубрик (по порядку в настройках) и общей ленты — без смешивания
- * в одну простыню и без циклического импорта с `feed-server` (соседей передают с page).
+ * Карусель после поста: слоты из той же категории, затем хвост с приоритетом
+ * соседних тем (по sortOrder) и раунд-робином по категориям, чтобы не заливать одной рубрикой.
  */
-export async function getPostReadNextForPostPage(
+export async function getPostCarouselPeers(
   currentPostId: string,
   categoryId: string | null,
-  neighborCategoryIds: string[],
-  opts?: { inCategoryLimit?: number; beyondLimit?: number },
-): Promise<PostReadNextPayload> {
-  const inCategoryLimit = opts?.inCategoryLimit ?? 5;
-  const beyondLimit = opts?.beyondLimit ?? 8;
+  opts?: { categoryFirst?: number; totalLimit?: number },
+): Promise<PostCarouselItem[]> {
+  const categoryFirst = opts?.categoryFirst ?? 5;
+  const totalLimit = opts?.totalLimit ?? 16;
+
+  const carouselInclude = {
+    images: firstImageInclude,
+    category: { select: { name: true, slug: true } },
+  } as const;
+  type CarouselRow = Prisma.PostGetPayload<{ include: typeof carouselInclude }>;
 
   const sameCategory = categoryId
     ? await prisma.post.findMany({
@@ -137,59 +146,73 @@ export async function getPostReadNextForPostPage(
           categoryId,
         },
         orderBy: carouselOrderBy,
-        take: inCategoryLimit,
-        include: postReadNextInclude,
+        take: categoryFirst,
+        include: carouselInclude,
       })
     : [];
 
-  const excludeIds = new Set<string>([
-    currentPostId,
-    ...sameCategory.map((p) => p.id),
-  ]);
+  const excludeIds = [currentPostId, ...sameCategory.map((p) => p.id)];
+  const remaining = Math.max(0, totalLimit - sameCategory.length);
 
-  type Row = (typeof sameCategory)[number];
-  const beyondRows: Row[] = [];
-
-  const neighborIds = neighborCategoryIds.filter(Boolean);
-  const neighborCap = Math.min(4, beyondLimit);
-  if (neighborIds.length > 0 && neighborCap > 0) {
-    const neighborPosts = await prisma.post.findMany({
-      where: {
-        status: POST_STATUS.PUBLISHED,
-        id: { notIn: [...excludeIds] },
-        categoryId: { in: neighborIds },
-      },
-      orderBy: carouselOrderBy,
-      take: neighborCap,
-      include: postReadNextInclude,
-    });
-    for (const p of neighborPosts) {
-      beyondRows.push(p);
-      excludeIds.add(p.id);
-    }
-  }
-
-  const remaining = beyondLimit - beyondRows.length;
+  let tail: CarouselRow[] = [];
   if (remaining > 0) {
-    const rest = await prisma.post.findMany({
-      where: {
-        status: POST_STATUS.PUBLISHED,
-        id: { notIn: [...excludeIds] },
-      },
+    const feedOrderIds = await listCategoryIdsByFeedOrder();
+    const idx = categoryId ? feedOrderIds.indexOf(categoryId) : -1;
+    const neighborIds: string[] = [];
+    if (idx >= 0) {
+      if (idx > 0) neighborIds.push(feedOrderIds[idx - 1]!);
+      if (idx < feedOrderIds.length - 1) neighborIds.push(feedOrderIds[idx + 1]!);
+    }
+
+    const neighborRows =
+      neighborIds.length > 0
+        ? await prisma.post.findMany({
+            where: {
+              status: POST_STATUS.PUBLISHED,
+              id: { notIn: excludeIds },
+              categoryId: { in: neighborIds },
+            },
+            orderBy: carouselOrderBy,
+            take: 40,
+            include: carouselInclude,
+          })
+        : [];
+
+    const excludeAfterNeighbors = [...excludeIds, ...neighborRows.map((p) => p.id)];
+    const forbiddenCats = new Set<string>();
+    if (categoryId) forbiddenCats.add(categoryId);
+    for (const id of neighborIds) forbiddenCats.add(id);
+
+    const otherWhere: Prisma.PostWhereInput =
+      forbiddenCats.size > 0
+        ? {
+            status: POST_STATUS.PUBLISHED,
+            id: { notIn: excludeAfterNeighbors },
+            OR: [
+              { categoryId: null },
+              { categoryId: { notIn: [...forbiddenCats] } },
+            ],
+          }
+        : {
+            status: POST_STATUS.PUBLISHED,
+            id: { notIn: excludeAfterNeighbors },
+          };
+
+    const otherRows = await prisma.post.findMany({
+      where: otherWhere,
       orderBy: carouselOrderBy,
-      take: remaining,
-      include: postReadNextInclude,
+      take: 40,
+      include: carouselInclude,
     });
-    beyondRows.push(...rest);
+
+    const merged: CarouselRow[] = [...neighborRows, ...otherRows];
+    tail = diversifyByCategoryRoundRobin(merged, remaining);
   }
 
-  return {
-    inCategory: sameCategory.map(mapPostToCarouselItem),
-    beyond: beyondRows.map(mapPostToCarouselItem),
-  };
+  return [...sameCategory, ...tail].map(mapPostToCarouselItem);
 }
 
-export const getPostReadNextForPostPageCached = cache(getPostReadNextForPostPage);
+export const getPostCarouselPeersCached = cache(getPostCarouselPeers);
 
 export function parseVariants(json: string): Record<string, string> {
   try {

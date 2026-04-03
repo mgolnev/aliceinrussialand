@@ -34,7 +34,7 @@ git commit -m "краткое описание изменений"
 git push origin main
 ```
 
-Если в [Vercel](https://vercel.com) проект привязан к этому репозиторию, после `push` запускается **сборка и деплой** без ручных шагов. Переменные окружения на Vercel и порядок первичной настройки Supabase — в [docs/VERCEL_SUPABASE.md](docs/VERCEL_SUPABASE.md); краткий чеклист — [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Если в [Vercel](https://vercel.com) проект привязан к этому репозиторию, после `push` запускается **сборка и деплой** без ручных шагов. Переменные окружения на Vercel и порядок первичной настройки Supabase — в [docs/VERCEL_SUPABASE.md](docs/VERCEL_SUPABASE.md); краткий чеклист — [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Логика рекомендаций после поста и в конце ленты категории — в [docs/RECOMMENDATIONS.md](docs/RECOMMENDATIONS.md).
 
 ### Хэш пароля админа (для `.env`)
 
