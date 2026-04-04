@@ -13,6 +13,28 @@ function parsePlatform(v: unknown): SocialPlatform | null {
   return null;
 }
 
+function safeSocialPreviewError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  if (
+    raw.includes("Invalid `") ||
+    raw.includes("invocation") ||
+    raw.includes("/src/") ||
+    raw.includes("/Users/")
+  ) {
+    return "Ошибка загрузки списка соцсети.";
+  }
+  if (raw.includes("HTTP 401") || raw.includes("HTTP 403")) {
+    return "Instagram отклонил запрос. Настройте официальный Graph API в переменных окружения.";
+  }
+  if (raw.includes("HTTP 429")) {
+    return "Instagram временно ограничил запросы. Попробуйте позже или используйте Graph API.";
+  }
+  if (raw.includes("Graph API не настроен")) {
+    return "Graph API не настроен. Добавьте INSTAGRAM_GRAPH_API_TOKEN и INSTAGRAM_GRAPH_USER_ID.";
+  }
+  return raw || "Ошибка загрузки списка соцсети.";
+}
+
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as {
     platform?: unknown;
@@ -58,7 +80,8 @@ export async function POST(req: Request) {
       importedSourceUrls,
     });
   } catch (e) {
-    const msg = "Ошибка загрузки списка соцсети.";
+    console.error("[social/preview] failed", e);
+    const msg = safeSocialPreviewError(e);
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }
