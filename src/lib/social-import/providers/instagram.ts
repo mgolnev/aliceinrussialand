@@ -38,6 +38,43 @@ type IgWebInfoResponse = {
   };
 };
 
+type IgLegacyResponse = {
+  graphql?: {
+    user?: {
+      edge_owner_to_timeline_media?: {
+        edges?: Array<{ node?: IgWebEdgeNode }>;
+      };
+    };
+  };
+};
+
+const IG_PREVIEW_CACHE_TTL_MS = 90_000;
+const igPreviewCache = new Map<string, { ts: number; page: SocialImportPage }>();
+
+function isRateOrBlockError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return msg.includes("HTTP 429") || msg.includes("HTTP 403") || msg.includes("HTTP 401");
+}
+
+async function withBackoff<T>(
+  fn: () => Promise<T>,
+  retries = 2,
+  baseDelayMs = 350,
+): Promise<T> {
+  let lastError: unknown;
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastError = e;
+      if (i >= retries) break;
+      const jitter = Math.floor(Math.random() * 150);
+      await new Promise((r) => setTimeout(r, baseDelayMs * (i + 1) + jitter));
+    }
+  }
+  throw lastError;
+}
+
 function parseCaption(node: IgWebEdgeNode): string {
   return (
     node.edge_media_to_caption?.edges?.[0]?.node?.text?.trim() ||
@@ -139,13 +176,93 @@ async function previewViaWeb(account: string, limit: number): Promise<SocialImpo
   return { items, nextCursor: null };
 }
 
+async function previewViaWebAltHost(
+  account: string,
+  limit: number,
+): Promise<SocialImportPage> {
+  const url =
+    `https://i.instagram.com/api/v1/users/web_profile_info/` +
+    `?username=${encodeURIComponent(account)}`;
+  const json = await socialFetchJson<IgWebInfoResponse>(url, {
+    headers: {
+      Accept: "application/json",
+      "X-IG-App-ID": "936619743392459",
+      "X-ASBD-ID": "129477",
+      Referer: `https://www.instagram.com/${encodeURIComponent(account)}/`,
+    },
+  });
+  const edges = json.data?.user?.edge_owner_to_timeline_media?.edges ?? [];
+  const items = edges
+    .slice(0, Math.min(limit, 24))
+    .map((e) => mapWebNode(e.node ?? {}))
+    .filter((i) => Boolean(i.href || i.text));
+  return { items, nextCursor: null };
+}
+
+async function previewViaLegacyA1(
+  account: string,
+  limit: number,
+): Promise<SocialImportPage> {
+  const url =
+    `https://www.instagram.com/${encodeURIComponent(account)}/` +
+    `?__a=1&__d=dis`;
+  const json = await socialFetchJson<IgLegacyResponse>(url, {
+    headers: {
+      Accept: "application/json",
+      Referer: `https://www.instagram.com/${encodeURIComponent(account)}/`,
+    },
+  });
+  const edges = json.graphql?.user?.edge_owner_to_timeline_media?.edges ?? [];
+  const items = edges
+    .slice(0, Math.min(limit, 24))
+    .map((e) => mapWebNode(e.node ?? {}))
+    .filter((i) => Boolean(i.href || i.text));
+  return { items, nextCursor: null };
+}
+
+function cacheKey(account: string, limit: number, cursor?: string | null): string {
+  return `${account.toLowerCase()}::${limit}::${cursor ?? ""}`;
+}
+
 export const instagramProvider: SocialImportProvider = {
   platform: "instagram",
   async preview({ account, limit, cursor }) {
+    const key = cacheKey(account, limit, cursor);
+    const hit = igPreviewCache.get(key);
+    if (hit && Date.now() - hit.ts < IG_PREVIEW_CACHE_TTL_MS) {
+      return hit.page;
+    }
+
     try {
-      return await previewViaGraphApi(account, limit, cursor);
-    } catch {
-      return await previewViaWeb(account, limit);
+      const page = await previewViaGraphApi(account, limit, cursor);
+      igPreviewCache.set(key, { ts: Date.now(), page });
+      return page;
+    } catch (graphError) {
+      try {
+        const page = await withBackoff(() => previewViaWeb(account, limit));
+        igPreviewCache.set(key, { ts: Date.now(), page });
+        return page;
+      } catch (webError) {
+        try {
+          const page = await withBackoff(() => previewViaWebAltHost(account, limit));
+          igPreviewCache.set(key, { ts: Date.now(), page });
+          return page;
+        } catch (altError) {
+          try {
+            const page = await withBackoff(() => previewViaLegacyA1(account, limit), 1);
+            igPreviewCache.set(key, { ts: Date.now(), page });
+            return page;
+          } catch (legacyError) {
+            const errors = [graphError, webError, altError, legacyError]
+              .map((e) => (e instanceof Error ? e.message : String(e)))
+              .join(" | ");
+            if ([graphError, webError, altError, legacyError].some(isRateOrBlockError)) {
+              throw new Error(`HTTP 429 (fallback failed): ${errors}`);
+            }
+            throw new Error(`Instagram fallback failed: ${errors}`);
+          }
+        }
+      }
     }
   },
 };
