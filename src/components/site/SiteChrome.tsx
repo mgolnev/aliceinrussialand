@@ -39,11 +39,14 @@ export function SiteChrome({
     clearNavigationState();
   };
 
+  // Без общего div-обёртки: у sticky ограничивающий блок — родитель. Короткая обёртка только под шапку+спейсер
+  // ломала sticky (шапка уезжала с блоком). Fragment не создаёт узла — родитель тот же, что у ленты ниже.
+  // Не использовать display:contents на обёртке (SSR/гидрация Next 16).
   return (
     <>
     <header
-      data-site-chrome-root
-      className="sticky top-0 z-20 border-b border-stone-200/70 bg-[#fbfaf7]/90 backdrop-blur-xl"
+      id="site-chrome-root"
+      className="sticky top-0 z-20 w-full min-w-0 border-b border-stone-200/70 bg-[#fbfaf7]/90 backdrop-blur-xl"
     >
       <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-3 sm:gap-4 sm:px-5">
         <Link
@@ -109,12 +112,8 @@ export function SiteChrome({
         </div>
       ) : null}
     </header>
-    {/**
-     * Резерв высоты под шапку, пока она временно position:fixed (см. .lightbox-open в globals.css).
-     * Без спейсера контент подпрыгивает, когда лайтбокс снимает sticky.
-     */}
     <div
-      data-site-chrome-spacer
+      id="site-chrome-spacer"
       aria-hidden
       className="pointer-events-none shrink-0"
       style={{ height: "var(--site-chrome-spacer-h, 0px)" }}

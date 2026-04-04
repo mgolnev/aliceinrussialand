@@ -105,13 +105,40 @@ export async function getFeedPage(
           cursor: { id: cursor },
         }
       : {}),
-    include: {
+    // Явный select: без миграции source* колонок `include` всё равно читает все поля Post и падает.
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      body: true,
+      displayMode: true,
+      publishedAt: true,
+      pinned: true,
+      categoryId: true,
       images:
         feedProfile === "admin"
-          ? { orderBy: { sortOrder: "asc" } }
+          ? {
+              orderBy: { sortOrder: "asc" },
+              select: {
+                id: true,
+                caption: true,
+                alt: true,
+                variantsJson: true,
+                width: true,
+                height: true,
+              },
+            }
           : {
               orderBy: { sortOrder: "asc" },
               take: FEED_PUBLIC_MAX_IMAGES_PER_POST,
+              select: {
+                id: true,
+                caption: true,
+                alt: true,
+                variantsJson: true,
+                width: true,
+                height: true,
+              },
             },
       category: { select: { id: true, name: true, slug: true } },
     },

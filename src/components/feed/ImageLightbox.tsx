@@ -23,6 +23,9 @@ const DOUBLE_TAP_SCALE = 2.5;
 const SWIPE_PX = 56;
 /** Закрытие свайпом вниз при scale≈1; только если вертикаль доминирует над горизонталью. */
 const SWIPE_DOWN_CLOSE_PX = 96;
+/** Затухание при закрытии: заметнее, чем 200 ms, и не обрывается до конца анимации. */
+const CLOSE_FADE_MS = 320;
+const CLOSE_UNMOUNT_AFTER_MS = CLOSE_FADE_MS + 40;
 
 function touchDistance(
   a: { clientX: number; clientY: number },
@@ -78,7 +81,7 @@ export function ImageLightbox({
       if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
       closeTimerRef.current = window.setTimeout(() => {
         onClose();
-      }, 140);
+      }, CLOSE_UNMOUNT_AFTER_MS);
     },
     [closingMode, onClose],
   );
@@ -107,7 +110,7 @@ export function ImageLightbox({
     const scrollY = window.scrollY;
     const html = document.documentElement;
     const body = document.body;
-    const chromeRoot = document.querySelector<HTMLElement>("[data-site-chrome-root]");
+    const chromeRoot = document.getElementById("site-chrome-root");
     if (chromeRoot) {
       const h = chromeRoot.getBoundingClientRect().height;
       html.style.setProperty(
@@ -308,9 +311,9 @@ export function ImageLightbox({
     }
   };
 
+  /** Без preventDefault: у React touchmove часто passive — блокировка скролла в нативном слушателе ниже. */
   const onTouchMove = (e: React.TouchEvent) => {
     if (e.touches.length === 2 && pinchRef.current) {
-      e.preventDefault();
       const d = touchDistance(e.touches[0], e.touches[1]);
       if (pinchRef.current.startDist < 1) return;
       const next = clamp(
@@ -326,7 +329,6 @@ export function ImageLightbox({
       return;
     }
     if (e.touches.length === 1 && panRef.current && scale > 1.01) {
-      e.preventDefault();
       const t = e.touches[0];
       setPanX(
         panRef.current.originPanX + (t.clientX - panRef.current.startX),
@@ -346,7 +348,6 @@ export function ImageLightbox({
       const dx = t.clientX - s.x;
       const dy = t.clientY - s.y;
       if (dy > 12 && dy > Math.abs(dx)) {
-        e.preventDefault();
         setIsPulling(true);
         setOverlayPullY(Math.min(dy, 360));
       } else if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 12) {
@@ -429,7 +430,6 @@ export function ImageLightbox({
 
   const onWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
       const delta = -e.deltaY * 0.008;
       setScale((s) => clamp(s + delta, MIN_SCALE, MAX_SCALE));
     }
@@ -449,6 +449,7 @@ export function ImageLightbox({
     overlayPullY > 0 ? Math.max(0.4, 1 - overlayPullY / 480) : 1;
   const pullTransition = "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)";
   const fadeTransition = "opacity 220ms cubic-bezier(0.22, 1, 0.36, 1)";
+  const closeFadeTransition = `opacity ${CLOSE_FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
 
   const ui = (
     <div
@@ -457,7 +458,7 @@ export function ImageLightbox({
         overscrollBehavior: "none",
         touchAction: "none",
         opacity: closingMode ? 0 : 1,
-        transition: closingMode ? fadeTransition : undefined,
+        transition: closingMode ? closeFadeTransition : undefined,
       }}
       onClick={() => requestClose("fade")}
       role="presentation"

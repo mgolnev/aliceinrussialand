@@ -45,7 +45,7 @@ html {
   она оказывается вне видимой области, пока оверлей полупрозрачный, и «вспыхивает» после закрытия.
   Пока открыт лайтбокс, прибиваем шапку к viewport; высоту компенсируем спейсером в SiteChrome.
 */
-html.lightbox-open [data-site-chrome-root] {
+html.lightbox-open #site-chrome-root {
   position: fixed;
   top: 0;
   left: 0;
