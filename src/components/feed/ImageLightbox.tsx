@@ -62,6 +62,7 @@ export function ImageLightbox({
   } | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const [overlayPullY, setOverlayPullY] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
   const tapRef = useRef<{ t: number; x: number; y: number } | null>(null);
   const [shareHint, setShareHint] = useState<string | null>(null);
   const [shareBusy, setShareBusy] = useState(false);
@@ -239,6 +240,7 @@ export function ImageLightbox({
     if (e.touches.length === 2) {
       swipeStartRef.current = null;
       setOverlayPullY(0);
+      setIsPulling(false);
       panRef.current = null;
       pinchRef.current = {
         startDist: touchDistance(e.touches[0], e.touches[1]),
@@ -258,10 +260,12 @@ export function ImageLightbox({
         };
         swipeStartRef.current = null;
         setOverlayPullY(0);
+        setIsPulling(false);
       } else {
         panRef.current = null;
         swipeStartRef.current = { x: t.clientX, y: t.clientY };
         setOverlayPullY(0);
+        setIsPulling(false);
       }
     }
   };
@@ -305,8 +309,10 @@ export function ImageLightbox({
       const dy = t.clientY - s.y;
       if (dy > 12 && dy > Math.abs(dx)) {
         e.preventDefault();
+        setIsPulling(true);
         setOverlayPullY(Math.min(dy, 360));
       } else if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 12) {
+        setIsPulling(false);
         setOverlayPullY(0);
       }
     }
@@ -338,6 +344,7 @@ export function ImageLightbox({
 
     const start = swipeStartRef.current;
     swipeStartRef.current = null;
+    setIsPulling(false);
     setOverlayPullY(0);
 
     if (start && scaleRef.current <= 1.01) {
@@ -398,21 +405,38 @@ export function ImageLightbox({
     return null;
   }
 
+  const overlayOpacity =
+    overlayPullY > 0 ? Math.max(0.4, 1 - overlayPullY / 480) : 1;
+  const pullTransition = "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)";
+  const fadeTransition = "opacity 220ms cubic-bezier(0.22, 1, 0.36, 1)";
+
   const ui = (
     <div
-      className="fixed inset-0 z-[200] grid grid-rows-[auto_minmax(0,1fr)] bg-black/95 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[200] animate-in fade-in duration-200"
       style={{
         overscrollBehavior: "none",
         touchAction: "none",
-        transform: overlayPullY > 0 ? `translateY(${overlayPullY}px)` : undefined,
-        opacity:
-          overlayPullY > 0
-            ? Math.max(0.4, 1 - overlayPullY / 480)
-            : undefined,
       }}
       onClick={onClose}
       role="presentation"
     >
+      <div
+        className="absolute inset-0 bg-black/95 backdrop-blur-md"
+        style={{
+          opacity: overlayOpacity,
+          willChange: "opacity",
+          transition: isPulling ? "none" : fadeTransition,
+        }}
+      />
+      <div
+        className="relative z-[1] grid h-full grid-rows-[auto_minmax(0,1fr)]"
+        style={{
+          transform:
+            overlayPullY > 0 ? `translate3d(0, ${overlayPullY}px, 0)` : undefined,
+          willChange: "transform",
+          transition: isPulling ? "none" : pullTransition,
+        }}
+      >
       {/* Панель сверху — не наезжает на фото; safe-area сверху здесь */}
       <div
         className="flex shrink-0 items-center gap-2 border-b border-white/10 bg-black/40 px-3 py-2.5 backdrop-blur-md sm:px-4 sm:py-3"
@@ -505,6 +529,7 @@ export function ImageLightbox({
             </p>
           </div>
         ) : null}
+      </div>
       </div>
     </div>
   );
