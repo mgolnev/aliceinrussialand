@@ -379,6 +379,9 @@ export function SocialImportPanel({
                 <p className="mt-1 text-xs text-stone-500">
                   Для стабильности на проде используйте импорт по конкретным URL постов.
                 </p>
+                <p className="mt-1 text-xs text-stone-500">
+                  Instagram без авторизации: для карусели импортируется только первое фото.
+                </p>
               </div>
             ) : null}
           </div>

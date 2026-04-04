@@ -113,13 +113,54 @@ function parsePostMeta(html: string, fallbackUrl: string): SocialImportItem {
   };
 }
 
+function extractBestEffortDateFromHtml(html: string): string | null {
+  const fromUploadDate = html.match(/"uploadDate":"([^"]+)"/)?.[1];
+  if (fromUploadDate) return fromUploadDate;
+
+  const fromPublishedMeta = html.match(
+    /<meta[^>]+property="article:published_time"[^>]+content="([^"]+)"/i,
+  )?.[1];
+  if (fromPublishedMeta) return fromPublishedMeta;
+
+  const fromTakenAtTimestamp = html.match(/"taken_at_timestamp":(\d{9,})/)?.[1];
+  if (fromTakenAtTimestamp) {
+    const ts = Number.parseInt(fromTakenAtTimestamp, 10);
+    if (Number.isFinite(ts) && ts > 0) return new Date(ts * 1000).toISOString();
+  }
+
+  const fromCreatedAt = html.match(/"created_at":(\d{9,})/)?.[1];
+  if (fromCreatedAt) {
+    const ts = Number.parseInt(fromCreatedAt, 10);
+    if (Number.isFinite(ts) && ts > 0) return new Date(ts * 1000).toISOString();
+  }
+
+  return null;
+}
+
 async function fetchSingleWithRetry(url: string): Promise<SocialImportItem> {
   let lastError: unknown;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       const oembed = await fetchViaOEmbed(url);
-      // oEmbed чаще всего отдаёт thumbnail даже когда HTML ограничен.
-      if (oembed.imageUrls.length > 0) return oembed;
+      // Best-effort дата/время: пытаемся добрать из HTML публичной страницы.
+      if (oembed.imageUrls.length > 0 || oembed.text) {
+        if (!oembed.dateIso) {
+          try {
+            const html = await socialFetchText(url, {
+              timeoutMs: 10000 + attempt * 2000,
+              headers: {
+                Referer: "https://www.instagram.com/",
+                Accept:
+                  "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              },
+            });
+            return { ...oembed, dateIso: extractBestEffortDateFromHtml(html) };
+          } catch {
+            return oembed;
+          }
+        }
+        return oembed;
+      }
 
       const html = await socialFetchText(url, {
         timeoutMs: 12000 + attempt * 3000,
