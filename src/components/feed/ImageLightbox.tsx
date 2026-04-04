@@ -63,11 +63,25 @@ export function ImageLightbox({
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const [overlayPullY, setOverlayPullY] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
+  const [closingMode, setClosingMode] = useState<null | "fade" | "swipe">(null);
+  const closeTimerRef = useRef<number | null>(null);
   const tapRef = useRef<{ t: number; x: number; y: number } | null>(null);
   const [shareHint, setShareHint] = useState<string | null>(null);
   const [shareBusy, setShareBusy] = useState(false);
 
   const slide = slides[index];
+
+  const requestClose = useCallback(
+    (mode: "fade" | "swipe" = "fade") => {
+      if (closingMode) return;
+      setClosingMode(mode);
+      if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = window.setTimeout(() => {
+        onClose();
+      }, 140);
+    },
+    [closingMode, onClose],
+  );
 
   const resetTransform = useCallback(() => {
     setScale(1);
@@ -81,6 +95,12 @@ export function ImageLightbox({
   useEffect(() => {
     resetTransform();
   }, [index, resetTransform]);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+    };
+  }, []);
 
   /** Блокировка фона: overflow:hidden на iOS не хватает — фиксируем body. */
   useEffect(() => {
@@ -126,7 +146,7 @@ export function ImageLightbox({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose();
+        requestClose("fade");
         return;
       }
       if (slides.length < 2) return;
@@ -144,7 +164,7 @@ export function ImageLightbox({
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose, onIndexChange, slides.length, index]);
+  }, [requestClose, onIndexChange, slides.length, index]);
 
   const shareCurrentPhoto = useCallback(async () => {
     const src = slide?.src;
@@ -345,16 +365,18 @@ export function ImageLightbox({
     const start = swipeStartRef.current;
     swipeStartRef.current = null;
     setIsPulling(false);
-    setOverlayPullY(0);
 
     if (start && scaleRef.current <= 1.01) {
       const dx = t.clientX - start.x;
       const dy = t.clientY - start.y;
       if (dy > SWIPE_DOWN_CLOSE_PX && dy > Math.abs(dx)) {
-        onClose();
+        setOverlayPullY(Math.min(Math.max(dy, SWIPE_DOWN_CLOSE_PX), 420));
+        requestClose("swipe");
         return;
       }
     }
+
+    setOverlayPullY(0);
 
     const swipeOk = slides.length > 1 && scaleRef.current <= 1.01;
     if (swipeOk && start) {
@@ -416,8 +438,10 @@ export function ImageLightbox({
       style={{
         overscrollBehavior: "none",
         touchAction: "none",
+        opacity: closingMode ? 0 : 1,
+        transition: closingMode ? fadeTransition : undefined,
       }}
-      onClick={onClose}
+      onClick={() => requestClose("fade")}
       role="presentation"
     >
       <div
@@ -432,7 +456,11 @@ export function ImageLightbox({
         className="relative z-[1] grid h-full grid-rows-[auto_minmax(0,1fr)]"
         style={{
           transform:
-            overlayPullY > 0 ? `translate3d(0, ${overlayPullY}px, 0)` : undefined,
+            closingMode === "swipe"
+              ? `translate3d(0, ${Math.max(overlayPullY, 180)}px, 0)`
+              : overlayPullY > 0
+                ? `translate3d(0, ${overlayPullY}px, 0)`
+                : undefined,
           willChange: "transform",
           transition: isPulling ? "none" : pullTransition,
         }}
@@ -481,7 +509,7 @@ export function ImageLightbox({
           <button
             type="button"
             className="flex min-h-9 items-center rounded-full px-3 text-[15px] font-medium leading-none text-white/90 transition hover:bg-white/10 active:bg-white/15"
-            onClick={onClose}
+            onClick={() => requestClose("fade")}
           >
             Закрыть
           </button>
