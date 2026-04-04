@@ -40,7 +40,11 @@ export function SiteChrome({
   };
 
   return (
-    <header className="sticky top-0 z-20 border-b border-stone-200/70 bg-[#fbfaf7]/90 backdrop-blur-xl">
+    <>
+    <header
+      data-site-chrome-root
+      className="sticky top-0 z-20 border-b border-stone-200/70 bg-[#fbfaf7]/90 backdrop-blur-xl"
+    >
       <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-3 sm:gap-4 sm:px-5">
         <Link
           href="/"
@@ -105,5 +109,16 @@ export function SiteChrome({
         </div>
       ) : null}
     </header>
+    {/**
+     * Резерв высоты под шапку, пока она временно position:fixed (см. .lightbox-open в globals.css).
+     * Без спейсера контент подпрыгивает, когда лайтбокс снимает sticky.
+     */}
+    <div
+      data-site-chrome-spacer
+      aria-hidden
+      className="pointer-events-none shrink-0"
+      style={{ height: "var(--site-chrome-spacer-h, 0px)" }}
+    />
+    </>
   );
 }

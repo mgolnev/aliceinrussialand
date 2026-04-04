@@ -39,3 +39,19 @@ html {
   overflow-x: hidden;
   max-width: 100vw;
 }
+
+/*
+  Блокировка скролла лайтбоксом (body position:fixed) ломает position:sticky у шапки —
+  она оказывается вне видимой области, пока оверлей полупрозрачный, и «вспыхивает» после закрытия.
+  Пока открыт лайтбокс, прибиваем шапку к viewport; высоту компенсируем спейсером в SiteChrome.
+*/
+html.lightbox-open [data-site-chrome-root] {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 199;
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+}

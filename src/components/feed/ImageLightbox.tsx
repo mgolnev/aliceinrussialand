@@ -107,6 +107,15 @@ export function ImageLightbox({
     const scrollY = window.scrollY;
     const html = document.documentElement;
     const body = document.body;
+    const chromeRoot = document.querySelector<HTMLElement>("[data-site-chrome-root]");
+    if (chromeRoot) {
+      const h = chromeRoot.getBoundingClientRect().height;
+      html.style.setProperty(
+        "--site-chrome-spacer-h",
+        `${Math.round(h * 100) / 100}px`,
+      );
+      html.classList.add("lightbox-open");
+    }
     const prevHtmlOverflow = html.style.overflow;
     const prevBody = {
       position: body.style.position,
@@ -147,6 +156,8 @@ export function ImageLightbox({
       window.scrollTo(0, scrollY);
       requestAnimationFrame(() => window.scrollTo(0, scrollY));
       html.style.scrollBehavior = prevInlineScrollBehavior;
+      html.classList.remove("lightbox-open");
+      html.style.removeProperty("--site-chrome-spacer-h");
     };
   }, []);
 
