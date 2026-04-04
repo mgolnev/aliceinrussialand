@@ -37,4 +37,26 @@ describe("parseMessages / текст поста", () => {
     const items = parseMessages(html, "ch", 5);
     expect(items[0]?.text).toBe("А\n\nБ");
   });
+
+  it("вставляет пробел после точки, если HTML склеил следующее предложение без пробела", () => {
+    const html = `
+      <div class="tgme_widget_message" data-post="ch/4">
+        <a class="tgme_widget_message_date" href="https://t.me/ch/4"><time datetime="2024-01-04"></time></a>
+        <div class="tgme_widget_message_text">Первое предложение.<span>Второе без пробела в разметке</span></div>
+      </div>`;
+    const items = parseMessages(html, "ch", 5);
+    expect(items[0]?.text).toBe(
+      "Первое предложение. Второе без пробела в разметке",
+    );
+  });
+
+  it("не вставляет пробел после точки перед строчной буквой (домены, десятичные и т.д.)", () => {
+    const html = `
+      <div class="tgme_widget_message" data-post="ch/5">
+        <a class="tgme_widget_message_date" href="https://t.me/ch/5"><time datetime="2024-01-05"></time></a>
+        <div class="tgme_widget_message_text">Число 3.14 и сайт example.com здесь.</div>
+      </div>`;
+    const items = parseMessages(html, "ch", 5);
+    expect(items[0]?.text).toBe("Число 3.14 и сайт example.com здесь.");
+  });
 });

@@ -299,6 +299,15 @@ function normalizeWs(s: string) {
 }
 
 /**
+ * В вёрстке t.me часто нет пробела между инлайновыми тегами: «конец.</span><span>Дальше»
+ * → cheerio даёт «конец.Дальше». Вставляем пробел после конца предложения, если сразу
+ * идёт заглавная буква (новое предложение), не трогая «3.14», «example.com» и т.п.
+ */
+function ensureSpaceAfterSentenceEndBeforeCapital(text: string): string {
+  return text.replace(/([.!?…])(\p{Lu})/gu, "$1 $2");
+}
+
+/**
  * Если весь текст — две подряд одинаковые части (частая вёрстка: два .tgme_widget_message_text
  * или один блок, продублированный без разделителя), оставляем одну копию.
  */
@@ -364,7 +373,8 @@ function extractWidgetMessageText(
       : $blocks.first().text().trim();
   }
 
-  return dedupeRepeatedBody(raw);
+  const spaced = ensureSpaceAfterSentenceEndBeforeCapital(raw);
+  return dedupeRepeatedBody(spaced);
 }
 
 /** Экспорт для тестов и отладки парсера виджета. */

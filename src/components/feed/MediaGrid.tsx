@@ -57,8 +57,19 @@ export function slotSizesFromWidthFraction(widthFraction: number): string {
   return `(max-width: 640px) ${mob}vw, (max-width: 1100px) ${tab}vw, ${desk}px`;
 }
 
-/** Высота ряда: одинаковая для всех ячеек в ряду (как в Telegram). */
-function aspectForRow(indices: number[], images: GridImage[]): string {
+type AspectOpts = { rowIndex?: number; seed?: string };
+
+/** Высота ряда: одинаковая для всех ячеек в ряду; seed+rowIndex дают лёгкое чередование ритма на мобильных. */
+function aspectForRow(
+  indices: number[],
+  images: GridImage[],
+  opts?: AspectOpts,
+): string {
+  const rowIndex = opts?.rowIndex ?? 0;
+  const seed = opts?.seed;
+  const alt =
+    seed !== undefined && (hashSeed(`${seed}:asp:${rowIndex}`) % 2 === 1);
+
   const os = indices.map((i) =>
     orientation(images[i]?.width, images[i]?.height),
   );
@@ -68,22 +79,50 @@ function aspectForRow(indices: number[], images: GridImage[]): string {
 
   if (n === 1) {
     const o = os[0];
-    if (o === "landscape") return "aspect-[16/10] sm:aspect-[16/9]";
-    if (o === "portrait") return "aspect-[4/5] sm:aspect-[3/4]";
-    return "aspect-[4/3]";
+    if (o === "landscape") {
+      return alt
+        ? "aspect-[18/10] sm:aspect-[16/9]"
+        : "aspect-[16/10] sm:aspect-[16/9]";
+    }
+    if (o === "portrait") {
+      return alt
+        ? "aspect-[3/4] sm:aspect-[3/4]"
+        : "aspect-[4/5] sm:aspect-[3/4]";
+    }
+    return alt ? "aspect-[5/4] sm:aspect-[4/3]" : "aspect-[4/3]";
   }
   if (n === 2) {
-    if (l === 2) return "aspect-[2/1] sm:aspect-[16/9]";
-    if (p === 2) return "aspect-[5/4] sm:aspect-[6/5]";
-    return "aspect-[15/9] sm:aspect-[16/10]";
+    if (l === 2) {
+      return alt
+        ? "aspect-[7/3] sm:aspect-[16/9]"
+        : "aspect-[2/1] sm:aspect-[16/9]";
+    }
+    if (p === 2) {
+      return alt
+        ? "aspect-[4/3] sm:aspect-[6/5]"
+        : "aspect-[5/4] sm:aspect-[6/5]";
+    }
+    return alt
+      ? "aspect-[7/4] sm:aspect-[16/10]"
+      : "aspect-[15/9] sm:aspect-[16/10]";
   }
   if (n === 3) {
-    if (l >= 2) return "aspect-[8/3] sm:aspect-[3/1]";
-    if (p >= 2) return "aspect-[5/3] sm:aspect-[2/1]";
-    return "aspect-[5/3]";
+    if (l >= 2) {
+      return alt
+        ? "aspect-[5/2] sm:aspect-[3/1]"
+        : "aspect-[8/3] sm:aspect-[3/1]";
+    }
+    if (p >= 2) {
+      return alt
+        ? "aspect-[16/10] sm:aspect-[2/1]"
+        : "aspect-[5/3] sm:aspect-[2/1]";
+    }
+    return alt
+      ? "aspect-[16/10] sm:aspect-[2/1]"
+      : "aspect-[5/3] sm:aspect-[2/1]";
   }
   if (n === 4) return "aspect-[2/1] sm:aspect-[16/9]";
-  return "aspect-[5/3]";
+  return alt ? "aspect-[16/10] sm:aspect-[5/3]" : "aspect-[5/3]";
 }
 
 /** Пропорции ширин в ряду из 2 фото с учётом ориентации (~40/60 для портрет+ландшафт). */
@@ -127,7 +166,9 @@ function rowSizesTelegram(n: number, seed: string | undefined): number[] {
   if (n === 6) {
     return hashSeed(seed) % 2 === 0 ? [1, 2, 3] : [2, 2, 2];
   }
-  if (n === 7) return [3, 2, 2];
+  if (n === 7) {
+    return hashSeed(seed + ":row7") % 2 === 0 ? [3, 2, 2] : [2, 3, 2];
+  }
   if (n === 8) return [4, 4];
   if (n === 9) return [3, 3, 3];
   if (n === 10) return [3, 3, 2, 2];
@@ -149,14 +190,62 @@ function rowSizesTelegram(n: number, seed: string | undefined): number[] {
   return rows;
 }
 
-type Layout =
+export type MediaGridLayout =
   | { kind: "rows"; rows: { indices: number[]; flex: number[] }[] }
   | { kind: "grid4"; indices: [number, number, number, number] };
 
-function buildLayout(images: GridImage[], seed: string | undefined): Layout {
+/** Экспорт для тестов и отладки раскладки. */
+export function buildMediaGridLayout(
+  images: GridImage[],
+  seed: string | undefined,
+): MediaGridLayout {
   const n = images.length;
+
+  /** Три фото: полоса 3 | герой + пара | пара + герой — стабильно от post.id. */
+  if (n === 3) {
+    const mode = hashSeed(seed + ":layout3") % 3;
+    if (mode === 0) {
+      return {
+        kind: "rows",
+        rows: [{ indices: [0, 1, 2], flex: [1, 1, 1] }],
+      };
+    }
+    if (mode === 1) {
+      return {
+        kind: "rows",
+        rows: [
+          { indices: [0], flex: [1] },
+          { indices: [1, 2], flex: [...flexPairForTwo(images, 1, 2)] },
+        ],
+      };
+    }
+    return {
+      kind: "rows",
+      rows: [
+        { indices: [0, 1], flex: [...flexPairForTwo(images, 0, 1)] },
+        { indices: [2], flex: [1] },
+      ],
+    };
+  }
+
+  /** Четыре фото: «бенто» или два ряда по 2 — разный ритм в ленте. */
   if (n === 4) {
-    return { kind: "grid4", indices: [0, 1, 2, 3] };
+    if (hashSeed(seed + ":layout4") % 3 === 0) {
+      return { kind: "grid4", indices: [0, 1, 2, 3] };
+    }
+    return {
+      kind: "rows",
+      rows: [
+        {
+          indices: [0, 1],
+          flex: [...flexPairStaggered(images, 0, 1, 0, seed)],
+        },
+        {
+          indices: [2, 3],
+          flex: [...flexPairStaggered(images, 2, 3, 1, seed)],
+        },
+      ],
+    };
   }
 
   if (n === 5) {
@@ -198,8 +287,6 @@ function buildLayout(images: GridImage[], seed: string | undefined): Layout {
         indices: [0, 1],
         flex: [...flexPairForTwo(images, 0, 1)],
       });
-    } else if (n === 3) {
-      rows.push({ indices: [0, 1, 2], flex: [1, 1, 1] });
     } else if (n === 6) {
       rows.push(
         { indices: [0, 1], flex: [...flexPairStaggered(images, 0, 1, 0, seed)] },
@@ -286,7 +373,7 @@ export function MediaGrid({
   if (count === 0) return null;
 
   const clickable = typeof onImageClick === "function";
-  const layout = buildLayout(images, layoutSeed);
+  const layout = buildMediaGridLayout(images, layoutSeed);
 
   const frameClass =
     fullBleed && flushCardBottom
@@ -330,7 +417,10 @@ export function MediaGrid({
     body = (
       <div className="flex w-full min-w-0 flex-col gap-px bg-stone-200/90">
         {layout.rows.map((row, ri) => {
-          const aspect = aspectForRow(row.indices, images);
+          const aspect = aspectForRow(row.indices, images, {
+            rowIndex: ri,
+            seed: layoutSeed,
+          });
           const cols = row.flex
             .map((w) => `minmax(0,${w}fr)`)
             .join(" ");
