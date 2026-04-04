@@ -27,6 +27,7 @@ type TelegramPreviewItem = {
 const LS_KEY_PLATFORM = "admin.socialImport.platform";
 const LS_KEY_TELEGRAM = "admin.socialImport.telegramChannel";
 const LS_KEY_INSTAGRAM = "admin.socialImport.instagramAccount";
+const LS_KEY_INSTAGRAM_URLS = "admin.socialImport.instagramUrls";
 const LS_KEY_BEHANCE = "admin.socialImport.behanceAccount";
 
 const checkboxClass =
@@ -76,6 +77,7 @@ export function SocialImportPanel({
   const router = useRouter();
   const [platform, setPlatform] = useState<PanelPlatform>("telegram");
   const [instagramAccount, setInstagramAccount] = useState(defaultInstagramAccount);
+  const [instagramUrls, setInstagramUrls] = useState("");
   const [behanceAccount, setBehanceAccount] = useState(defaultBehanceAccount);
   const [telegramChannel, setTelegramChannel] = useState(defaultTelegramChannel);
   const [items, setItems] = useState<SocialImportItem[] | null>(null);
@@ -103,8 +105,10 @@ export function SocialImportPanel({
       const savedTg = localStorage.getItem(LS_KEY_TELEGRAM);
       const savedIg = localStorage.getItem(LS_KEY_INSTAGRAM);
       const savedBh = localStorage.getItem(LS_KEY_BEHANCE);
+      const savedIgUrls = localStorage.getItem(LS_KEY_INSTAGRAM_URLS);
       if (savedTg) setTelegramChannel(savedTg);
       if (savedIg) setInstagramAccount(savedIg);
+      if (savedIgUrls) setInstagramUrls(savedIgUrls);
       if (savedBh) setBehanceAccount(savedBh);
     } catch {
       // localStorage может быть недоступен в ограниченных окружениях.
@@ -116,11 +120,12 @@ export function SocialImportPanel({
       localStorage.setItem(LS_KEY_PLATFORM, platform);
       localStorage.setItem(LS_KEY_TELEGRAM, telegramChannel);
       localStorage.setItem(LS_KEY_INSTAGRAM, instagramAccount);
+      localStorage.setItem(LS_KEY_INSTAGRAM_URLS, instagramUrls);
       localStorage.setItem(LS_KEY_BEHANCE, behanceAccount);
     } catch {
       // Игнорируем ошибки хранилища, UI продолжает работать без персистентности.
     }
-  }, [platform, telegramChannel, instagramAccount, behanceAccount]);
+  }, [platform, telegramChannel, instagramAccount, instagramUrls, behanceAccount]);
 
   const account =
     platform === "telegram"
@@ -155,6 +160,13 @@ export function SocialImportPanel({
               body: JSON.stringify({
                 platform,
                 account,
+                urls:
+                  platform === "instagram"
+                    ? instagramUrls
+                        .split(/\r?\n/)
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                    : undefined,
                 limit: 20,
                 before: reset ? null : nextCursor,
               }),
@@ -333,7 +345,9 @@ export function SocialImportPanel({
             <label className="text-sm font-medium text-stone-700">
               {platform === "telegram"
                 ? "Канал (username без @)"
-                : "Username"}
+                : platform === "instagram"
+                  ? "Username (опционально)"
+                  : "Username"}
               <input
                 className="mt-1 block w-full rounded-xl border border-stone-300 px-3 py-2.5 font-mono text-sm outline-none focus:border-stone-400"
                 value={account}
@@ -351,6 +365,22 @@ export function SocialImportPanel({
                 }
               />
             </label>
+            {platform === "instagram" ? (
+              <div className="sm:col-span-2">
+                <label className="text-sm font-medium text-stone-700">
+                  Ссылки на посты Instagram (по одной в строке)
+                  <textarea
+                    className="mt-1 min-h-[92px] w-full rounded-xl border border-stone-300 px-3 py-2.5 font-mono text-xs outline-none focus:border-stone-400"
+                    value={instagramUrls}
+                    onChange={(e) => setInstagramUrls(e.target.value)}
+                    placeholder={"https://www.instagram.com/p/XXXXXXXXX/\nhttps://www.instagram.com/reel/YYYYYYYYY/"}
+                  />
+                </label>
+                <p className="mt-1 text-xs text-stone-500">
+                  Для стабильности на проде используйте импорт по конкретным URL постов.
+                </p>
+              </div>
+            ) : null}
           </div>
           <div className="mt-3 flex justify-end border-t border-stone-100 pt-3">
             <button

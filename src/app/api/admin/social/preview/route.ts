@@ -4,6 +4,7 @@ import type { SocialPlatform } from "@/lib/social-import/types";
 import {
   listAlreadyImportedSourceUrls,
 } from "@/lib/social-import/import-core";
+import { previewInstagramByUrls } from "@/lib/social-import/providers/instagram-by-urls";
 
 export const runtime = "nodejs";
 export const maxDuration = 45;
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as {
     platform?: unknown;
     account?: string;
+    urls?: string[];
     limit?: number;
     before?: string | null;
   } | null;
@@ -52,7 +54,7 @@ export async function POST(req: Request) {
   }
 
   const account = body?.account?.trim() ?? "";
-  if (!account) {
+  if (!account && platform !== "instagram") {
     return NextResponse.json(
       { error: "Укажите account (username)" },
       { status: 400 },
@@ -61,11 +63,15 @@ export async function POST(req: Request) {
 
   const provider = getSocialImportProvider(platform);
   try {
-    const page = await provider.preview({
-      account,
-      limit: Math.min(Math.max(body?.limit ?? 20, 1), 40),
-      cursor: body?.before ?? null,
-    });
+    const safeLimit = Math.min(Math.max(body?.limit ?? 20, 1), 40);
+    const page =
+      platform === "instagram" && Array.isArray(body?.urls) && body.urls.length > 0
+        ? await previewInstagramByUrls(body.urls, safeLimit)
+        : await provider.preview({
+            account,
+            limit: safeLimit,
+            cursor: body?.before ?? null,
+          });
 
     const importedSourceUrls = await listAlreadyImportedSourceUrls(
       platform,
