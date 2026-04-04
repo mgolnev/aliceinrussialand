@@ -13,6 +13,16 @@ import { parseVariants } from "@/lib/posts-query";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
+function isSourceFieldsCompatError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return (
+    msg.includes("sourcePlatform") ||
+    msg.includes("sourceUrl") ||
+    msg.includes("Unknown arg") ||
+    msg.includes("does not exist in the current database")
+  );
+}
+
 type Item = {
   href: string;
   text: string;
@@ -63,33 +73,74 @@ export async function POST(req: Request) {
         await deleteImageFiles(existing.id, im.id);
       }
       await prisma.postImage.deleteMany({ where: { postId: existing.id } });
-      await prisma.post.update({
-        where: { id: existing.id },
-        data: {
-          body: text,
-          title,
-          telegramSourceUrl: normUrl,
-          metaTitle: "",
-          metaDescription: "",
-          categoryId: null,
-          publishedAt: tgPublishedAt,
-        },
-      });
+      await (async () => {
+        try {
+          await prisma.post.update({
+            where: { id: existing.id },
+            data: {
+              body: text,
+              title,
+              telegramSourceUrl: normUrl,
+              sourcePlatform: "TELEGRAM",
+              sourceUrl: normUrl,
+              metaTitle: "",
+              metaDescription: "",
+              categoryId: null,
+              publishedAt: tgPublishedAt,
+            },
+          });
+        } catch (e) {
+          if (!isSourceFieldsCompatError(e)) throw e;
+          await prisma.post.update({
+            where: { id: existing.id },
+            data: {
+              body: text,
+              title,
+              telegramSourceUrl: normUrl,
+              metaTitle: "",
+              metaDescription: "",
+              categoryId: null,
+              publishedAt: tgPublishedAt,
+            },
+          });
+        }
+      })();
       postId = existing.id;
     } else {
-      const post = await prisma.post.create({
-        data: {
-          title,
-          slug: draftSlug(),
-          body: text,
-          displayMode: "GRID",
-          status: POST_STATUS.DRAFT,
-          telegramSourceUrl: normUrl,
-          metaTitle: "",
-          metaDescription: "",
-          publishedAt: tgPublishedAt,
-        },
-      });
+      const post = await (async () => {
+        try {
+          return await prisma.post.create({
+            data: {
+              title,
+              slug: draftSlug(),
+              body: text,
+              displayMode: "GRID",
+              status: POST_STATUS.DRAFT,
+              telegramSourceUrl: normUrl,
+              sourcePlatform: "TELEGRAM",
+              sourceUrl: normUrl,
+              metaTitle: "",
+              metaDescription: "",
+              publishedAt: tgPublishedAt,
+            },
+          });
+        } catch (e) {
+          if (!isSourceFieldsCompatError(e)) throw e;
+          return await prisma.post.create({
+            data: {
+              title,
+              slug: draftSlug(),
+              body: text,
+              displayMode: "GRID",
+              status: POST_STATUS.DRAFT,
+              telegramSourceUrl: normUrl,
+              metaTitle: "",
+              metaDescription: "",
+              publishedAt: tgPublishedAt,
+            },
+          });
+        }
+      })();
       postId = post.id;
     }
 

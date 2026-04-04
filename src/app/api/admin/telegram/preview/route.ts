@@ -9,6 +9,16 @@ export const runtime = "nodejs";
 /** Ретраи к t.me; на Pro можно до 60s, на Hobby Vercel усечёт по плану. */
 export const maxDuration = 45;
 
+function isSourceFieldsCompatError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return (
+    msg.includes("sourcePlatform") ||
+    msg.includes("sourceUrl") ||
+    msg.includes("Unknown arg") ||
+    msg.includes("does not exist in the current database")
+  );
+}
+
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as {
     channelUser?: string;
@@ -50,16 +60,36 @@ export async function POST(req: Request) {
 
     let importedHrefs: string[] = [];
     if (expanded.length) {
-      const rows = await prisma.post.findMany({
-        where: { telegramSourceUrl: { in: expanded } },
-        select: { telegramSourceUrl: true },
-      });
+      const rows = await (async () => {
+        try {
+          return await prisma.post.findMany({
+            where: {
+              OR: [
+                { telegramSourceUrl: { in: expanded } },
+                { sourcePlatform: "TELEGRAM", sourceUrl: { in: expanded } },
+              ],
+            },
+            select: { telegramSourceUrl: true, sourceUrl: true },
+          });
+        } catch (e) {
+          if (!isSourceFieldsCompatError(e)) throw e;
+          // Совместимость со старыми Prisma Client/БД без sourcePlatform/sourceUrl.
+          const legacy = await prisma.post.findMany({
+            where: { telegramSourceUrl: { in: expanded } },
+            select: { telegramSourceUrl: true },
+          });
+          return legacy.map((r) => ({
+            telegramSourceUrl: r.telegramSourceUrl,
+            sourceUrl: null,
+          }));
+        }
+      })();
       importedHrefs = [
         ...new Set(
           rows
             .map((r) =>
-              r.telegramSourceUrl
-                ? normalizeTelegramPostUrl(r.telegramSourceUrl)
+              r.telegramSourceUrl || r.sourceUrl
+                ? normalizeTelegramPostUrl(r.telegramSourceUrl || r.sourceUrl || "")
                 : "",
             )
             .filter(Boolean),
@@ -73,7 +103,7 @@ export async function POST(req: Request) {
       importedHrefs,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Ошибка загрузки";
+    const msg = "Ошибка загрузки списка Telegram.";
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }

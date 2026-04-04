@@ -8,6 +8,12 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum SocialSourcePlatform {
+  TELEGRAM
+  INSTAGRAM
+  BEHANCE
+}
+
 model SiteSettings {
   id                   Int     @id @default(1)
   displayName          String  @default("Иллюстратор")
@@ -52,6 +58,9 @@ model Post {
   metaTitle          String         @default("")
   metaDescription    String         @default("")
   telegramSourceUrl  String?
+  sourcePlatform     SocialSourcePlatform?
+  sourceUrl          String?
+  sourceExternalId   String?
   locale             String         @default("ru")
   categoryId         String?
   category           PostCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -62,6 +71,8 @@ model Post {
   @@index([status, publishedAt])
   @@index([categoryId])
   @@index([status, pinned, publishedAt(sort: Desc)])
+  @@index([sourcePlatform, sourceUrl])
+  @@index([sourcePlatform, sourceExternalId])
 }
 
 model PostImage {

@@ -13,6 +13,16 @@ import { excerptForMetaDescription } from "@/lib/meta-excerpt";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
+function isSourceFieldsCompatError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return (
+    msg.includes("sourcePlatform") ||
+    msg.includes("sourceUrl") ||
+    msg.includes("Unknown arg") ||
+    msg.includes("does not exist in the current database")
+  );
+}
+
 type Item = {
   href: string;
   text: string;
@@ -49,19 +59,42 @@ export async function POST(req: Request) {
       const publish = Boolean(item.publish);
       const publishedAt = item.dateIso ? new Date(item.dateIso) : new Date();
 
-      const post = await prisma.post.create({
-        data: {
-          title: titleLine,
-          slug,
-          body: item.text,
-          displayMode: "GRID",
-          status: publish ? POST_STATUS.PUBLISHED : POST_STATUS.DRAFT,
-          publishedAt,
-          telegramSourceUrl: normalizeTelegramPostUrl(item.href),
-          metaTitle: titleLine,
-          metaDescription: excerptForMetaDescription(item.text),
-        },
-      });
+      const normUrl = normalizeTelegramPostUrl(item.href);
+      const post = await (async () => {
+        try {
+          return await prisma.post.create({
+            data: {
+              title: titleLine,
+              slug,
+              body: item.text,
+              displayMode: "GRID",
+              status: publish ? POST_STATUS.PUBLISHED : POST_STATUS.DRAFT,
+              publishedAt,
+              telegramSourceUrl: normUrl,
+              sourcePlatform: "TELEGRAM",
+              sourceUrl: normUrl,
+              metaTitle: titleLine,
+              metaDescription: excerptForMetaDescription(item.text),
+            },
+          });
+        } catch (e) {
+          if (!isSourceFieldsCompatError(e)) throw e;
+          // Совместимость со старыми Prisma Client/БД без source*.
+          return await prisma.post.create({
+            data: {
+              title: titleLine,
+              slug,
+              body: item.text,
+              displayMode: "GRID",
+              status: publish ? POST_STATUS.PUBLISHED : POST_STATUS.DRAFT,
+              publishedAt,
+              telegramSourceUrl: normUrl,
+              metaTitle: titleLine,
+              metaDescription: excerptForMetaDescription(item.text),
+            },
+          });
+        }
+      })();
 
       let order = 0;
       for (const url of item.imageUrls.slice(0, 20)) {

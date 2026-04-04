@@ -31,7 +31,7 @@ export function AdminFolderNav() {
         prefetch
         className={`relative ${pillTabClass(telegramActive)}`}
       >
-        Telegram
+        Импорт
         <LinkPendingBackdrop />
       </Link>
       <Link

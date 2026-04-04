@@ -117,6 +117,9 @@ export async function PATCH(req: Request, ctx: Ctx) {
     metaTitle?: string;
     metaDescription?: string;
     telegramSourceUrl?: string | null;
+    sourcePlatform?: "TELEGRAM" | "INSTAGRAM" | "BEHANCE" | null;
+    sourceUrl?: string | null;
+    sourceExternalId?: string | null;
     locale?: string;
     categoryId?: string | null;
   } = {};
@@ -148,6 +151,20 @@ export async function PATCH(req: Request, ctx: Ctx) {
   }
   if (typeof body.telegramSourceUrl === "string") {
     data.telegramSourceUrl = body.telegramSourceUrl || null;
+  }
+  if (
+    body.sourcePlatform === "TELEGRAM" ||
+    body.sourcePlatform === "INSTAGRAM" ||
+    body.sourcePlatform === "BEHANCE" ||
+    body.sourcePlatform === null
+  ) {
+    data.sourcePlatform = body.sourcePlatform;
+  }
+  if (typeof body.sourceUrl === "string") {
+    data.sourceUrl = body.sourceUrl || null;
+  }
+  if (typeof body.sourceExternalId === "string") {
+    data.sourceExternalId = body.sourceExternalId || null;
   }
   if (typeof body.locale === "string") data.locale = body.locale;
 
