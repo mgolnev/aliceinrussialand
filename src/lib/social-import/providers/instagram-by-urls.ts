@@ -1,11 +1,19 @@
 import * as cheerio from "cheerio";
-import { socialFetchText } from "@/lib/social-import/fetch";
+import { socialFetchJson, socialFetchText } from "@/lib/social-import/fetch";
 import type { SocialImportItem, SocialImportPage } from "@/lib/social-import/types";
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const REQUEST_COOLDOWN_MS = 450;
 
 const urlCache = new Map<string, { ts: number; item: SocialImportItem }>();
+
+type InstagramOEmbed = {
+  author_name?: string;
+  author_url?: string;
+  media_id?: string;
+  thumbnail_url?: string;
+  title?: string;
+};
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -45,14 +53,49 @@ function externalIdFromUrl(url: string): string {
   return m?.[1] ?? url;
 }
 
+function parseOEmbedMeta(url: string, o: InstagramOEmbed): SocialImportItem {
+  const mediaId = String(o.media_id ?? "").trim();
+  const externalId = mediaId
+    ? mediaId.split("_")[0] || externalIdFromUrl(url)
+    : externalIdFromUrl(url);
+  const text = (o.title ?? "").trim();
+  const thumbnail = (o.thumbnail_url ?? "").trim();
+  return {
+    externalId,
+    href: url,
+    text,
+    imageUrls: thumbnail ? [thumbnail] : [],
+    dateIso: null,
+  };
+}
+
+async function fetchViaOEmbed(url: string): Promise<SocialImportItem> {
+  const endpoint =
+    `https://www.instagram.com/api/v1/oembed/` +
+    `?url=${encodeURIComponent(url)}`;
+  const json = await socialFetchJson<InstagramOEmbed>(endpoint, {
+    timeoutMs: 12000,
+    headers: {
+      Accept: "application/json",
+      Referer: "https://www.instagram.com/",
+    },
+  });
+  return parseOEmbedMeta(url, json);
+}
+
 function parsePostMeta(html: string, fallbackUrl: string): SocialImportItem {
   const $ = cheerio.load(html);
   const href =
     $('meta[property="og:url"]').attr("content")?.trim() || fallbackUrl;
-  const image =
+  const imageFromMeta =
     $('meta[property="og:image"]').attr("content")?.trim() ||
     $('meta[name="twitter:image"]').attr("content")?.trim() ||
     "";
+  // Fallback: иногда meta-поля урезаны, но в HTML остаются прямые CDN-ссылки.
+  const imageFromHtml =
+    html.match(/https?:\/\/[^"'\\s]+cdninstagram\.com\/[^"'\\s]+\.(?:jpg|jpeg|png|webp)[^"'\\s]*/i)?.[0] ??
+    "";
+  const image = imageFromMeta || imageFromHtml;
   const description =
     $('meta[property="og:description"]').attr("content")?.trim() ||
     $('meta[name="description"]').attr("content")?.trim() ||
@@ -74,6 +117,10 @@ async function fetchSingleWithRetry(url: string): Promise<SocialImportItem> {
   let lastError: unknown;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
+      const oembed = await fetchViaOEmbed(url);
+      // oEmbed чаще всего отдаёт thumbnail даже когда HTML ограничен.
+      if (oembed.imageUrls.length > 0) return oembed;
+
       const html = await socialFetchText(url, {
         timeoutMs: 12000 + attempt * 3000,
         headers: {
@@ -82,7 +129,12 @@ async function fetchSingleWithRetry(url: string): Promise<SocialImportItem> {
             "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
       });
-      return parsePostMeta(html, url);
+      const htmlItem = parsePostMeta(html, url);
+      if (htmlItem.imageUrls.length > 0 || htmlItem.text || htmlItem.dateIso) {
+        return htmlItem;
+      }
+      // Если всё ещё пусто — вернём хотя бы заголовок/мета из oEmbed.
+      return oembed;
     } catch (e) {
       lastError = e;
       const msg = e instanceof Error ? e.message : String(e);
@@ -124,7 +176,10 @@ export async function previewInstagramByUrls(
     if (i > 0) await sleep(REQUEST_COOLDOWN_MS);
     try {
       const item = await fetchSingleWithRetry(url);
-      urlCache.set(url, { ts: Date.now(), item });
+      // Не кэшируем «пустые» результаты: чтобы следующая попытка могла подтянуть данные.
+      if (item.imageUrls.length > 0 || item.text || item.dateIso) {
+        urlCache.set(url, { ts: Date.now(), item });
+      }
       items.push(item);
     } catch {
       // Пропускаем битые URL, не валим весь список.
