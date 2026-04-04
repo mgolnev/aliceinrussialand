@@ -131,14 +131,21 @@ export function ImageLightbox({
     body.style.touchAction = "none";
 
     return () => {
+      /**
+       * Важно для sticky-шапки: восстанавливаем скролл максимально «без кадра 0».
+       * Иначе на части устройств заметна вспышка верхней панели при закрытии.
+       */
+      const prevInlineScrollBehavior = html.style.scrollBehavior;
+      html.style.scrollBehavior = "auto";
+      // Предустановка целевой позиции до снятия fixed-блокировки.
+      window.scrollTo(0, scrollY);
       html.style.overflow = prevHtmlOverflow;
       Object.assign(body.style, prevBody);
       body.style.paddingRight = "";
       body.style.touchAction = "";
-      /* На всякий случай: инлайн smooth на html ломает мгновенный возврат скролла. */
-      const prevInlineScrollBehavior = html.style.scrollBehavior;
-      html.style.scrollBehavior = "auto";
+      // Повторная синхронизация после снятия fixed + еще один кадр-запас.
       window.scrollTo(0, scrollY);
+      requestAnimationFrame(() => window.scrollTo(0, scrollY));
       html.style.scrollBehavior = prevInlineScrollBehavior;
     };
   }, []);
