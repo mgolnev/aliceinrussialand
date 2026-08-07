@@ -1,0 +1,10 @@
+.git
+.next
+.env
+.env.*
+!.env.example
+node_modules
+coverage
+storage
+public/media
+npm-debug.log*

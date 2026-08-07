@@ -40,6 +40,8 @@ model PostCategory {
   slug      String   @unique
   name      String
   description String @default("")
+  isArchived Boolean  @default(false)
+  oldSlugs   String[] @default([])
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -61,6 +63,7 @@ model Post {
   sourcePlatform     SocialSourcePlatform?
   sourceUrl          String?
   sourceExternalId   String?
+  oldSlugs           String[]       @default([])
   locale             String         @default("ru")
   categoryId         String?
   category           PostCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)

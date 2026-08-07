@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Нужен self-hosted (Docker) деплой: Vercel по-прежнему поддерживается.
+  output: "standalone",
   experimental: {
     optimizePackageImports: ["lucide-react"],
   },

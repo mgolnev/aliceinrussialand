@@ -7,6 +7,9 @@ import { ScrollMetrics } from "@/components/site/ScrollMetrics";
 import { GlobalScrollManager } from "@/components/navigation/GlobalScrollManager";
 import { resolveSiteOrigin } from "@/lib/site-origin";
 
+// БД подключается в runtime: self-hosted контейнер не требует доступа к ней на build-этапе.
+export const dynamic = "force-dynamic";
+
 const sans = Manrope({
   subsets: ["latin", "cyrillic"],
   variable: "--font-body",
