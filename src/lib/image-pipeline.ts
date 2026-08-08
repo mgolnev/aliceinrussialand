@@ -19,6 +19,7 @@ import {
 
 const MAX_ORIGINAL_WIDTH = 2560;
 const VARIANTS = [640, 960, 1280] as const;
+const WEBP_QUALITY = 90;
 
 const AVATAR_MAX_SIDE = 1024;
 const AVATAR_VARIANTS = [128, 256, 512] as const;
@@ -73,7 +74,7 @@ function encodePostVariantWebp(finalBuf: Buffer, w: number) {
       fit: "inside",
       withoutEnlargement: true,
     })
-    .webp({ quality: 82, effort: 4 })
+    .webp({ quality: WEBP_QUALITY, effort: 4 })
     .toBuffer();
 }
 
@@ -182,7 +183,7 @@ export async function processAvatarUpload(params: {
             height: side,
             fit: "cover",
           })
-          .webp({ quality: 85, effort: 4 })
+          .webp({ quality: WEBP_QUALITY, effort: 4 })
           .toBuffer(),
       ),
     );
@@ -215,7 +216,7 @@ export async function processAvatarUpload(params: {
           height: side,
           fit: "cover",
         })
-        .webp({ quality: 85, effort: 4 })
+        .webp({ quality: WEBP_QUALITY, effort: 4 })
         .toBuffer(),
     ),
   );
@@ -264,7 +265,7 @@ export async function processAboutPhotoUpload(params: {
         sharp(work)
           .rotate()
           .resize({ width: w, withoutEnlargement: true })
-          .webp({ quality: 85, effort: 4 })
+          .webp({ quality: WEBP_QUALITY, effort: 4 })
           .toBuffer(),
       ),
     );
@@ -288,7 +289,7 @@ export async function processAboutPhotoUpload(params: {
       sharp(work)
         .rotate()
         .resize({ width: w, withoutEnlargement: true })
-        .webp({ quality: 85, effort: 4 })
+        .webp({ quality: WEBP_QUALITY, effort: 4 })
         .toBuffer(),
     ),
   );
