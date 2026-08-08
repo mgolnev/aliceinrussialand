@@ -13,7 +13,7 @@ export function AdminGenericPageSkeleton() {
         <div className="h-4 w-[88%] max-w-xl animate-pulse rounded bg-stone-200/40" />
       </div>
 
-      <div className="overflow-hidden rounded-[28px] border border-stone-200/80 bg-white/90 p-5 shadow-[0_20px_50px_-40px_rgba(60,44,29,0.2)] sm:p-6">
+      <div className="overflow-hidden rounded-[28px] border border-stone-200/80 bg-white/90 p-5 sm:p-6">
         <div className="space-y-5">
           {[0, 1, 2, 3, 4].map((i) => (
             <div key={i} className="space-y-2">
@@ -42,7 +42,7 @@ export function AdminPostMetaEditSkeleton() {
       aria-busy="true"
       aria-label="Загрузка редактора SEO"
     >
-      <div className="rounded-2xl border border-stone-200/80 bg-white/90 px-4 py-4 shadow-sm sm:px-5 sm:py-5">
+      <div className="rounded-2xl border border-stone-200/80 bg-white/90 px-4 py-4 sm:px-5 sm:py-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="h-6 w-28 animate-pulse rounded-full bg-stone-200/70" />
           <div className="h-3 w-16 animate-pulse rounded bg-stone-200/50" />
@@ -54,7 +54,7 @@ export function AdminPostMetaEditSkeleton() {
         </div>
       </div>
 
-      <div className="space-y-4 rounded-2xl border border-stone-200/80 bg-white/90 px-4 py-4 shadow-sm sm:px-5 sm:py-5">
+      <div className="space-y-4 rounded-2xl border border-stone-200/80 bg-white/90 px-4 py-4 sm:px-5 sm:py-5">
         {[0, 1, 2].map((i) => (
           <div key={i} className="space-y-2">
             <div className="h-3.5 w-32 animate-pulse rounded bg-stone-200/70" />
@@ -71,7 +71,7 @@ export function AdminPostMetaEditSkeleton() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 rounded-2xl border border-stone-200/80 bg-white/90 px-4 py-4 shadow-sm sm:px-5">
+      <div className="flex flex-wrap gap-2 rounded-2xl border border-stone-200/80 bg-white/90 px-4 py-4 sm:px-5">
         <div className="h-10 w-40 animate-pulse rounded-full bg-stone-100" />
         <div className="h-10 w-44 animate-pulse rounded-full bg-stone-100" />
       </div>

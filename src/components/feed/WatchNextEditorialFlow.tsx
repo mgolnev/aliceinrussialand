@@ -107,7 +107,7 @@ function EditorialWideBandCard({
   return (
     <Link
       href={`/p/${item.slug}`}
-      className="group relative block overflow-hidden rounded-3xl bg-[#fffdf9]/90 shadow-[0_14px_40px_-36px_rgba(60,44,29,0.5)] ring-1 ring-stone-200/60"
+      className="group relative block overflow-hidden rounded-3xl bg-[#fffdf9]/90 ring-1 ring-stone-200/60"
       aria-label={`Открыть: ${item.title}`}
     >
       <LinkPendingBackdrop />
@@ -227,7 +227,7 @@ function HeroStory({
   return (
     <Link
       href={`/p/${item.slug}`}
-      className="group relative block overflow-hidden rounded-3xl bg-[#fffdf9]/90 shadow-[0_18px_50px_-40px_rgba(60,44,29,0.55)] ring-1 ring-stone-200/60"
+      className="group relative block overflow-hidden rounded-3xl bg-[#fffdf9]/90 ring-1 ring-stone-200/60"
       aria-label={`Следующая история: ${item.title}`}
     >
       <LinkPendingBackdrop />
@@ -575,4 +575,3 @@ export function WatchNextEditorialFlow({
     </div>
   );
 }
-

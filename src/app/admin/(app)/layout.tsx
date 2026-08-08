@@ -42,10 +42,10 @@ export default async function AdminAppLayout({
                   alt=""
                   width={40}
                   height={40}
-                  className="h-10 w-10 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-stone-200/80"
+                  className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-stone-200/80"
                 />
               ) : (
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-stone-900 text-xs font-bold uppercase tracking-tighter text-white shadow-sm">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-stone-900 text-xs font-bold uppercase tracking-tighter text-white ">
                   {initials}
                 </div>
               )}

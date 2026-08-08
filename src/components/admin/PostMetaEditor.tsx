@@ -108,7 +108,7 @@ export function PostMetaEditor({ initial, siteUrl }: Props) {
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <div className="rounded-2xl border border-stone-200/80 bg-white/90 px-4 py-4 shadow-sm sm:px-5 sm:py-5">
+      <div className="rounded-2xl border border-stone-200/80 bg-white/90 px-4 py-4 sm:px-5 sm:py-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span
             className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -141,7 +141,7 @@ export function PostMetaEditor({ initial, siteUrl }: Props) {
         </p>
       ) : null}
 
-      <div className="space-y-4 rounded-2xl border border-stone-200/80 bg-white/90 px-4 py-4 shadow-sm sm:px-5 sm:py-5">
+      <div className="space-y-4 rounded-2xl border border-stone-200/80 bg-white/90 px-4 py-4 sm:px-5 sm:py-5">
         <label className="block text-[14px] font-medium text-stone-800">
           Slug (путь URL)
           <input
@@ -189,7 +189,7 @@ export function PostMetaEditor({ initial, siteUrl }: Props) {
           <button
             type="button"
             disabled={saving}
-            className="rounded-full bg-stone-900 px-4 py-2.5 text-[14px] font-medium text-white shadow-sm hover:bg-stone-800 disabled:opacity-50"
+            className="rounded-full bg-stone-900 px-4 py-2.5 text-[14px] font-medium text-white hover:bg-stone-800 disabled:opacity-50"
             onClick={() => void saveMeta()}
           >
             Сохранить
@@ -198,7 +198,7 @@ export function PostMetaEditor({ initial, siteUrl }: Props) {
             <button
               type="button"
               disabled={saving}
-              className="rounded-full border border-stone-300 bg-white px-4 py-2.5 text-[14px] font-medium text-stone-800 shadow-sm hover:bg-stone-50 disabled:opacity-50"
+              className="rounded-full border border-stone-300 bg-white px-4 py-2.5 text-[14px] font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-50"
               onClick={() =>
                 void setStatus(POST_STATUS.DRAFT, "Снято с публикации")
               }
@@ -209,7 +209,7 @@ export function PostMetaEditor({ initial, siteUrl }: Props) {
             <button
               type="button"
               disabled={saving}
-              className="rounded-full bg-emerald-700 px-4 py-2.5 text-[14px] font-medium text-white shadow-sm hover:bg-emerald-800 disabled:opacity-50"
+              className="rounded-full bg-emerald-700 px-4 py-2.5 text-[14px] font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
               onClick={() => void setStatus(POST_STATUS.PUBLISHED, "Опубликовано")}
             >
               Опубликовать
@@ -218,7 +218,7 @@ export function PostMetaEditor({ initial, siteUrl }: Props) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 rounded-2xl border border-stone-200/80 bg-white/90 px-4 py-4 shadow-sm sm:flex-row sm:flex-wrap sm:px-5">
+      <div className="flex flex-col gap-2 rounded-2xl border border-stone-200/80 bg-white/90 px-4 py-4 sm:flex-row sm:flex-wrap sm:px-5">
         <Link
           href="/admin/posts"
           className="inline-flex items-center justify-center rounded-full border border-stone-200 bg-white px-4 py-2.5 text-center text-[14px] text-stone-700 hover:bg-stone-50"

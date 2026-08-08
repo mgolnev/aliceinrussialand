@@ -135,7 +135,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         <div className="mt-4 sm:mt-5">
           <Link
             href={`/?category=${encodeURIComponent(category.slug)}`}
-            className="inline-flex w-full min-h-11 items-center justify-center gap-2 rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-stone-800 active:scale-[0.99] sm:w-auto sm:min-h-0 sm:py-2.5"
+            className="inline-flex w-full min-h-11 items-center justify-center gap-2 rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-800 active:scale-[0.99] sm:w-auto sm:min-h-0 sm:py-2.5"
           >
             Смотреть в ленте
             <ChevronRight
@@ -159,4 +159,3 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
     </>
   );
 }
-

@@ -47,7 +47,7 @@ export function SocialLinksSection({
                     ? "noopener noreferrer me"
                     : "noopener noreferrer"
                 }
-                className="flex items-center gap-4 rounded-2xl border border-stone-200/90 bg-white px-4 py-3.5 shadow-[0_6px_24px_-12px_rgba(60,44,29,0.18)] transition hover:border-stone-300 hover:bg-stone-50/80 active:scale-[0.99]"
+                className="flex items-center gap-4 rounded-2xl border border-stone-200/90 bg-white px-4 py-3.5 transition hover:border-stone-300 hover:bg-stone-50/80 active:scale-[0.99]"
               >
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full ring-1 ring-stone-200/80">
                   <SocialBrandIcon kind={s.kind} size={36} />

@@ -499,7 +499,7 @@ export function ImageLightbox({
             type="button"
             aria-label="Поделиться фотографией"
             disabled={shareBusy}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-[15px] font-medium text-white/90 shadow-sm backdrop-blur-md transition hover:bg-white/15 active:scale-90 disabled:opacity-50"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-[15px] font-medium text-white/90 backdrop-blur-md transition hover:bg-white/15 active:scale-90 disabled:opacity-50"
             onClick={() => void shareCurrentPhoto()}
           >
             <ShareForwardIcon size={20} className="text-white/90" />
@@ -559,7 +559,7 @@ export function ImageLightbox({
               <img
                 src={slide.src}
                 alt={slide.alt}
-                className="h-full w-full select-none rounded-lg object-contain object-center shadow-2xl"
+                className="h-full w-full select-none rounded-lg object-contain object-center "
                 draggable={false}
               />
             </div>

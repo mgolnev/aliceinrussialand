@@ -5,7 +5,7 @@ export default function AdminPostsLoading() {
       aria-busy="true"
       aria-label="Загрузка списка постов"
     >
-      <div className="overflow-hidden rounded-2xl border border-stone-200/60 bg-white shadow-sm ring-1 ring-stone-100/80">
+      <div className="overflow-hidden rounded-2xl border border-stone-200/60 bg-white ring-1 ring-stone-100/80">
         <ul className="divide-y divide-stone-200/50" aria-hidden>
           {Array.from({ length: 8 }).map((_, i) => (
             <li

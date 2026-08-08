@@ -309,7 +309,7 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
                     : "Сбросить заготовку и удалить черновик с сервера"
                 }
                 disabled={working}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90 disabled:opacity-50"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition active:scale-90 disabled:opacity-50"
                 onClick={() => void discardComposer()}
               >
                 <X size={18} aria-hidden />
@@ -370,7 +370,7 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
           }}
         >
           <div
-            className="w-full max-w-md rounded-t-2xl border border-stone-200 bg-white p-5 shadow-2xl sm:rounded-2xl"
+            className="w-full max-w-md rounded-t-2xl border border-stone-200 bg-white p-5 sm:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <h3

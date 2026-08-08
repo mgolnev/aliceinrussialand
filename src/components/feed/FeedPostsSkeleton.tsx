@@ -10,7 +10,7 @@ export function FeedPostsSkeleton() {
       {[0, 1, 2, 3].map((i) => (
         <div
           key={i}
-          className="animate-pulse overflow-hidden rounded-[24px] border border-stone-200/80 bg-white/95 shadow-[0_8px_30px_-10px_rgba(60,44,29,0.12)] sm:rounded-[30px]"
+          className="animate-pulse overflow-hidden rounded-[24px] border border-stone-200/80 bg-white/95 sm:rounded-[30px]"
         >
           <div className="space-y-4 px-3 py-4 sm:px-5 sm:py-5">
             <div className="flex items-center justify-between gap-3">

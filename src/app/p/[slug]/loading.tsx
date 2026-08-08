@@ -17,7 +17,7 @@ export default async function PostLoading() {
       />
       <div className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-10">
         <div
-          className="overflow-hidden rounded-[24px] border border-stone-200/80 bg-white/95 shadow-[0_8px_30px_-10px_rgba(60,44,29,0.15)] sm:rounded-[30px]"
+          className="overflow-hidden rounded-[24px] border border-stone-200/80 bg-white/95 sm:rounded-[30px]"
           aria-busy="true"
         >
           <div className="flex items-start justify-between gap-3 px-3 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-5">
@@ -40,7 +40,7 @@ export default async function PostLoading() {
 
         <div className="mt-8 sm:mt-10">
           <div className="mb-2 h-5 w-40 animate-pulse rounded bg-stone-200/70 sm:mb-2.5" />
-          <div className="overflow-hidden rounded-2xl border border-stone-200/70 bg-[#fffdf9]/90 shadow-sm">
+          <div className="overflow-hidden rounded-2xl border border-stone-200/70 bg-[#fffdf9]/90 ">
             <div className="flex h-40 border-b border-stone-200/50 sm:h-44">
               <div className="h-full w-[60%] animate-pulse bg-stone-200/50" />
               <div className="flex h-full w-[40%] flex-col justify-center gap-2 border-l border-stone-200/40 px-3 py-3">

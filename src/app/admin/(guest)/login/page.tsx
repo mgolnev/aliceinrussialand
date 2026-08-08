@@ -31,7 +31,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-md rounded-[32px] border border-stone-200/80 bg-white/92 p-8 shadow-[0_24px_70px_-44px_rgba(60,44,29,0.5)] backdrop-blur-sm">
+    <div className="w-full max-w-md rounded-[32px] border border-stone-200/80 bg-white/92 p-8 backdrop-blur-sm">
       <div className="mb-6 flex items-center gap-3">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-stone-900 text-sm font-semibold text-white">
           AR
@@ -79,7 +79,7 @@ export default function AdminLoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="w-full max-w-md rounded-[32px] border border-stone-200 bg-white p-8 text-center text-sm text-stone-500 shadow-sm">
+        <div className="w-full max-w-md rounded-[32px] border border-stone-200 bg-white p-8 text-center text-sm text-stone-500 ">
           Загрузка…
         </div>
       }

@@ -58,7 +58,7 @@ export function AdminPostsList({
         </label>
         <select
           id="admin-posts-sort"
-          className="min-w-0 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-800 shadow-sm outline-none transition focus:border-stone-400 focus:ring-2 focus:ring-stone-400/25 sm:max-w-md"
+          className="min-w-0 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-800 outline-none transition focus:border-stone-400 focus:ring-2 focus:ring-stone-400/25 sm:max-w-md"
           value={sortMode}
           onChange={(e) => {
             const v = e.target.value;
@@ -72,7 +72,7 @@ export function AdminPostsList({
           ))}
         </select>
       </div>
-      <ul className="rounded-2xl border border-stone-200/60 bg-white shadow-sm ring-1 ring-stone-100/80">
+      <ul className="rounded-2xl border border-stone-200/60 bg-white ring-1 ring-stone-100/80">
         {sorted.map((p) => (
           <AdminPostRow
             key={p.id}

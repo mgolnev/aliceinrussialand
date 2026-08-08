@@ -547,7 +547,7 @@ export function PostCard({
   return (
     <>
       <article
-        className={`relative min-w-0 scroll-mt-24 ${articleClip} rounded-[24px] border border-stone-200/80 bg-white/95 shadow-[0_8px_30px_-10px_rgba(60,44,29,0.15)] backdrop-blur-sm sm:rounded-[30px] ${articlePad}`}
+        className={`relative min-w-0 scroll-mt-24 ${articleClip} rounded-[24px] border border-stone-200/80 bg-white/95 backdrop-blur-sm sm:rounded-[30px] ${articlePad}`}
       >
         {showPostLinkOverlay ? (
           <PostOpenLinkOverlay href={postUrl} ariaLabel={openPostAria} />
@@ -631,7 +631,7 @@ export function PostCard({
               <button
                 type="button"
                 aria-label="Закрыть редактирование"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition active:scale-90"
                 onClick={() => cancelEdit()}
               >
                 <X size={18} />
@@ -643,7 +643,7 @@ export function PostCard({
                   type="button"
                   aria-expanded={menuOpen}
                   aria-haspopup="menu"
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition active:scale-90"
                   onClick={() => setMenuOpen((value) => !value)}
                 >
                   <MoreHorizontal size={18} />
@@ -652,7 +652,7 @@ export function PostCard({
                   ? createPortal(
                       <div
                         ref={menuPanelRef}
-                        className="fixed z-[100] w-56 overflow-hidden rounded-2xl border border-stone-200 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100"
+                        className="fixed z-[100] w-56 overflow-hidden rounded-2xl border border-stone-200 bg-white p-1.5 animate-in fade-in zoom-in-95 duration-100"
                         style={{
                           top: menuPos.top,
                           right: menuPos.right,
@@ -743,7 +743,7 @@ export function PostCard({
                 type="button"
                 aria-label="Поделиться"
                 title="Поделиться"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition active:scale-90"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();

@@ -144,7 +144,7 @@ export default async function AboutPage() {
             <img
               src={aboutPhotoUrl}
               alt={s.displayName}
-              className="mt-6 w-full rounded-2xl object-cover shadow-md"
+              className="mt-6 w-full rounded-2xl object-cover "
             />
           ) : null}
           {s.bio ? (

@@ -161,7 +161,7 @@ export function SettingsForm({ initial }: Props) {
 
   return (
     <>
-    <div className="space-y-6 rounded-[28px] border border-stone-200/80 bg-white/90 p-6 pb-24 shadow-[0_20px_50px_-40px_rgba(60,44,29,0.35)] sm:pb-28">
+    <div className="space-y-6 rounded-[28px] border border-stone-200/80 bg-white/90 p-6 pb-24 sm:pb-28">
       <div className="flex flex-col gap-4 rounded-2xl border border-stone-200 bg-stone-50/80 p-4 sm:flex-row sm:items-center">
         <div className="flex items-center gap-4">
           {avatarPreviewUrl ? (
@@ -171,10 +171,10 @@ export function SettingsForm({ initial }: Props) {
               alt=""
               width={72}
               height={72}
-              className="h-[72px] w-[72px] rounded-full object-cover shadow-sm ring-2 ring-white"
+              className="h-[72px] w-[72px] rounded-full object-cover ring-2 ring-white"
             />
           ) : (
-            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-stone-800 text-lg font-bold uppercase tracking-tight text-white shadow-sm">
+            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-stone-800 text-lg font-bold uppercase tracking-tight text-white ">
               {form.displayName.slice(0, 2)}
             </div>
           )}
@@ -200,7 +200,7 @@ export function SettingsForm({ initial }: Props) {
           <button
             type="button"
             disabled={avatarBusy}
-            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-800 shadow-sm hover:bg-stone-50 disabled:opacity-50"
+            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-50"
             onClick={() => avatarInputRef.current?.click()}
           >
             {avatarBusy ? "Загрузка…" : "Загрузить фото"}
@@ -209,7 +209,7 @@ export function SettingsForm({ initial }: Props) {
             <button
               type="button"
               disabled={avatarBusy}
-              className="rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 disabled:opacity-50"
+              className="rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
               onClick={() => void removeAvatar()}
             >
               Убрать
@@ -246,7 +246,7 @@ export function SettingsForm({ initial }: Props) {
             <button
               type="button"
               disabled={aboutPhotoBusy}
-              className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-800 shadow-sm hover:bg-stone-50 disabled:opacity-50"
+              className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-50"
               onClick={() => aboutPhotoInputRef.current?.click()}
             >
               {aboutPhotoBusy ? "Загрузка…" : "Загрузить"}
@@ -255,7 +255,7 @@ export function SettingsForm({ initial }: Props) {
               <button
                 type="button"
                 disabled={aboutPhotoBusy}
-                className="rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 disabled:opacity-50"
+                className="rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
                 onClick={() => void removeAboutPhoto()}
               >
                 Убрать
@@ -425,7 +425,7 @@ export function SettingsForm({ initial }: Props) {
           <h2 className="text-lg font-medium">Соцсети</h2>
           <button
             type="button"
-            className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 shadow-sm"
+            className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 "
             onClick={addSocial}
           >
             + Ссылка
@@ -479,7 +479,7 @@ export function SettingsForm({ initial }: Props) {
       </div>
     </div>
 
-    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200/80 bg-[#fffdf9]/95 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] shadow-[0_-10px_40px_-16px_rgba(60,44,29,0.14)] backdrop-blur-xl supports-[backdrop-filter]:bg-[#fffdf9]/88">
+    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200/80 bg-[#fffdf9]/95 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] backdrop-blur-xl supports-[backdrop-filter]:bg-[#fffdf9]/88">
       <div className="mx-auto flex max-w-5xl flex-col gap-3 px-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6">
         {message ? (
           <p
@@ -494,7 +494,7 @@ export function SettingsForm({ initial }: Props) {
         )}
         <button
           type="button"
-          className="w-full shrink-0 rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-stone-800 active:scale-[0.99] sm:w-auto"
+          className="w-full shrink-0 rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-800 active:scale-[0.99] sm:w-auto"
           onClick={() => void save()}
         >
           Сохранить настройки

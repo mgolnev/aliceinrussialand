@@ -182,7 +182,7 @@ function SortableItem({
     <div
       ref={setNodeRef}
       style={style}
-      className="grid grid-cols-[auto_minmax(0,1fr)] items-stretch overflow-hidden rounded-[24px] border border-stone-200/80 bg-white/95 shadow-[0_8px_30px_-10px_rgba(60,44,29,0.15)] backdrop-blur-sm sm:rounded-[30px]"
+      className="grid grid-cols-[auto_minmax(0,1fr)] items-stretch overflow-hidden rounded-[24px] border border-stone-200/80 bg-white/95 backdrop-blur-sm sm:rounded-[30px]"
     >
       <div className="flex w-9 shrink-0 flex-col items-center pt-3 sm:w-10 sm:pt-4">
         <button
@@ -209,7 +209,7 @@ function SortableItem({
               <button
                 type="button"
                 aria-label="Закрыть редактирование"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition active:scale-90"
                 disabled={rowBusy}
                 onClick={() => {
                   setEditing(false);
@@ -263,7 +263,7 @@ function SortableItem({
                 <button
                   type="button"
                   disabled={rowBusy || !draft.trim()}
-                  className="flex shrink-0 items-center rounded-full bg-stone-900 px-3 py-2 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50 sm:px-5 sm:text-sm"
+                  className="flex shrink-0 items-center rounded-full bg-stone-900 px-3 py-2 text-[13px] font-bold text-white transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50 sm:px-5 sm:text-sm"
                   onClick={() => void saveCategory()}
                 >
                   Сохранить
@@ -293,7 +293,7 @@ function SortableItem({
                   aria-haspopup="menu"
                   aria-label="Действия"
                   disabled={menuDisabled}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90 disabled:opacity-50"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition active:scale-90 disabled:opacity-50"
                   onClick={() => setMenuOpen((v) => !v)}
                 >
                   <MoreHorizontal size={18} />
@@ -302,7 +302,7 @@ function SortableItem({
                   ? createPortal(
                       <div
                         ref={menuPanelRef}
-                        className="fixed z-[100] w-56 overflow-hidden rounded-2xl border border-stone-200 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100"
+                        className="fixed z-[100] w-56 overflow-hidden rounded-2xl border border-stone-200 bg-white p-1.5 animate-in fade-in zoom-in-95 duration-100"
                         style={{
                           top: menuPos.top,
                           right: menuPos.right,
@@ -471,7 +471,7 @@ export function CategoriesPanel({ initial }: { initial: CategoryRow[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[24px] border border-stone-200/80 bg-white/90 p-4 shadow-sm sm:p-5">
+      <div className="rounded-[24px] border border-stone-200/80 bg-white/90 p-4 sm:p-5">
         <h2 className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">
           Новая категория
         </h2>
@@ -494,7 +494,7 @@ export function CategoriesPanel({ initial }: { initial: CategoryRow[] }) {
             <button
               type="button"
               disabled={busy || !!savingId || !name.trim()}
-              className="flex shrink-0 items-center rounded-full bg-stone-900 px-3 py-2 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50 sm:px-5 sm:text-sm"
+              className="flex shrink-0 items-center rounded-full bg-stone-900 px-3 py-2 text-[13px] font-bold text-white transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50 sm:px-5 sm:text-sm"
               onClick={() => void addCategory()}
             >
               Добавить

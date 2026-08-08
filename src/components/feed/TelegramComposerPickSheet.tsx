@@ -145,7 +145,7 @@ export function TelegramComposerPickSheet({
       }}
     >
       <div
-        className="flex max-h-[min(88vh,640px)] w-full flex-col rounded-t-[22px] bg-[#fffdf9] shadow-2xl sm:max-h-[80vh] sm:max-w-lg sm:rounded-[22px]"
+        className="flex max-h-[min(88vh,640px)] w-full flex-col rounded-t-[22px] bg-[#fffdf9] sm:max-h-[80vh] sm:max-w-lg sm:rounded-[22px]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stone-200/80 px-4 py-3 sm:px-5">
@@ -203,7 +203,7 @@ export function TelegramComposerPickSheet({
                         setPicking(null);
                       });
                     }}
-                    className={`flex w-full gap-3 rounded-2xl border p-3 text-left shadow-sm transition active:scale-[0.99] disabled:opacity-60 ${
+                    className={`flex w-full gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.99] disabled:opacity-60 ${
                       alreadyImported
                         ? "border-stone-200/80 bg-stone-100/70 opacity-95 hover:border-stone-300 hover:bg-stone-100"
                         : "border-stone-200/90 bg-white hover:border-stone-300 hover:bg-stone-50/80"
@@ -265,7 +265,7 @@ export function TelegramComposerPickSheet({
                 type="button"
                 disabled={loadingMore}
                 onClick={() => void load(nextBefore, true)}
-                className="w-full rounded-xl border border-stone-200 bg-white py-2.5 text-sm font-medium text-stone-800 shadow-sm hover:bg-stone-50 disabled:opacity-50"
+                className="w-full rounded-xl border border-stone-200 bg-white py-2.5 text-sm font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-50"
               >
                 {loadingMore ? (
                   <span className="inline-flex items-center justify-center gap-2">

@@ -110,7 +110,7 @@ function PostThumb({
       >
         <ImageIcon className="h-[22%] min-h-4 w-[22%] min-w-4 text-stone-400" strokeWidth={1.5} />
         {extra > 0 ? (
-          <span className="absolute bottom-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded bg-stone-900/88 px-0.5 text-[9px] font-bold leading-none text-white shadow-sm">
+          <span className="absolute bottom-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded bg-stone-900/88 px-0.5 text-[9px] font-bold leading-none text-white ">
             +{extra}
           </span>
         ) : null}
@@ -135,7 +135,7 @@ function PostThumb({
         loading="lazy"
       />
       {extra > 0 ? (
-        <span className="absolute bottom-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded bg-stone-900/88 px-0.5 text-[9px] font-bold leading-none text-white shadow-sm">
+        <span className="absolute bottom-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded bg-stone-900/88 px-0.5 text-[9px] font-bold leading-none text-white ">
           +{extra}
         </span>
       ) : null}
@@ -556,7 +556,7 @@ export function AdminPostRow({
             <button
               ref={menuTriggerRef}
               type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition active:scale-90"
               aria-expanded={menuOpen}
               aria-haspopup="menu"
               aria-label="Действия"
@@ -572,7 +572,7 @@ export function AdminPostRow({
               ? createPortal(
                   <div
                     ref={menuPanelRef}
-                    className="fixed z-[200] w-56 overflow-hidden rounded-2xl border border-stone-200 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100"
+                    className="fixed z-[200] w-56 overflow-hidden rounded-2xl border border-stone-200 bg-white p-1.5 animate-in fade-in zoom-in-95 duration-100"
                     style={{ top: menuPos.top, right: menuPos.right }}
                     role="menu"
                   >
@@ -674,7 +674,7 @@ export function AdminPostRow({
                 <button
                   type="button"
                   aria-label="Закрыть редактирование"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 shadow-sm transition active:scale-90"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition active:scale-90"
                   disabled={working}
                   onClick={() => cancelEdit()}
                 >
@@ -739,7 +739,7 @@ export function AdminPostRow({
                 }
               />
 
-              <details className="mt-5 overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-sm ring-1 ring-stone-100/80">
+              <details className="mt-5 overflow-hidden rounded-2xl border border-stone-200/80 bg-white ring-1 ring-stone-100/80">
                 <summary className="cursor-pointer list-none px-4 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-stone-500 transition hover:bg-stone-50/90 [&::-webkit-details-marker]:hidden">
                   Slug и SEO
                 </summary>

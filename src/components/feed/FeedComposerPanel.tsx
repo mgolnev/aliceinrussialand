@@ -63,7 +63,7 @@ function SortableThumb({
     <div
       ref={setNodeRef}
       style={style}
-      className="group relative min-w-0 overflow-hidden rounded-xl border border-stone-200 bg-stone-50 shadow-sm"
+      className="group relative min-w-0 overflow-hidden rounded-xl border border-stone-200 bg-stone-50 "
     >
       <button
         type="button"
@@ -81,7 +81,7 @@ function SortableThumb({
       <button
         type="button"
         onClick={onDelete}
-        className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-red-600 shadow-sm transition hover:bg-white active:scale-90"
+        className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-red-600 transition hover:bg-white active:scale-90"
       >
         <X size={14} />
       </button>
@@ -187,7 +187,7 @@ export function FeedComposerPanel({
 
   const shellClass = isEmbedded
     ? `min-w-0 ${className}`
-    : `overflow-hidden rounded-[24px] border border-stone-200/80 bg-white shadow-[0_12px_40px_-12px_rgba(60,44,29,0.2)] sm:rounded-[30px] ${className}`;
+    : `overflow-hidden rounded-[24px] border border-stone-200/80 bg-white sm:rounded-[30px] ${className}`;
 
   const innerClass = isEmbedded
     ? "min-w-0"
@@ -391,7 +391,7 @@ export function FeedComposerPanel({
                 type="button"
                 disabled={working || uploadBlocksSubmit}
                 onClick={() => setQuickMenuOpen(true)}
-                className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-stone-900 text-white shadow-sm transition-colors hover:bg-stone-800 active:scale-90 disabled:opacity-50"
+                className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-stone-900 text-white transition-colors hover:bg-stone-800 active:scale-90 disabled:opacity-50"
                 aria-label="Добавить контент"
                 aria-haspopup="dialog"
                 aria-expanded={quickMenuOpen}
@@ -406,7 +406,7 @@ export function FeedComposerPanel({
                 >
                   <div
                     role="menu"
-                    className="w-full rounded-t-2xl border border-stone-200/80 bg-white px-4 pt-4 pb-[max(1.75rem,calc(env(safe-area-inset-bottom,0px)+1.25rem))] shadow-xl sm:max-w-sm sm:rounded-2xl sm:p-3 sm:pb-3"
+                    className="w-full rounded-t-2xl border border-stone-200/80 bg-white px-4 pt-4 pb-[max(1.75rem,calc(env(safe-area-inset-bottom,0px)+1.25rem))] sm:max-w-sm sm:rounded-2xl sm:p-3 sm:pb-3"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <p className="pb-3 text-xs font-semibold uppercase tracking-wide text-stone-400 sm:px-0 sm:pb-2">
@@ -500,7 +500,7 @@ export function FeedComposerPanel({
               type="button"
               onClick={() => onSubmitPublish()}
               disabled={!canSubmit || working || uploadBlocksSubmit}
-              className="flex shrink-0 items-center gap-1.5 rounded-full bg-stone-900 px-3 py-2 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50 sm:gap-2 sm:px-5 sm:text-sm"
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-stone-900 px-3 py-2 text-[13px] font-bold text-white transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50 sm:gap-2 sm:px-5 sm:text-sm"
             >
               {working ? "..." : publishLabel}
               <Send size={15} className="-rotate-12 sm:h-4 sm:w-4" />

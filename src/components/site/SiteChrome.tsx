@@ -63,10 +63,10 @@ export function SiteChrome({
               alt=""
               width={40}
               height={40}
-              className="h-10 w-10 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-stone-200/80 group-hover:ring-stone-300"
+              className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-stone-200/80 group-hover:ring-stone-300"
             />
           ) : (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-stone-900 text-white shadow-sm group-hover:bg-stone-800">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-stone-900 text-white group-hover:bg-stone-800">
               <span className="text-sm font-bold uppercase tracking-tighter">
                 {displayName.slice(0, 2)}
               </span>

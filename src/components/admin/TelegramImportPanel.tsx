@@ -243,7 +243,7 @@ export function TelegramImportPanel({ defaultChannel }: Props) {
   return (
     <>
       <div className={items ? "space-y-6 pb-24 sm:pb-28" : "space-y-6"}>
-        <div className="rounded-[24px] border border-stone-200/80 bg-white/90 p-4 shadow-sm sm:p-5">
+        <div className="rounded-[24px] border border-stone-200/80 bg-white/90 p-4 sm:p-5">
           <h2 className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">
             Канал для предпросмотра
           </h2>
@@ -260,7 +260,7 @@ export function TelegramImportPanel({ defaultChannel }: Props) {
               <button
                 type="button"
                 disabled={loading}
-                className="flex shrink-0 items-center rounded-full bg-stone-900 px-3 py-2 text-[13px] font-bold text-white shadow-sm transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50 sm:px-5 sm:text-sm"
+                className="flex shrink-0 items-center rounded-full bg-stone-900 px-3 py-2 text-[13px] font-bold text-white transition-all hover:bg-stone-800 active:scale-95 disabled:opacity-50 sm:px-5 sm:text-sm"
                 onClick={() => void loadList()}
               >
                 <ButtonLabelSwap
@@ -283,7 +283,7 @@ export function TelegramImportPanel({ defaultChannel }: Props) {
         ) : null}
 
         {items ? (
-          <div className="flex flex-col gap-4 rounded-[24px] border border-stone-200/80 bg-white/90 p-4 shadow-sm sm:p-5">
+          <div className="flex flex-col gap-4 rounded-[24px] border border-stone-200/80 bg-white/90 p-4 sm:p-5">
             <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-stone-200/80 bg-stone-50/60 p-4 transition hover:bg-stone-50/90">
               <input
                 type="checkbox"
@@ -307,7 +307,7 @@ export function TelegramImportPanel({ defaultChannel }: Props) {
                 return (
                   <li
                     key={it.messageId}
-                    className={`flex items-center gap-3 rounded-2xl border border-stone-200/70 p-3 shadow-sm ${
+                    className={`flex items-center gap-3 rounded-2xl border border-stone-200/70 p-3 ${
                       imported
                         ? "bg-stone-100/80 opacity-90"
                         : "bg-white"
@@ -352,13 +352,13 @@ export function TelegramImportPanel({ defaultChannel }: Props) {
       </div>
 
       {items ? (
-        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200/80 bg-[#fffdf9]/95 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] shadow-[0_-10px_40px_-16px_rgba(60,44,29,0.14)] backdrop-blur-xl supports-[backdrop-filter]:bg-[#fffdf9]/88">
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200/80 bg-[#fffdf9]/95 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] backdrop-blur-xl supports-[backdrop-filter]:bg-[#fffdf9]/88">
           <div className="mx-auto flex max-w-5xl flex-row flex-nowrap items-center justify-end gap-2 px-3 sm:gap-3 sm:px-6">
             {nextBefore ? (
               <button
                 type="button"
                 disabled={loadingMore}
-                className="shrink-0 whitespace-nowrap rounded-full border border-stone-300 bg-white px-3 py-2 text-[13px] font-medium text-stone-700 shadow-sm transition hover:bg-stone-50 disabled:opacity-60 sm:px-4 sm:py-2.5 sm:text-sm"
+                className="shrink-0 whitespace-nowrap rounded-full border border-stone-300 bg-white px-3 py-2 text-[13px] font-medium text-stone-700 transition hover:bg-stone-50 disabled:opacity-60 sm:px-4 sm:py-2.5 sm:text-sm"
                 onClick={() => void loadList(false)}
               >
                 <ButtonLabelSwap
@@ -371,7 +371,7 @@ export function TelegramImportPanel({ defaultChannel }: Props) {
             <button
               type="button"
               disabled={importing}
-              className={`shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-[13px] font-semibold text-white shadow-sm transition-colors duration-300 disabled:opacity-60 sm:px-4 sm:py-2.5 sm:text-sm ${
+              className={`shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-[13px] font-semibold text-white transition-colors duration-300 disabled:opacity-60 sm:px-4 sm:py-2.5 sm:text-sm ${
                 importSuccessFlash
                   ? "bg-emerald-600 hover:bg-emerald-600 active:bg-emerald-700"
                   : "bg-stone-900 hover:bg-stone-800 active:scale-[0.99]"

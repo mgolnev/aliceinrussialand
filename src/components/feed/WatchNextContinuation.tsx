@@ -118,7 +118,7 @@ export function WatchNextContinuation({
   if (!hasPosts && !hasTopics) return null;
 
   const chipClassName =
-    "rounded-full border border-stone-300/90 bg-white/90 px-3 py-1.5 text-sm font-medium normal-case text-stone-800 shadow-sm transition hover:border-stone-400 hover:bg-white";
+    "rounded-full border border-stone-300/90 bg-white/90 px-3 py-1.5 text-sm font-medium normal-case text-stone-800 transition hover:border-stone-400 hover:bg-white";
 
   return (
     <div className="mt-8 sm:mt-10">
@@ -129,14 +129,14 @@ export function WatchNextContinuation({
         Смотреть дальше
       </h2>
       <section
-        className="overflow-hidden rounded-2xl border border-stone-200/80 bg-[#fffdf9]/90 shadow-[0_12px_40px_-28px_rgba(60,44,29,0.35)]"
+        className="overflow-hidden rounded-2xl border border-stone-200/80 bg-[#fffdf9]/90 "
         aria-labelledby={sectionHeadingId}
       >
         {featured ? (
           <Link
             href={`/p/${featured.slug}`}
             aria-label={`Продолжить смотреть: ${featured.preview.slice(0, 120)}`}
-            className="group relative flex h-40 min-h-0 w-full shrink-0 overflow-hidden rounded-t-2xl border-b border-stone-200/80 bg-white shadow-[0_12px_36px_-18px_rgba(55,42,28,0.45)] outline-none ring-stone-400/30 transition-[box-shadow,background-color,border-color,transform] duration-200 hover:border-stone-300/90 hover:bg-[#fffdfb] hover:shadow-[0_18px_48px_-20px_rgba(55,42,28,0.5)] focus-visible:ring-2 focus-visible:ring-inset motion-safe:active:scale-[0.99] motion-safe:active:bg-stone-50/95 sm:h-44"
+            className="group relative flex h-40 min-h-0 w-full shrink-0 overflow-hidden rounded-t-2xl border-b border-stone-200/80 bg-white outline-none ring-stone-400/30 transition-[background-color,border-color,transform] duration-200 hover:border-stone-300/90 hover:bg-[#fffdfb] focus-visible:ring-2 focus-visible:ring-inset motion-safe:active:scale-[0.99] motion-safe:active:bg-stone-50/95 sm:h-44"
           >
             <LinkPendingBackdrop />
             <div className="relative z-[1] h-full w-[60%] max-w-[60%] shrink-0 overflow-hidden bg-[#ede8e0]">
