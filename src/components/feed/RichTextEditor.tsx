@@ -32,7 +32,8 @@ function selectionIsInside(root: HTMLElement) {
 
 export function RichTextEditor({ value, onChange, placeholder, disabled }: Props) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const lastEmittedRef = useRef(value);
+  /** Последнее значение, уже синхронизированное с DOM contenteditable. */
+  const lastEmittedRef = useRef<string | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
   const [hasSelection, setHasSelection] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
@@ -117,10 +118,10 @@ export function RichTextEditor({ value, onChange, placeholder, disabled }: Props
         role="textbox"
         aria-multiline="true"
         aria-label="Текст публикации"
+        dir="ltr"
         data-placeholder={placeholder}
         className="rich-text-editor min-h-[120px] w-full whitespace-pre-wrap border-none bg-transparent p-0 text-base leading-relaxed text-stone-900 outline-none placeholder:text-stone-400 sm:min-h-[160px] [&_a]:text-stone-900 [&_a]:underline [&_a]:decoration-stone-400 [&_a]:underline-offset-2"
-        style={{ fontSize: "max(16px, 1rem)" }}
-        dangerouslySetInnerHTML={{ __html: richTextToEditorHtml(value) }}
+        style={{ fontSize: "max(16px, 1rem)", unicodeBidi: "plaintext" }}
         onInput={emitValue}
         onFocus={(event) => {
           handleMobileEditableFocus(event);
