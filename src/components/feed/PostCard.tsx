@@ -739,21 +739,16 @@ export function PostCard({
                     )
                   : null}
               </div>
-            ) : (
-              <button
-                type="button"
-                aria-label="Поделиться"
-                title="Поделиться"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition active:scale-90"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  sharePost();
-                }}
+            ) : !standalone ? (
+              <Link
+                href={postUrl}
+                prefetch
+                aria-label={openPostAria}
+                className="inline-flex h-9 items-center rounded-full border border-stone-200 bg-white px-3 text-[13px] font-semibold text-stone-700 transition hover:border-stone-300 hover:text-stone-950 active:scale-95"
               >
-                <ShareForwardIcon size={20} className="text-stone-700" />
-              </button>
-            )}
+                Смотреть всё
+              </Link>
+            ) : null}
           </div>
         </header>
 
@@ -834,23 +829,6 @@ export function PostCard({
                 <PostRichText value={postBodyForRender} />
               </div>
             ) : null}
-            {!standalone ? (
-              <div
-                className={`${
-                  postBodyForRender ? "mb-3 sm:mb-4 -mt-1" : "mb-2 sm:mb-2.5"
-                }`}
-              >
-                <Link
-                  href={postUrl}
-                  prefetch
-                  aria-label={openPostAria}
-                  className="pointer-events-auto relative z-[2] inline-flex items-center text-[11px] font-medium text-stone-400 transition hover:text-stone-600"
-                >
-                  Открыть пост
-                </Link>
-              </div>
-            ) : null}
-
             {!standalone && post.images.length > 0 ? (
               <div className="pointer-events-auto min-w-0">
                 <MediaGrid

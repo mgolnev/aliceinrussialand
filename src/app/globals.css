@@ -38,6 +38,14 @@ body {
   body {
     font-size: 14px;
   }
+
+  /* iOS Safari увеличивает страницу при focus, если текст поля меньше 16px. */
+  input,
+  textarea,
+  select,
+  [contenteditable="true"] {
+    font-size: 16px !important;
+  }
 }
 
 ::selection {

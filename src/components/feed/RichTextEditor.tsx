@@ -120,7 +120,7 @@ export function RichTextEditor({ value, onChange, placeholder, disabled }: Props
         aria-label="Текст публикации"
         dir="ltr"
         data-placeholder={placeholder}
-        className="rich-text-editor min-h-[120px] w-full whitespace-pre-wrap border-none bg-transparent p-0 text-base leading-relaxed text-stone-900 outline-none placeholder:text-stone-400 sm:min-h-[160px] [&_a]:text-stone-900 [&_a]:underline [&_a]:decoration-stone-400 [&_a]:underline-offset-2"
+        className="rich-text-editor min-h-[120px] w-full whitespace-pre-wrap border-none bg-transparent p-0 text-base leading-relaxed text-stone-900 outline-none placeholder:text-stone-400 sm:min-h-[160px] [&_a]:text-blue-600 [&_a]:underline [&_a]:decoration-blue-400 [&_a]:underline-offset-2"
         style={{ fontSize: "max(16px, 1rem)", unicodeBidi: "plaintext" }}
         onInput={emitValue}
         onFocus={(event) => {
@@ -149,7 +149,7 @@ export function RichTextEditor({ value, onChange, placeholder, disabled }: Props
           onSubmit={(event) => { event.preventDefault(); createLink(); }}
           aria-label="Адрес ссылки"
         >
-          <input autoFocus value={linkValue} onChange={(event) => setLinkValue(event.target.value)} className="min-w-[12rem] flex-1 bg-transparent px-1 py-1.5 text-sm outline-none" inputMode="url" aria-label="URL ссылки" />
+          <input autoFocus value={linkValue} onChange={(event) => setLinkValue(event.target.value)} className="min-w-[12rem] flex-1 bg-transparent px-1 py-1.5 text-base outline-none sm:text-sm" inputMode="url" aria-label="URL ссылки" />
           <button type="submit" className="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-900 text-white active:scale-95" aria-label="Добавить ссылку"><Check size={16} /></button>
           <button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-200 active:scale-95" onClick={() => setLinkOpen(false)} aria-label="Отменить"><X size={16} /></button>
           {linkError ? <p className="w-full text-xs text-red-700" role="alert">{linkError}</p> : null}

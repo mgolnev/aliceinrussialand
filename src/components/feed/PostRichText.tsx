@@ -19,7 +19,7 @@ function RichTextParts({ parts }: { parts: RichTextPart[] }) {
         href={part.href}
         target="_blank"
         rel="noreferrer"
-        className="pointer-events-auto underline decoration-stone-400 underline-offset-2 transition hover:decoration-stone-900"
+        className="pointer-events-auto text-blue-600 underline decoration-blue-400 underline-offset-2 transition hover:text-blue-800 hover:decoration-blue-700"
       >
         <RichTextParts parts={part.children} />
       </a>
