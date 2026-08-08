@@ -36,7 +36,7 @@ export function FeedCategoryBar({
         className={pillTabClass(activeSlug === null)}
         onClick={() => onSelect(null)}
       >
-        Все
+        все
       </button>
       {categories.map((c) => (
         <button

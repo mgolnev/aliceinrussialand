@@ -739,15 +739,6 @@ export function PostCard({
                     )
                   : null}
               </div>
-            ) : !standalone ? (
-              <Link
-                href={postUrl}
-                prefetch
-                aria-label={openPostAria}
-                className="inline-flex h-9 items-center rounded-full border border-stone-200 bg-white px-3 text-[13px] font-semibold text-stone-700 transition hover:border-stone-300 hover:text-stone-950 active:scale-95"
-              >
-                Смотреть всё
-              </Link>
             ) : null}
           </div>
         </header>
