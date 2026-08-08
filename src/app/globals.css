@@ -45,6 +45,12 @@ body {
   color: #1c1917;
 }
 
+.rich-text-editor:empty::before {
+  color: #a8a29e;
+  content: attr(data-placeholder);
+  pointer-events: none;
+}
+
 html {
   /* Не smooth: иначе Next.js + восстановление скролла ленты дают лишнюю анимацию при / ↔ /p/ */
   scroll-behavior: auto;

@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ResponsiveImage } from "@/components/ui/ResponsiveImage";
 import { ShareForwardIcon } from "@/components/ui/ShareForwardIcon";
+import { PostRichText } from "@/components/feed/PostRichText";
 import { PostImpression } from "./PostImpression";
 import { PostOpenLinkOverlay } from "./PostOpenLinkOverlay";
 import type { FeedCategory, FeedPost } from "@/types/feed";
@@ -830,7 +831,7 @@ export function PostCard({
                   showPostLinkOverlay ? "pointer-events-none" : ""
                 } ${feedMediaGrid ? "mb-2 sm:mb-2.5" : "mb-3 sm:mb-5"}`}
               >
-                {postBodyForRender}
+                <PostRichText value={postBodyForRender} />
               </div>
             ) : null}
             {!standalone ? (

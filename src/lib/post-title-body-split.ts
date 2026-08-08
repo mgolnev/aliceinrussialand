@@ -1,3 +1,5 @@
+import { richTextToPlainText } from "@/lib/rich-text";
+
 /**
  * Та же логика, что на странице поста (PostCard standalone):
  * заголовок — первое предложение из поля title, тело — текст без дубля в начале.
@@ -65,6 +67,20 @@ export function stripLeadingTitleFromBody(body: string, title: string): string {
   if (trimmedBody.startsWith(trimmedTitle)) {
     const rest = trimmedBody.slice(trimmedTitle.length).trimStart();
     return rest;
+  }
+
+  /**
+   * Заголовок строится из видимого текста. После форматирования первое слово
+   * может начинаться с `**`/`_`/ссылки, поэтому срезаем исходную разметку по
+   * позиции, где её видимое представление совпало с заголовком.
+   */
+  const plainBody = richTextToPlainText(trimmedBody);
+  if (plainBody.startsWith(trimmedTitle)) {
+    for (let end = 1; end <= trimmedBody.length; end += 1) {
+      if (richTextToPlainText(trimmedBody.slice(0, end)) === trimmedTitle) {
+        return trimmedBody.slice(end).trimStart();
+      }
+    }
   }
 
   const byTitlePrefix = trimmedBody.match(titleAsBodyPrefixRegex(trimmedTitle));

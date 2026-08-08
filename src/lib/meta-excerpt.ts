@@ -1,5 +1,6 @@
 import { extractFirstSentence } from "./post-text";
 import { stripEmojiForSeo } from "./seo-sanitize";
+import { richTextToPlainText } from "./rich-text";
 
 const DEFAULT_MAX = 160;
 /** Мин. длина первого предложения, чтобы взять его как description вместо всего текста. */
@@ -24,7 +25,7 @@ export function excerptForMetaDescription(
   raw: string,
   maxLen: number = DEFAULT_MAX,
 ): string {
-  const stripped = stripEmojiForSeo(raw);
+  const stripped = stripEmojiForSeo(richTextToPlainText(raw));
   if (!stripped) return "";
 
   const first = extractFirstSentence(stripped);

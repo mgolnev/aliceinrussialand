@@ -1,3 +1,5 @@
+import { richTextToPlainText } from "@/lib/rich-text";
+
 /** Перед точкой ≥4 букв — не режем «т.к.» и однобуквенные сокращения. */
 const WORD_BEFORE_DOT = "(\\p{L}{4,})";
 /** Перед !? ≥3 букв — хватает на «Ого!ужас», однобуквенные сокращения не с ! */
@@ -49,5 +51,5 @@ export function derivePostTitle(title: string | null | undefined, body: string) 
   const explicit = title?.trim();
   if (explicit) return explicit;
 
-  return extractFirstSentence(body) || "Новая публикация";
+  return extractFirstSentence(richTextToPlainText(body)) || "Новая публикация";
 }

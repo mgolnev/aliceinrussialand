@@ -17,10 +17,6 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { MediaGrid } from "@/components/feed/MediaGrid";
-import {
-  handleMobileEditableBlur,
-  handleMobileEditableFocus,
-} from "@/lib/mobile-editable-scroll";
 import { pillTabClass } from "@/lib/pill-tab-styles";
 import {
   Image as ImageIcon,
@@ -32,6 +28,7 @@ import {
   ImagePlus,
 } from "lucide-react";
 import type { UploadQueueRow } from "@/hooks/use-feed-image-upload-queue";
+import { RichTextEditor } from "@/components/feed/RichTextEditor";
 
 export type FeedComposerImage = {
   id: string;
@@ -217,17 +214,11 @@ export function FeedComposerPanel({
       ) : null}
 
       <div className={innerClass}>
-        <textarea
+        <RichTextEditor
           value={body}
-          onChange={(e) => onBodyChange(e.target.value)}
-          onFocus={handleMobileEditableFocus}
-          onBlur={handleMobileEditableBlur}
+          onChange={onBodyChange}
           placeholder={placeholder}
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck
-          className="min-h-[120px] w-full min-w-0 resize-none border-none bg-transparent p-0 text-base leading-relaxed text-stone-900 outline-none placeholder:text-stone-400 sm:min-h-[160px]"
-          style={{ fontSize: "max(16px, 1rem)" }}
+          disabled={working}
         />
 
         {categories &&
