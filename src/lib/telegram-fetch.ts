@@ -1,26 +1,51 @@
 import { ProxyAgent, fetch as undiciFetch } from "undici";
 
-let proxyDispatcher: ProxyAgent | undefined;
+let explicitProxyDispatcher: ProxyAgent | undefined;
+let ambientProxyDispatcher: ProxyAgent | undefined;
 
-function outboundProxyUrl(): string | undefined {
-  const v =
-    process.env.TELEGRAM_OUTBOUND_PROXY?.trim() ||
-    process.env.HTTPS_PROXY?.trim() ||
-    process.env.HTTP_PROXY?.trim();
-  return v || undefined;
+function explicitProxyUrl(): string | undefined {
+  return process.env.TELEGRAM_OUTBOUND_PROXY?.trim() || undefined;
+}
+
+function ambientProxyUrl(): string | undefined {
+  return (
+    process.env.HTTPS_PROXY?.trim() || process.env.HTTP_PROXY?.trim() || undefined
+  );
 }
 
 export function isTelegramProxyConfigured(): boolean {
-  return Boolean(outboundProxyUrl());
+  return Boolean(explicitProxyUrl() || ambientProxyUrl());
 }
 
-function getDispatcher(): ProxyAgent | undefined {
-  const url = outboundProxyUrl();
+function getDispatcher(kind: "explicit" | "ambient"): ProxyAgent | undefined {
+  const url = kind === "explicit" ? explicitProxyUrl() : ambientProxyUrl();
   if (!url) return undefined;
-  if (!proxyDispatcher) {
-    proxyDispatcher = new ProxyAgent(url);
+
+  if (kind === "explicit") {
+    explicitProxyDispatcher ??= new ProxyAgent(url);
+    return explicitProxyDispatcher;
   }
-  return proxyDispatcher;
+
+  ambientProxyDispatcher ??= new ProxyAgent(url);
+  return ambientProxyDispatcher;
+}
+
+function fetchWithDispatcher(
+  url: string,
+  init: RequestInit | undefined,
+  dispatcher?: ProxyAgent,
+): Promise<Response> {
+  return undiciFetch(
+    url,
+    {
+      ...init,
+      ...(dispatcher ? { dispatcher } : {}),
+    } as Parameters<typeof undiciFetch>[1],
+  ) as unknown as Promise<Response>;
+}
+
+function isLikelyBlocked(status: number): boolean {
+  return status === 403 || status === 429 || status >= 500;
 }
 
 /**
@@ -31,13 +56,28 @@ export async function telegramFetch(
   url: string,
   init?: RequestInit,
 ): Promise<Response> {
-  const dispatcher = getDispatcher();
-  const res = await undiciFetch(
-    url,
-    {
-      ...init,
-      ...(dispatcher ? { dispatcher } : {}),
-    } as Parameters<typeof undiciFetch>[1],
-  );
-  return res as unknown as Response;
+  // Явный прокси — осознанная настройка пользователя, используем его сразу.
+  const explicit = getDispatcher("explicit");
+  if (explicit) return fetchWithDispatcher(url, init, explicit);
+
+  // HTTP(S)_PROXY может быть технической переменной окружения хостинга и не
+  // подходить для Telegram. Пробуем прямой запрос прежде, чем задействовать его.
+  let directError: unknown;
+  try {
+    const direct = await fetchWithDispatcher(url, init);
+    if (!isLikelyBlocked(direct.status) || !getDispatcher("ambient")) {
+      return direct;
+    }
+  } catch (error) {
+    directError = error;
+  }
+
+  const ambient = getDispatcher("ambient");
+  if (!ambient) throw directError;
+
+  try {
+    return await fetchWithDispatcher(url, init, ambient);
+  } catch (proxyError) {
+    throw directError ?? proxyError;
+  }
 }
