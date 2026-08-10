@@ -27,4 +27,22 @@ describe("rich post text", () => {
     root.innerHTML = "<strong>Важно</strong> и <em>точно</em><br><a href='https://example.com'>источник</a>";
     expect(editorHtmlToRichText(root)).toBe("**Важно** и _точно_\n[источник](https://example.com/)");
   });
+
+  it("keeps line breaks when Chrome creates block elements on Enter", () => {
+    const root = document.createElement("div");
+    root.innerHTML = "Первая строка<div>Вторая строка</div><div>Третья строка</div>";
+
+    expect(editorHtmlToRichText(root)).toBe(
+      "Первая строка\nВторая строка\nТретья строка",
+    );
+  });
+
+  it("keeps an empty paragraph created between two lines", () => {
+    const root = document.createElement("div");
+    root.innerHTML = "Первая строка<div><br></div><div>Третья строка</div>";
+
+    expect(editorHtmlToRichText(root)).toBe(
+      "Первая строка\n\nТретья строка",
+    );
+  });
 });

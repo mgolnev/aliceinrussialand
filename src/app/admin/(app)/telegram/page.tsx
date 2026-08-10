@@ -1,9 +1,13 @@
 import { SocialImportPanel } from "@/components/admin/SocialImportPanel";
+import { listFeedCategories } from "@/lib/feed-server";
 import { getSiteSettings } from "@/lib/site";
 import { DEFAULT_TELEGRAM_CHANNEL } from "@/lib/telegram-default";
 
 export default async function AdminTelegramPage() {
-  const s = await getSiteSettings();
+  const [s, categories] = await Promise.all([
+    getSiteSettings(),
+    listFeedCategories(),
+  ]);
   return (
     <div className="space-y-6">
       <div className="rounded-[28px] border border-stone-200/80 bg-white/90 p-6 ">
@@ -18,6 +22,7 @@ export default async function AdminTelegramPage() {
       </div>
       <SocialImportPanel
         defaultTelegramChannel={s.telegramChannelUser || DEFAULT_TELEGRAM_CHANNEL}
+        categories={categories}
       />
     </div>
   );

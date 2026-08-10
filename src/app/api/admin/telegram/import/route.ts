@@ -29,6 +29,7 @@ type Item = {
   imageUrls: string[];
   dateIso: string | null;
   publish?: boolean;
+  categoryId?: string | null;
 };
 
 export async function POST(req: Request) {
@@ -42,6 +43,21 @@ export async function POST(req: Request) {
     }
 
     const created: string[] = [];
+    const requestedCategoryIds = [
+      ...new Set(
+        body.items
+          .map((item) => item.categoryId?.trim())
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const validCategoryIds = new Set(
+      (
+        await prisma.postCategory.findMany({
+          where: { id: { in: requestedCategoryIds } },
+          select: { id: true },
+        })
+      ).map((category) => category.id),
+    );
 
     for (const item of body.items) {
       const titleLine = derivePostTitle("", item.text || "");
@@ -60,6 +76,7 @@ export async function POST(req: Request) {
       const publishedAt = item.dateIso ? new Date(item.dateIso) : new Date();
 
       const normUrl = normalizeTelegramPostUrl(item.href);
+      const categoryId = item.categoryId?.trim();
       const post = await (async () => {
         try {
           return await prisma.post.create({
@@ -75,6 +92,10 @@ export async function POST(req: Request) {
               sourceUrl: normUrl,
               metaTitle: titleLine,
               metaDescription: excerptForMetaDescription(item.text),
+              categoryId:
+                categoryId && validCategoryIds.has(categoryId)
+                  ? categoryId
+                  : null,
             },
           });
         } catch (e) {
@@ -91,6 +112,10 @@ export async function POST(req: Request) {
               telegramSourceUrl: normUrl,
               metaTitle: titleLine,
               metaDescription: excerptForMetaDescription(item.text),
+              categoryId:
+                categoryId && validCategoryIds.has(categoryId)
+                  ? categoryId
+                  : null,
             },
           });
         }

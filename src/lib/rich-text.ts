@@ -155,17 +155,27 @@ export function editorHtmlToRichText(root: HTMLElement) {
         const href = safePostHref(node.getAttribute("href") ?? "");
         return href ? `[${children}](${href})` : children;
       }
-      case "DIV":
-      case "P":
-        return `${children}\n`;
       default:
         return children;
     }
   };
 
-  return Array.from(root.childNodes)
-    .map(read)
-    .join("")
+  let result = "";
+  for (const node of Array.from(root.childNodes)) {
+    const isBlock =
+      node instanceof HTMLElement &&
+      (node.tagName === "DIV" || node.tagName === "P");
+    const value = read(node);
+    if (isBlock) {
+      if (result && !result.endsWith("\n")) result += "\n";
+      result += value;
+      result += "\n";
+    } else {
+      result += value;
+    }
+  }
+
+  return result
     .replace(/\n{3,}/g, "\n\n")
     .replace(/\n+$/g, "");
 }

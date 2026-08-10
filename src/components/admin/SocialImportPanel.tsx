@@ -1,9 +1,11 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- preview URLs from Telegram are temporary external CDN URLs. */
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { dispatchFeedRefreshMerge } from "@/lib/feed-refresh";
+import { pillTabClass } from "@/lib/pill-tab-styles";
 import type { SocialImportItem, SocialPlatform } from "@/lib/social-import/types";
 import { normalizeSourceUrl } from "@/lib/social-import/normalize";
 import { normalizeTelegramPostUrl } from "@/lib/telegram-post-url";
@@ -12,6 +14,7 @@ type Props = {
   defaultInstagramAccount?: string;
   defaultBehanceAccount?: string;
   defaultTelegramChannel?: string;
+  categories?: Array<{ id: string; name: string; slug: string }>;
 };
 
 type PanelPlatform = SocialPlatform | "telegram";
@@ -73,6 +76,7 @@ export function SocialImportPanel({
   defaultInstagramAccount = "",
   defaultBehanceAccount = "",
   defaultTelegramChannel = "",
+  categories = [],
 }: Props) {
   const router = useRouter();
   const [platform, setPlatform] = useState<PanelPlatform>("telegram");
@@ -82,6 +86,7 @@ export function SocialImportPanel({
   const [telegramChannel, setTelegramChannel] = useState(defaultTelegramChannel);
   const [items, setItems] = useState<SocialImportItem[] | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [categoryIds, setCategoryIds] = useState<Record<string, string | null>>({});
   const [publish, setPublish] = useState(true);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -220,6 +225,7 @@ export function SocialImportPanel({
         const nextSel: Record<string, boolean> = {};
         for (const it of sorted) nextSel[itemUiId(it)] = false;
         setSelected(nextSel);
+        setCategoryIds({});
       } else {
         const batch = dedupeItems(mappedItems);
         setItems((prev) => sortNewest(dedupeItems([...(prev ?? []), ...batch])));
@@ -274,6 +280,7 @@ export function SocialImportPanel({
                 imageUrls: it.imageUrls,
                 dateIso: it.dateIso,
                 publish,
+                categoryId: categoryIds[itemUiId(it)] ?? null,
               })),
             }),
           })
@@ -331,6 +338,7 @@ export function SocialImportPanel({
                   setPlatform(next);
                   setItems(null);
                   setSelected({});
+                  setCategoryIds({});
                   setImportedSourceUrls([]);
                   setNextCursor(null);
                   setError(null);
@@ -423,42 +431,112 @@ export function SocialImportPanel({
             <ul className="space-y-2 rounded-[24px] border border-stone-200/60 bg-stone-50/50 p-2">
               {items.map((it) => {
                 const imported = isAlreadyImported(it);
+                const selectedForImport =
+                  !imported && Boolean(selected[itemUiId(it)]);
                 return (
                   <li
                     key={itemUiId(it)}
-                    className={`flex items-center gap-3 rounded-2xl border border-stone-200/70 p-3 ${
+                    className={`rounded-2xl border border-stone-200/70 p-3 ${
                       imported ? "bg-stone-100/80 opacity-90" : "bg-white"
                     }`}
                   >
-                    <input
-                      type="checkbox"
-                      className={checkboxClass}
-                      disabled={imported}
-                      checked={imported ? false : Boolean(selected[itemUiId(it)])}
-                      onChange={() => toggle(itemUiId(it))}
-                    />
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="line-clamp-3 min-w-0 flex-1 text-sm leading-6 text-stone-800">
-                          {it.text || "(без текста)"}
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        className={`${checkboxClass} mt-0.5`}
+                        disabled={imported}
+                        checked={imported ? false : Boolean(selected[itemUiId(it)])}
+                        onChange={() => toggle(itemUiId(it))}
+                      />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <p
+                            className={`min-w-0 flex-1 text-sm leading-6 text-stone-800 ${
+                              selectedForImport
+                                ? "whitespace-pre-wrap"
+                                : "line-clamp-2"
+                            }`}
+                          >
+                            {it.text || "(без текста)"}
+                          </p>
+                          {imported ? (
+                            <span className="shrink-0 rounded-full bg-stone-200/90 px-2 py-0.5 text-[11px] font-medium text-stone-600">
+                              Уже импортировано
+                            </span>
+                          ) : null}
+                        </div>
+                        {selectedForImport &&
+                        platform === "telegram" &&
+                        it.imageUrls.length > 0 ? (
+                          <div
+                            className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                            style={{ WebkitOverflowScrolling: "touch" }}
+                            aria-label="Изображения из Telegram"
+                          >
+                            {it.imageUrls.map((url, index) => (
+                              <img
+                                key={`${url}-${index}`}
+                                src={url}
+                                alt="Изображение из Telegram"
+                                referrerPolicy="no-referrer"
+                                className="h-24 w-24 shrink-0 rounded-lg border border-stone-200 object-cover sm:h-28 sm:w-28"
+                              />
+                            ))}
+                          </div>
+                        ) : null}
+                        <p className="text-xs text-stone-500">
+                          {formatDate(it.dateIso)} · {it.imageUrls.length} изобр. ·{" "}
+                          <a
+                            href={it.href}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline"
+                          >
+                            открыть источник
+                          </a>
                         </p>
-                        {imported ? (
-                          <span className="shrink-0 rounded-full bg-stone-200/90 px-2 py-0.5 text-[11px] font-medium text-stone-600">
-                            Уже импортировано
-                          </span>
+                        {selectedForImport &&
+                        platform === "telegram" &&
+                        categories.length > 0 ? (
+                          <div>
+                            <p className="mb-1.5 text-xs font-medium text-stone-500">
+                              Категория после импорта
+                            </p>
+                            <div className="flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden">
+                              <button
+                                type="button"
+                                className={pillTabClass(!categoryIds[itemUiId(it)])}
+                                onClick={() =>
+                                  setCategoryIds((prev) => ({
+                                    ...prev,
+                                    [itemUiId(it)]: null,
+                                  }))
+                                }
+                              >
+                                Без категории
+                              </button>
+                              {categories.map((category) => {
+                                const active = categoryIds[itemUiId(it)] === category.id;
+                                return (
+                                  <button
+                                    key={category.id}
+                                    type="button"
+                                    className={pillTabClass(active)}
+                                    onClick={() =>
+                                      setCategoryIds((prev) => ({
+                                        ...prev,
+                                        [itemUiId(it)]: category.id,
+                                      }))
+                                    }
+                                  >
+                                    {category.name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
                         ) : null}
                       </div>
-                      <p className="text-xs text-stone-500">
-                        {formatDate(it.dateIso)} · {it.imageUrls.length} изобр. ·{" "}
-                        <a
-                          href={it.href}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="underline"
-                        >
-                          открыть источник
-                        </a>
-                      </p>
                     </div>
                   </li>
                 );
