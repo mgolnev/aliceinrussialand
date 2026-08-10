@@ -32,6 +32,16 @@ async function ensureUniqueSlug(base: string, id: string) {
   return slug;
 }
 
+/** Сбрасывает публичные страницы, которые показывают изменённый пост. */
+function revalidatePublicPostPages(slugs: Array<string | null | undefined>) {
+  for (const slug of new Set(slugs.filter(Boolean))) {
+    revalidatePath(`/p/${slug}`);
+  }
+  revalidatePath("/");
+  revalidatePath("/archive");
+  revalidatePath("/category/[slug]", "page");
+}
+
 export async function GET(_req: Request, ctx: Ctx) {
   const { id } = await ctx.params;
   const post = await prisma.post.findUnique({
@@ -222,6 +232,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     });
 
     revalidatePath("/admin/posts");
+    revalidatePublicPostPages([existing.slug, fresh?.slug]);
 
     return NextResponse.json({
       ...fresh,
@@ -259,5 +270,6 @@ export async function DELETE(_req: Request, ctx: Ctx) {
 
   await prisma.post.delete({ where: { id } });
   revalidatePath("/admin/posts");
+  revalidatePublicPostPages([post.slug]);
   return NextResponse.json({ ok: true });
 }

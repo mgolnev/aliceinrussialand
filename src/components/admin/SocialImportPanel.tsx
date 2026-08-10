@@ -413,7 +413,7 @@ export function SocialImportPanel({
         {done ? <p className="text-sm text-stone-700">{done}</p> : null}
 
         {items ? (
-          <div className="flex flex-col gap-4 rounded-[24px] border border-stone-200/80 bg-white/90 p-4 sm:p-5">
+          <section className="space-y-4" aria-label="Посты для импорта">
             <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-stone-200/80 bg-stone-50/60 p-4 transition hover:bg-stone-50/90">
               <input
                 type="checkbox"
@@ -428,7 +428,7 @@ export function SocialImportPanel({
               </span>
             </label>
 
-            <ul className="space-y-2 rounded-[24px] border border-stone-200/60 bg-stone-50/50 p-2">
+            <ul className="divide-y divide-stone-200/80 border-y border-stone-200/80">
               {items.map((it) => {
                 const imported = isAlreadyImported(it);
                 const selectedForImport =
@@ -436,8 +436,8 @@ export function SocialImportPanel({
                 return (
                   <li
                     key={itemUiId(it)}
-                    className={`rounded-2xl border border-stone-200/70 p-3 ${
-                      imported ? "bg-stone-100/80 opacity-90" : "bg-white"
+                    className={`py-4 first:pt-3 last:pb-3 ${
+                      imported ? "opacity-70" : ""
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -448,15 +448,9 @@ export function SocialImportPanel({
                         checked={imported ? false : Boolean(selected[itemUiId(it)])}
                         onChange={() => toggle(itemUiId(it))}
                       />
-                      <div className="min-w-0 flex-1 space-y-2">
+                      <div className="min-w-0 flex-1 space-y-2.5">
                         <div className="flex flex-wrap items-start justify-between gap-2">
-                          <p
-                            className={`min-w-0 flex-1 text-sm leading-6 text-stone-800 ${
-                              selectedForImport
-                                ? "whitespace-pre-wrap"
-                                : "line-clamp-2"
-                            }`}
-                          >
+                          <p className="line-clamp-2 min-w-0 flex-1 text-sm leading-6 text-stone-800">
                             {it.text || "(без текста)"}
                           </p>
                           {imported ? (
@@ -469,7 +463,7 @@ export function SocialImportPanel({
                         platform === "telegram" &&
                         it.imageUrls.length > 0 ? (
                           <div
-                            className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                            className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             style={{ WebkitOverflowScrolling: "touch" }}
                             aria-label="Изображения из Telegram"
                           >
@@ -479,7 +473,7 @@ export function SocialImportPanel({
                                 src={url}
                                 alt="Изображение из Telegram"
                                 referrerPolicy="no-referrer"
-                                className="h-24 w-24 shrink-0 rounded-lg border border-stone-200 object-cover sm:h-28 sm:w-28"
+                                className="h-20 w-20 shrink-0 rounded-lg border border-stone-200 object-cover sm:h-24 sm:w-24"
                               />
                             ))}
                           </div>
@@ -498,11 +492,11 @@ export function SocialImportPanel({
                         {selectedForImport &&
                         platform === "telegram" &&
                         categories.length > 0 ? (
-                          <div>
+                          <div className="border-t border-stone-100 pt-2.5">
                             <p className="mb-1.5 text-xs font-medium text-stone-500">
                               Категория после импорта
                             </p>
-                            <div className="flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden">
+                            <div className="flex gap-1 overflow-x-auto px-0.5 pb-1 pt-0.5 [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden">
                               <button
                                 type="button"
                                 className={pillTabClass(!categoryIds[itemUiId(it)])}
@@ -542,7 +536,7 @@ export function SocialImportPanel({
                 );
               })}
             </ul>
-          </div>
+          </section>
         ) : null}
       </div>
 

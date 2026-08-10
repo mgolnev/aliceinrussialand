@@ -229,7 +229,7 @@ export function FeedComposerPanel({
             <p className="mb-1.5 text-xs font-medium text-stone-500">
               Категория
             </p>
-            <div className="flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden">
+            <div className="flex gap-1 overflow-x-auto px-0.5 pb-1 pt-0.5 [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden">
               <button
                 type="button"
                 className={pillTabClass(!postCategoryId)}

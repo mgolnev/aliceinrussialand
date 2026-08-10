@@ -483,6 +483,7 @@ export function PostCard({
         setMenuOpen(false);
         setEditMessage(null);
         dispatchFeedRefreshMerge();
+        router.refresh();
         return;
       }
       const apiErr =
