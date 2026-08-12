@@ -5,6 +5,11 @@ import { getSiteSettings } from "@/lib/site";
 import { resolveSiteOrigin } from "@/lib/site-origin";
 import { listSeoCategories, SEO_PAGE_SIZE } from "@/lib/seo-content";
 
+// Карта зависит от записей в БД. Без явной динамики Next может построить её
+// во время сборки, когда база на Amvera ещё недоступна, и закешировать только
+// служебные URL.
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const settings = await getSiteSettings();
   const origin = resolveSiteOrigin(settings.siteUrl);

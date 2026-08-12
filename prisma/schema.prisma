@@ -29,6 +29,9 @@ model SiteSettings {
   contactsLabel        String  @default("Контакты")
   defaultLocale        String  @default("ru")
   siteUrl              String  @default("http://localhost:3000")
+  /// SEO title and description for the home page. Empty values fall back to the public profile copy.
+  seoTitle             String  @default("")
+  seoDescription       String  @default("")
   plausibleDomain      String  @default("")
   yandexMetrikaId      String  @default("")
   yandexVerification   String  @default("")

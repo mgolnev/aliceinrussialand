@@ -19,7 +19,12 @@ export async function generateMetadata({
   const categoryParam = sp.category?.trim() || "";
   const s = await getSiteSettings();
   const siteUrl = resolveSiteOrigin(s.siteUrl);
-  const defaultDescription = s.tagline?.trim() || s.bio?.trim() || "Лента работ";
+  const defaultDescription =
+    s.seoDescription?.trim() ||
+    s.tagline?.trim() ||
+    s.bio?.trim() ||
+    "Лента работ";
+  const homeTitle = s.seoTitle?.trim() || s.displayName;
   const avatar = parseAvatarUrl(s.avatarMediaPath);
   const og = avatar ? absoluteUrl(siteUrl, avatar) : undefined;
   if (categoryParam) {
@@ -53,11 +58,11 @@ export async function generateMetadata({
   }
 
   return {
-    title: { absolute: s.displayName },
+    title: { absolute: homeTitle },
     description: defaultDescription,
     alternates: { canonical: "/" },
     openGraph: {
-      title: s.displayName,
+      title: homeTitle,
       description: defaultDescription,
       url: absoluteUrl(siteUrl, "/"),
       type: "website",
@@ -65,7 +70,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: og ? "summary_large_image" : "summary",
-      title: s.displayName,
+      title: homeTitle,
       description: defaultDescription,
       images: og ? [og] : undefined,
     },

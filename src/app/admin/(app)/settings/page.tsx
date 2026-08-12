@@ -28,6 +28,8 @@ export default async function AdminSettingsPage() {
           telegramChannelUser: s.telegramChannelUser,
           contactsLabel: s.contactsLabel,
           siteUrl: s.siteUrl,
+          seoTitle: s.seoTitle,
+          seoDescription: s.seoDescription,
           plausibleDomain: s.plausibleDomain,
           yandexMetrikaId: s.yandexMetrikaId,
           yandexVerification: s.yandexVerification,

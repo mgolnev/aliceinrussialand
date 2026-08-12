@@ -20,6 +20,8 @@ export function defaultSiteSettings(): SiteSettingsRow {
     contactsLabel: "Контакты",
     defaultLocale: "ru",
     siteUrl: "http://localhost:3000",
+    seoTitle: "",
+    seoDescription: "",
     plausibleDomain: "",
     yandexMetrikaId: "",
     yandexVerification: "",

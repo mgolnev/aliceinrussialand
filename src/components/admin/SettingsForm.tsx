@@ -14,6 +14,8 @@ type Props = {
     telegramChannelUser: string;
     contactsLabel: string;
     siteUrl: string;
+    seoTitle: string;
+    seoDescription: string;
     plausibleDomain: string;
     yandexMetrikaId: string;
     yandexVerification: string;
@@ -54,6 +56,8 @@ export function SettingsForm({ initial }: Props) {
         telegramChannelUser: form.telegramChannelUser,
         contactsLabel: form.contactsLabel,
         siteUrl: form.siteUrl,
+        seoTitle: form.seoTitle,
+        seoDescription: form.seoDescription,
         plausibleDomain: form.plausibleDomain,
         yandexMetrikaId: form.yandexMetrikaId,
         yandexVerification: form.yandexVerification,
@@ -324,6 +328,46 @@ export function SettingsForm({ initial }: Props) {
             }
           />
         </label>
+        <section className="border-y border-stone-200/80 py-5 sm:col-span-2">
+          <div className="mb-4">
+            <h2 className="text-lg font-medium text-stone-900">SEO</h2>
+            <p className="mt-1 text-sm leading-6 text-stone-500">
+              Заголовок и описание главной страницы для поисковой выдачи. На видимый текст сайта они не влияют.
+            </p>
+          </div>
+          <div className="grid gap-4">
+            <label className="block text-sm font-medium">
+              SEO title
+              <input
+                className="mt-1 w-full rounded-2xl border border-stone-300 px-3 py-2.5 outline-none focus:border-stone-400"
+                maxLength={70}
+                placeholder="Alice In Russialand — иллюстрация и керамика"
+                value={form.seoTitle}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, seoTitle: e.target.value }))
+                }
+              />
+              <span className="mt-1 block text-xs text-stone-500">
+                {form.seoTitle.length}/70. Если оставить пустым, используется имя сайта.
+              </span>
+            </label>
+            <label className="block text-sm font-medium">
+              SEO description
+              <textarea
+                className="mt-1 min-h-[88px] w-full rounded-2xl border border-stone-300 px-3 py-2.5 outline-none focus:border-stone-400"
+                maxLength={160}
+                placeholder="Авторский сайт Алисы: иллюстрация, керамика, выставки, наброски и новые работы."
+                value={form.seoDescription}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, seoDescription: e.target.value }))
+                }
+              />
+              <span className="mt-1 block text-xs text-stone-500">
+                {form.seoDescription.length}/160. Если оставить пустым, используется краткое описание сайта.
+              </span>
+            </label>
+          </div>
+        </section>
         <label className="block text-sm font-medium">
           Публичный URL сайта (canonical)
           <input

@@ -39,6 +39,12 @@ export async function PATCH(req: Request) {
     data.defaultLocale = str("defaultLocale");
   }
   if (str("siteUrl") !== undefined) data.siteUrl = str("siteUrl");
+  if (str("seoTitle") !== undefined) {
+    data.seoTitle = (str("seoTitle") ?? "").trim().slice(0, 70);
+  }
+  if (str("seoDescription") !== undefined) {
+    data.seoDescription = (str("seoDescription") ?? "").trim().slice(0, 160);
+  }
   if (str("plausibleDomain") !== undefined) {
     data.plausibleDomain = str("plausibleDomain");
   }

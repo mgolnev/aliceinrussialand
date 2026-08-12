@@ -28,14 +28,17 @@ export const viewport: Viewport = {
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSiteSettings();
   const base = resolveSiteOrigin(s.siteUrl);
+  const seoTitle = s.seoTitle?.trim() || s.displayName;
+  const seoDescription =
+    s.seoDescription?.trim() || s.tagline || s.bio || "Лента работ";
 
   return {
     metadataBase: new URL(base),
     title: {
-      default: s.displayName,
+      default: seoTitle,
       template: `%s · ${s.displayName}`,
     },
-    description: s.tagline || s.bio || "Лента работ",
+    description: seoDescription,
     ...(s.yandexVerification?.trim()
       ? { verification: { yandex: s.yandexVerification.trim() } }
       : {}),
