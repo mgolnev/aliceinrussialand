@@ -12,6 +12,7 @@ export function AdminFolderNav() {
   const telegramActive = pathname.startsWith("/admin/telegram");
   const settingsActive = pathname.startsWith("/admin/settings");
   const categoriesActive = pathname.startsWith("/admin/categories");
+  const projectsActive = pathname.startsWith("/admin/projects");
 
   return (
     <nav
@@ -40,6 +41,14 @@ export function AdminFolderNav() {
         className={`relative ${pillTabClass(categoriesActive)}`}
       >
         Категории
+        <LinkPendingBackdrop />
+      </Link>
+      <Link
+        href="/admin/projects"
+        prefetch
+        className={`relative ${pillTabClass(projectsActive)}`}
+      >
+        Циклы
         <LinkPendingBackdrop />
       </Link>
       <Link

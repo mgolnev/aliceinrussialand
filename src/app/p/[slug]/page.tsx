@@ -6,6 +6,7 @@ import {
   getPublishedPostBySlugCached,
   parseVariants,
 } from "@/lib/posts-query";
+import { getPublishedPostProjectsCached } from "@/lib/projects";
 import { listFeedCategories } from "@/lib/feed-server";
 import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { absoluteUrl } from "@/lib/absolute-url";
@@ -17,6 +18,7 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { PostBackTray } from "@/components/feed/PostBackTray";
 import { PostCard } from "@/components/feed/PostCard";
 import { PostReadNextCarousel } from "@/components/feed/PostReadNextCarousel";
+import { PostProjects } from "@/components/seo/PostProjects";
 import type { FeedCategory, FeedPost } from "@/types/feed";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 import { resolveSiteOrigin } from "@/lib/site-origin";
@@ -94,10 +96,10 @@ export default async function PostPage({ params }: PageProps) {
     "";
   const session = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   const isAdmin = session ? await verifySessionToken(session) : false;
-  const readNextItems = await getPostCarouselPeersCached(
-    post.id,
-    post.categoryId,
-  );
+  const [readNextItems, projects] = await Promise.all([
+    getPostCarouselPeersCached(post.id, post.categoryId),
+    getPublishedPostProjectsCached(post.id),
+  ]);
   const allFeedCategories: FeedCategory[] = await listFeedCategories();
 
   const feedPost: FeedPost = {
@@ -191,6 +193,7 @@ export default async function PostPage({ params }: PageProps) {
           prioritizeMedia
           standalone
         />
+        <PostProjects projects={projects} currentPostId={post.id} />
         <PostReadNextCarousel
           items={readNextItems}
           categories={allFeedCategories}

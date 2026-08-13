@@ -1,0 +1,118 @@
+import { cache } from "react";
+import type { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { POST_STATUS } from "@/lib/constants";
+
+export const PROJECT_STATUS = {
+  DRAFT: "DRAFT",
+  PUBLISHED: "PUBLISHED",
+  ARCHIVED: "ARCHIVED",
+} as const;
+
+export type PublishedProjectPost = {
+  id: string;
+  slug: string;
+  title: string;
+  body: string;
+  updatedAt: Date;
+  publishedAt: Date | null;
+};
+
+export type PublishedProject = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  metaTitle: string;
+  metaDescription: string;
+  updatedAt: Date;
+  posts: PublishedProjectPost[];
+};
+
+const publishedPostsSelect = {
+  where: { post: { status: POST_STATUS.PUBLISHED } },
+  orderBy: [{ sortOrder: "asc" as const }, { createdAt: "asc" as const }],
+  select: {
+    post: {
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        body: true,
+        updatedAt: true,
+        publishedAt: true,
+      },
+    },
+  },
+} satisfies Prisma.Project$postsArgs;
+
+function projectWithPublishedPosts(row: {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  metaTitle: string;
+  metaDescription: string;
+  updatedAt: Date;
+  posts: Array<{ post: PublishedProjectPost }>;
+}): PublishedProject {
+  return {
+    ...row,
+    posts: row.posts.map((relation) => relation.post),
+  };
+}
+
+/** Публичный цикл: только опубликованный цикл, в котором есть минимум две публикации. */
+export async function getPublishedProjectBySlug(
+  slug: string,
+): Promise<PublishedProject | null> {
+  const row = await prisma.project.findFirst({
+    where: { slug, status: PROJECT_STATUS.PUBLISHED },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      description: true,
+      metaTitle: true,
+      metaDescription: true,
+      updatedAt: true,
+      posts: publishedPostsSelect,
+    },
+  });
+  if (!row || row.posts.length < 2) return null;
+  return projectWithPublishedPosts(row);
+}
+
+/** Циклы, которые можно показать внизу опубликованного поста. */
+export async function getPublishedPostProjects(
+  postId: string,
+): Promise<PublishedProject[]> {
+  const rows = await prisma.postProject.findMany({
+    where: {
+      postId,
+      project: { status: PROJECT_STATUS.PUBLISHED },
+    },
+    orderBy: [{ project: { updatedAt: "desc" } }],
+    select: {
+      project: {
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          description: true,
+          metaTitle: true,
+          metaDescription: true,
+          updatedAt: true,
+          posts: publishedPostsSelect,
+        },
+      },
+    },
+  });
+
+  return rows
+    .map((row) => projectWithPublishedPosts(row.project))
+    .filter((project) => project.posts.length >= 2);
+}
+
+export const getPublishedProjectBySlugCached = cache(getPublishedProjectBySlug);
+export const getPublishedPostProjectsCached = cache(getPublishedPostProjects);

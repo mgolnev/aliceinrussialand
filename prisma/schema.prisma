@@ -70,6 +70,7 @@ model Post {
   locale             String         @default("ru")
   categoryId         String?
   category           PostCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  projects           PostProject[]
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   images             PostImage[]
@@ -79,6 +80,38 @@ model Post {
   @@index([status, pinned, publishedAt(sort: Desc)])
   @@index([sourcePlatform, sourceUrl])
   @@index([sourcePlatform, sourceExternalId])
+}
+
+// Авторский цикл работ, объединяющий публикации из разных категорий.
+model Project {
+  id              String        @id @default(cuid())
+  slug            String        @unique
+  title           String
+  description     String        @default("")
+  metaTitle       String        @default("")
+  metaDescription String        @default("")
+  /// DRAFT, PUBLISHED или ARCHIVED. Строка оставлена намеренно: статус совпадает по подходу с Post.
+  status          String        @default("DRAFT")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  posts           PostProject[]
+
+  @@index([status, updatedAt])
+}
+
+// Явная связь публикации с циклом; sortOrder задаёт порядок чтения.
+model PostProject {
+  id        String   @id @default(cuid())
+  postId    String
+  projectId String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, projectId])
+  @@index([projectId, sortOrder])
+  @@index([postId])
 }
 
 model PostImage {
