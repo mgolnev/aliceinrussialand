@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import type { FeedCategory } from "@/types/feed";
 import { AdminPostRow } from "@/components/admin/AdminPostRow";
 import type { AdminPostListRow } from "@/components/admin/admin-post-list-types";
@@ -21,6 +21,24 @@ const SORT_OPTIONS: { value: AdminPostsListSortMode; label: string }[] = [
   { value: "title_asc", label: "По названию (А → Я)" },
 ];
 
+const DEFAULT_SORT_MODE: AdminPostsListSortMode = "updated_desc";
+const SORT_MODE_CHANGE_EVENT = "alice-admin-posts-sort-change";
+
+/** LocalStorage — внешнее хранилище: `useSyncExternalStore` избегает setState в effect и hydration mismatch. */
+function readStoredSortMode(): AdminPostsListSortMode {
+  const raw = window.localStorage.getItem(ADMIN_POSTS_SORT_STORAGE_KEY);
+  return isAdminPostsListSortMode(raw) ? raw : DEFAULT_SORT_MODE;
+}
+
+function subscribeToStoredSortMode(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(SORT_MODE_CHANGE_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(SORT_MODE_CHANGE_EVENT, onStoreChange);
+  };
+}
+
 export function AdminPostsList({
   posts,
   siteUrl,
@@ -30,17 +48,16 @@ export function AdminPostsList({
   siteUrl: string;
   categories: FeedCategory[];
 }) {
-  const [sortMode, setSortMode] =
-    useState<AdminPostsListSortMode>("updated_desc");
+  const sortMode = useSyncExternalStore(
+    subscribeToStoredSortMode,
+    readStoredSortMode,
+    () => DEFAULT_SORT_MODE,
+  );
 
-  useEffect(() => {
-    const raw = window.localStorage.getItem(ADMIN_POSTS_SORT_STORAGE_KEY);
-    if (isAdminPostsListSortMode(raw)) setSortMode(raw);
-  }, []);
-
-  useEffect(() => {
-    window.localStorage.setItem(ADMIN_POSTS_SORT_STORAGE_KEY, sortMode);
-  }, [sortMode]);
+  function setSortMode(next: AdminPostsListSortMode) {
+    window.localStorage.setItem(ADMIN_POSTS_SORT_STORAGE_KEY, next);
+    window.dispatchEvent(new Event(SORT_MODE_CHANGE_EVENT));
+  }
 
   const sorted = useMemo(
     () => sortAdminPostRows(posts, sortMode),
