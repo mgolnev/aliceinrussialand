@@ -95,7 +95,9 @@ export async function getFeedPage(
   const posts = await prisma.post.findMany({
     where: {
       status: POST_STATUS.PUBLISHED,
-      ...(filterCategoryId ? { categoryId: filterCategoryId } : {}),
+      ...(filterCategoryId
+        ? { categoryId: filterCategoryId }
+        : { showInAll: true }),
     },
     orderBy: [{ pinned: "desc" }, { publishedAt: "desc" }, { id: "desc" }],
     take: take + 1,
@@ -114,6 +116,7 @@ export async function getFeedPage(
       displayMode: true,
       publishedAt: true,
       pinned: true,
+      showInAll: true,
       categoryId: true,
       images:
         feedProfile === "admin"
@@ -157,6 +160,7 @@ export async function getFeedPage(
       displayMode: p.displayMode === "STACK" ? "STACK" : "GRID",
       publishedAt: p.publishedAt?.toISOString() ?? null,
       pinned: p.pinned,
+      showInAll: p.showInAll,
       categoryId: p.categoryId,
       category: p.category,
       images: p.images.map((im) => ({

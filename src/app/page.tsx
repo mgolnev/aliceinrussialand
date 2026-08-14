@@ -12,6 +12,9 @@ import { getSeoCategoryBySlug } from "@/lib/seo-content";
 
 type HomeProps = { searchParams: Promise<{ category?: string }> };
 
+const DEFAULT_HOME_DESCRIPTION =
+  "Авторская лента Алисы: иллюстрация, керамика, выставки, наброски и личные заметки.";
+
 export async function generateMetadata({
   searchParams,
 }: HomeProps): Promise<Metadata> {
@@ -21,10 +24,9 @@ export async function generateMetadata({
   const siteUrl = resolveSiteOrigin(s.siteUrl);
   const defaultDescription =
     s.seoDescription?.trim() ||
-    s.tagline?.trim() ||
-    s.bio?.trim() ||
-    "Лента работ";
-  const homeTitle = s.seoTitle?.trim() || s.displayName;
+    DEFAULT_HOME_DESCRIPTION;
+  const homeTitle =
+    s.seoTitle?.trim() || `${s.displayName} — иллюстрация и керамика`;
   const avatar = parseAvatarUrl(s.avatarMediaPath);
   const og = avatar ? absoluteUrl(siteUrl, avatar) : undefined;
   if (categoryParam) {
@@ -134,7 +136,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
           <p className="mb-2 font-medium text-stone-800">Разделы</p>
           <div className="flex flex-wrap gap-x-4 gap-y-2">
             <Link href="/archive" className="underline decoration-stone-300 underline-offset-2">
-              Архив публикаций
+              Все публикации
             </Link>
             {categories.map((category) => (
               <Link

@@ -37,7 +37,11 @@ export async function GET(_req: Request, ctx: Ctx) {
     include: {
       posts: {
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-        select: { postId: true, sortOrder: true },
+        select: {
+          postId: true,
+          sortOrder: true,
+          post: { select: { id: true, title: true, slug: true } },
+        },
       },
     },
   });

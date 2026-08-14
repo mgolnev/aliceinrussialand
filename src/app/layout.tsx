@@ -16,6 +16,9 @@ const sans = Manrope({
   display: "swap",
 });
 
+const DEFAULT_SITE_DESCRIPTION =
+  "Авторская лента Алисы: иллюстрация, керамика, выставки, наброски и личные заметки.";
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -30,7 +33,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const base = resolveSiteOrigin(s.siteUrl);
   const seoTitle = s.seoTitle?.trim() || s.displayName;
   const seoDescription =
-    s.seoDescription?.trim() || s.tagline || s.bio || "Лента работ";
+    s.seoDescription?.trim() || DEFAULT_SITE_DESCRIPTION;
 
   return {
     metadataBase: new URL(base),

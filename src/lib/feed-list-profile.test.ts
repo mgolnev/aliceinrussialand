@@ -17,6 +17,7 @@ function samplePost(overrides: Partial<FeedPost> = {}): FeedPost {
     displayMode: "GRID",
     publishedAt: null,
     pinned: false,
+    showInAll: true,
     categoryId: null,
     category: null,
     images: [],

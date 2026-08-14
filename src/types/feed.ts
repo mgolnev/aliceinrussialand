@@ -48,6 +48,8 @@ export type FeedPost = {
   displayMode: "GRID" | "STACK";
   publishedAt: string | null;
   pinned: boolean;
+  /** False: visible in its category, but omitted from the public "Все" feed. */
+  showInAll: boolean;
   categoryId: string | null;
   category: { id: string; name: string; slug: string } | null;
   images: Array<{

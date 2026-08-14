@@ -17,6 +17,7 @@ import { ShareForwardIcon } from "@/components/ui/ShareForwardIcon";
 import { PostRichText } from "@/components/feed/PostRichText";
 import { PostImpression } from "./PostImpression";
 import { PostOpenLinkOverlay } from "./PostOpenLinkOverlay";
+import { PostProjectLinkEditor } from "@/components/admin/PostProjectLinkEditor";
 import {
   PostProjectTags,
   type ProjectTag,
@@ -28,6 +29,7 @@ import {
   dispatchFeedPostRemove,
   dispatchFeedPostUpdate,
   dispatchFeedRefreshMerge,
+  dispatchFeedRefreshReplace,
 } from "@/lib/feed-refresh";
 import { feedPostFromAdminPatchJson } from "@/lib/feed-post-from-admin-patch";
 import {
@@ -45,10 +47,12 @@ import {
   ExternalLink,
   Edit3,
   EyeOff,
+  Eye,
   Trash2,
   X,
   Pin,
   PinOff,
+  Link2,
 } from "lucide-react";
 
 const FeedComposerPanelLazy = dynamic(
@@ -145,6 +149,16 @@ export function PostCard({
   const [editMessage, setEditMessage] = useState<string | null>(null);
   const [editCategoryId, setEditCategoryId] = useState<string | null>(
     post.categoryId,
+  );
+  const [projectLinkMode, setProjectLinkMode] = useState(false);
+  const [projectLinkLoading, setProjectLinkLoading] = useState(false);
+  const [projectLinkWorking, setProjectLinkWorking] = useState(false);
+  const [projectLinkIds, setProjectLinkIds] = useState<string[]>([]);
+  const [projectLinkOptions, setProjectLinkOptions] = useState<
+    Array<{ id: string; title: string }>
+  >([]);
+  const [projectLinkMessage, setProjectLinkMessage] = useState<string | null>(
+    null,
   );
   const [pinnedUi, setPinnedUi] = useState(post.pinned);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
@@ -444,6 +458,146 @@ export function PostCard({
     }
   }
 
+  async function toggleShowInAll() {
+    const next = !post.showInAll;
+    setWorking(true);
+    try {
+      const res = await fetch(`/api/admin/posts/${post.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ showInAll: next }),
+        ...adminCredentials,
+      });
+      const data = await readAdminResponseJson(res);
+      if (!res.ok) return;
+      setMenuOpen(false);
+      const updated = feedPostFromAdminPatchJson(data);
+      if (updated) dispatchFeedPostUpdate(updated);
+      dispatchFeedRefreshReplace();
+      router.refresh();
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function startProjectLinking() {
+    setMenuOpen(false);
+    setEditMode(false);
+    setProjectLinkMessage(null);
+    setProjectLinkMode(true);
+    setProjectLinkLoading(true);
+    try {
+      const [postRes, projectsRes] = await Promise.all([
+        fetch(`/api/admin/posts/${post.id}`, { ...adminCredentials }),
+        fetch("/api/admin/projects", { ...adminCredentials }),
+      ]);
+      const [postData, projectsData] = await Promise.all([
+        readAdminResponseJson(postRes),
+        readAdminResponseJson(projectsRes),
+      ]);
+      if (!postRes.ok || !postData || typeof postData !== "object") {
+        const error =
+          postData &&
+          typeof postData === "object" &&
+          typeof (postData as { error?: unknown }).error === "string"
+            ? (postData as { error: string }).error
+            : "Не удалось загрузить связи поста";
+        setProjectLinkMessage(error);
+        return;
+      }
+      if (!projectsRes.ok || !projectsData || typeof projectsData !== "object") {
+        setProjectLinkMessage("Не удалось загрузить подборки.");
+        return;
+      }
+      const relations = Array.isArray((postData as { projects?: unknown }).projects)
+        ? ((postData as { projects: unknown[] }).projects ?? [])
+        : [];
+      const items = Array.isArray((projectsData as { items?: unknown }).items)
+        ? ((projectsData as { items: unknown[] }).items ?? [])
+        : [];
+      setProjectLinkIds(
+        relations.flatMap((relation) => {
+          if (!relation || typeof relation !== "object") return [];
+          const projectId = (relation as { projectId?: unknown }).projectId;
+          return typeof projectId === "string" ? [projectId] : [];
+        }),
+      );
+      setProjectLinkOptions(
+        items.flatMap((item) => {
+          if (!item || typeof item !== "object") return [];
+          const { id, title } = item as { id?: unknown; title?: unknown };
+          return typeof id === "string" && typeof title === "string"
+            ? [{ id, title }]
+            : [];
+        }),
+      );
+    } catch {
+      setProjectLinkMessage("Нет сети или сервер не ответил.");
+    } finally {
+      setProjectLinkLoading(false);
+    }
+  }
+
+  async function saveProjectLinks(
+    nextProjectIds: string[],
+    projectPosts?: { projectId: string; postIds: string[] },
+  ) {
+    setProjectLinkWorking(true);
+    setProjectLinkMessage(null);
+    try {
+      const res = await fetch(`/api/admin/posts/${post.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectIds: nextProjectIds }),
+        ...adminCredentials,
+      });
+      const data = await readAdminResponseJson(res);
+      if (!res.ok) {
+        const error =
+          data &&
+          typeof data === "object" &&
+          typeof (data as { error?: unknown }).error === "string"
+            ? (data as { error: string }).error
+            : `Не удалось сохранить (HTTP ${res.status})`;
+        setProjectLinkMessage(error);
+        return;
+      }
+      if (projectPosts) {
+        const projectRes = await fetch(
+          `/api/admin/projects/${projectPosts.projectId}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              postIds: projectPosts.postIds,
+              status:
+                projectPosts.postIds.length >= 2 ? "PUBLISHED" : "DRAFT",
+            }),
+            ...adminCredentials,
+          },
+        );
+        const projectData = await readAdminResponseJson(projectRes);
+        if (!projectRes.ok) {
+          const error =
+            projectData &&
+            typeof projectData === "object" &&
+            typeof (projectData as { error?: unknown }).error === "string"
+              ? (projectData as { error: string }).error
+              : `Не удалось сохранить подборку (HTTP ${projectRes.status})`;
+          setProjectLinkMessage(error);
+          return;
+        }
+      }
+      setProjectLinkMode(false);
+      dispatchFeedRefreshMerge();
+      router.refresh();
+    } catch {
+      setProjectLinkMessage("Нет сети или сервер не ответил.");
+    } finally {
+      setProjectLinkWorking(false);
+    }
+  }
+
   function cancelEdit() {
     setEditMode(false);
     setEditMessage(null);
@@ -551,7 +705,8 @@ export function PostCard({
     canManage && editMode ? "overflow-x-hidden" : "overflow-hidden";
 
   /** Полноэкранная ссылка на пост: текст/шапка не перехватывают hit-test (кроме кнопок и фото). */
-  const showPostLinkOverlay = !standalone && !(canManage && editMode);
+  const showPostLinkOverlay =
+    !standalone && !(canManage && (editMode || projectLinkMode));
 
   return (
     <>
@@ -624,11 +779,6 @@ export function PostCard({
                 </span>
               )
             ) : null}
-            {canManage && editMode ? (
-              <span className="mt-0.5 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
-                Редактирование
-              </span>
-            ) : null}
           </div>
 
           <div
@@ -636,12 +786,20 @@ export function PostCard({
               showPostLinkOverlay ? "pointer-events-auto" : ""
             }`}
           >
-            {canManage && editMode ? (
+            {canManage && (editMode || projectLinkMode) ? (
               <button
                 type="button"
-                aria-label="Закрыть редактирование"
+                aria-label={
+                  editMode ? "Закрыть редактирование" : "Закрыть выбор подборок"
+                }
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition active:scale-90"
-                onClick={() => cancelEdit()}
+                onClick={() => {
+                  if (editMode) cancelEdit();
+                  else {
+                    setProjectLinkMode(false);
+                    setProjectLinkMessage(null);
+                  }
+                }}
               >
                 <X size={18} />
               </button>
@@ -674,12 +832,23 @@ export function PostCard({
                           role="menuitem"
                           onClick={() => {
                             setEditMessage(null);
+                            setProjectLinkMode(false);
                             setEditMode(true);
                             setMenuOpen(false);
                           }}
                         >
                           <Edit3 size={16} className="text-stone-400" />
                           Редактировать
+                        </button>
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
+                          role="menuitem"
+                          disabled={working || projectLinkLoading}
+                          onClick={() => void startProjectLinking()}
+                        >
+                          <Link2 size={16} className="text-stone-400" />
+                          Связать с подборкой
                         </button>
                         <button
                           type="button"
@@ -705,6 +874,24 @@ export function PostCard({
                           )}
                           {pinnedUi ? "Открепить" : "Закрепить"}
                         </button>
+                        {post.categoryId ? (
+                          <button
+                            type="button"
+                            disabled={working}
+                            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
+                            role="menuitem"
+                            onClick={() => void toggleShowInAll()}
+                          >
+                            {post.showInAll ? (
+                              <EyeOff size={16} className="text-stone-400" />
+                            ) : (
+                              <Eye size={16} className="text-stone-400" />
+                            )}
+                            {post.showInAll
+                              ? "Скрыть из «Все»"
+                              : "Показывать во «Все»"}
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           disabled={working}
@@ -808,8 +995,31 @@ export function PostCard({
             }
           />
           </div>
-        ) : (
-          <>
+          ) : (
+            <>
+            {canManage && projectLinkMode ? (
+              <div className="mb-3 sm:mb-4">
+                {projectLinkLoading ? (
+                  <div className="h-28 animate-pulse rounded-2xl bg-stone-100" />
+                ) : (
+                  <PostProjectLinkEditor
+                    post={{ id: post.id, title: post.title, slug: post.slug }}
+                    projects={projectLinkOptions}
+                    selectedIds={projectLinkIds}
+                    onChange={setProjectLinkIds}
+                    onCancel={() => {
+                      setProjectLinkMode(false);
+                      setProjectLinkMessage(null);
+                    }}
+                    onSave={(ids, projectPosts) =>
+                      void saveProjectLinks(ids, projectPosts)
+                    }
+                    saving={projectLinkWorking}
+                    message={projectLinkMessage}
+                  />
+                )}
+              </div>
+            ) : null}
             {standalone && standaloneTitle ? (
               <h2
                 className={`mb-2.5 text-xl font-semibold leading-tight tracking-tight text-stone-900 sm:mb-3 sm:text-2xl ${
@@ -834,7 +1044,7 @@ export function PostCard({
                 className="mb-3 text-base leading-7 text-stone-700 sm:mb-5"
               />
             ) : null}
-            {!standalone && post.images.length > 0 ? (
+            {projectLinkMode ? null : !standalone && post.images.length > 0 ? (
               <div className="pointer-events-auto min-w-0">
                 <MediaGrid
                   fullBleed

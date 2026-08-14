@@ -6,6 +6,7 @@ export type AdminPostListRow = {
   preview: string;
   status: string;
   pinned: boolean;
+  showInAll: boolean;
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;

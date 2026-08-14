@@ -7,6 +7,7 @@ import { SiteChrome } from "@/components/site/SiteChrome";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SeoPostList } from "@/components/seo/SeoPostList";
 import { SeoPager } from "@/components/seo/SeoPager";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 
 type ArchivePageProps = {
   searchParams: Promise<{ page?: string }>;
@@ -24,8 +25,10 @@ export async function generateMetadata({
 }: ArchivePageProps): Promise<Metadata> {
   const [sp, settings] = await Promise.all([searchParams, getSiteSettings()]);
   const page = parsePageNumber(sp.page);
-  const title = page > 1 ? `Архив публикаций, стр. ${page}` : "Архив публикаций";
-  const description = "Публичный архив всех опубликованных материалов.";
+  const title =
+    page > 1 ? `Все публикации, стр. ${page}` : "Все публикации";
+  const description =
+    "Все заметки, иллюстрации, керамика и личные истории Алисы — от новых публикаций к ранним.";
   const canonicalPath = archivePath(page);
   const siteUrl = resolveSiteOrigin(settings.siteUrl);
 
@@ -61,11 +64,19 @@ export default async function ArchivePage({ searchParams }: ArchivePageProps) {
         contactsLabel={settings.contactsLabel}
       />
       <main className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-8">
+        <Breadcrumbs
+          siteUrl={resolveSiteOrigin(settings.siteUrl)}
+          className="mb-3"
+          items={[
+            { name: "Главная", href: "/" },
+            { name: "Все публикации" },
+          ]}
+        />
         <h1 className="text-2xl font-semibold tracking-tight text-stone-900">
-          Архив публикаций
+          Все публикации
         </h1>
         <p className="mt-2 text-sm leading-6 text-stone-600">
-          HTML-архив для стабильного обхода всех материалов поисковыми роботами.
+          Иллюстрации, керамика, заметки о выставках и личные истории — все публикации ленты в одном месте.
         </p>
         <section className="mt-5">
           <SeoPostList items={archive.items} emptyText="Архив пока пуст." />
@@ -81,4 +92,3 @@ export default async function ArchivePage({ searchParams }: ArchivePageProps) {
     </>
   );
 }
-

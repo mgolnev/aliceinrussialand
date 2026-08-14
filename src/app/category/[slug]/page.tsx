@@ -14,6 +14,7 @@ import { SiteChrome } from "@/components/site/SiteChrome";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SeoPostList } from "@/components/seo/SeoPostList";
 import { SeoPager } from "@/components/seo/SeoPager";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -25,6 +26,11 @@ export const dynamic = "force-dynamic";
 function pagePath(slug: string, page: number): string {
   if (page <= 1) return `/category/${slug}`;
   return `/category/${slug}?page=${page}`;
+}
+
+function readableCategoryName(name: string): string {
+  const trimmed = name.trim();
+  return trimmed ? `${trimmed[0].toLocaleUpperCase("ru-RU")}${trimmed.slice(1)}` : "Публикации";
 }
 
 function publicationsLabel(n: number): string {
@@ -67,13 +73,14 @@ export async function generateMetadata({
     };
   }
 
-  const titleBase = `${category.name} — категория | ${settings.displayName}`;
+  const categoryName = readableCategoryName(category.name);
+  const titleBase = `${categoryName} — ${settings.displayName}`;
   const title = page > 1 ? `${titleBase}, стр. ${page}` : titleBase;
   const canonicalPath = pagePath(category.slug, page);
   const siteUrl = resolveSiteOrigin(settings.siteUrl);
 
   return {
-    title,
+    title: { absolute: title },
     description: category.metaDescription,
     alternates: { canonical: canonicalPath },
     openGraph: {
@@ -123,6 +130,14 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         contactsLabel={settings.contactsLabel}
       />
       <main className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-8">
+        <Breadcrumbs
+          siteUrl={siteUrl}
+          className="mb-3"
+          items={[
+            { name: "Главная", href: "/" },
+            { name: category.name },
+          ]}
+        />
         <h1 className="text-2xl font-semibold tracking-tight text-stone-900">{category.name}</h1>
         <div className="mt-2 space-y-2 text-sm leading-6 text-stone-600">
           {descriptionParagraphs(category.description).map((paragraph, idx) => (

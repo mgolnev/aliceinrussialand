@@ -12,6 +12,7 @@ import { SiteChrome } from "@/components/site/SiteChrome";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SocialLinksSection } from "@/components/site/SocialLinksSection";
 import { resolveSiteOrigin } from "@/lib/site-origin";
+import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -136,6 +137,14 @@ export default async function AboutPage() {
       />
       <div className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-10">
         <article className="mx-auto max-w-2xl">
+          <Breadcrumbs
+            siteUrl={siteUrl}
+            className="mb-3"
+            items={[
+              { name: "Главная", href: "/" },
+              { name: "Обо мне" },
+            ]}
+          />
           <h1 className="text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
             Обо мне
           </h1>

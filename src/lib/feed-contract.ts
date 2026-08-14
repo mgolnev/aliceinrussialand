@@ -7,6 +7,7 @@ export const FEED_POST_JSON_KEYS = [
   "displayMode",
   "publishedAt",
   "pinned",
+  "showInAll",
   "categoryId",
   "category",
   "images",

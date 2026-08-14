@@ -119,6 +119,7 @@ export default async function PostPage({ params }: PageProps) {
     displayMode: post.displayMode === "STACK" ? "STACK" : "GRID",
     publishedAt: post.publishedAt?.toISOString() ?? null,
     pinned: post.pinned,
+    showInAll: post.showInAll,
     categoryId: post.categoryId,
     category: post.category,
     images: post.images.map((im) => ({

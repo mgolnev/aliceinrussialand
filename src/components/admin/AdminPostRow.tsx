@@ -14,6 +14,7 @@ import { createPortal } from "react-dom";
 import {
   Copy,
   Edit3,
+  Eye,
   ExternalLink,
   EyeOff,
   ImageIcon,
@@ -42,6 +43,7 @@ import {
   handleMobileEditableFocus,
 } from "@/lib/mobile-editable-scroll";
 import type { AdminPostListRow } from "@/components/admin/admin-post-list-types";
+import { PostProjectLinkEditor } from "@/components/admin/PostProjectLinkEditor";
 
 const FeedComposerPanelLazy = dynamic(
   () =>
@@ -230,12 +232,16 @@ export function AdminPostRow({
   const [editBody, setEditBody] = useState("");
   const [editImages, setEditImages] = useState<FeedPost["images"]>([]);
   const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
-  const [editProjectIds, setEditProjectIds] = useState<string[]>([]);
   const [editSlug, setEditSlug] = useState("");
   const [editMetaTitle, setEditMetaTitle] = useState("");
   const [editMetaDescription, setEditMetaDescription] = useState("");
   const [editMessage, setEditMessage] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+  const [projectLinkMode, setProjectLinkMode] = useState(false);
+  const [projectLinkLoading, setProjectLinkLoading] = useState(false);
+  const [projectLinkWorking, setProjectLinkWorking] = useState(false);
+  const [projectLinkIds, setProjectLinkIds] = useState<string[]>([]);
+  const [projectLinkMessage, setProjectLinkMessage] = useState<string | null>(null);
 
   const updateMenuPosition = useCallback(() => {
     const el = menuTriggerRef.current;
@@ -357,6 +363,7 @@ export function AdminPostRow({
 
   async function startEdit() {
     setMenuOpen(false);
+    setProjectLinkMode(false);
     setLoadError(null);
     setEditMessage(null);
     setEditMode(true);
@@ -385,14 +392,6 @@ export function AdminPostRow({
         return;
       }
       const raw = data as Record<string, unknown>;
-      const projectRelations = Array.isArray(raw.projects) ? raw.projects : [];
-      setEditProjectIds(
-        projectRelations.flatMap((relation) => {
-          if (!relation || typeof relation !== "object") return [];
-          const projectId = (relation as { projectId?: unknown }).projectId;
-          return typeof projectId === "string" ? [projectId] : [];
-        }),
-      );
       setFeedPost(feed);
       setEditBody(feed.body);
       setEditImages(feed.images);
@@ -411,6 +410,104 @@ export function AdminPostRow({
       setEditMode(false);
     } finally {
       setFetchingEdit(false);
+    }
+  }
+
+  async function startProjectLinking() {
+    setMenuOpen(false);
+    setEditMode(false);
+    setProjectLinkMessage(null);
+    setProjectLinkMode(true);
+    setProjectLinkLoading(true);
+    try {
+      const res = await fetch(`/api/admin/posts/${p.id}`, {
+        ...adminCredentials,
+      });
+      const data = await readAdminResponseJson(res);
+      if (!res.ok || !data || typeof data !== "object") {
+        const error =
+          data &&
+          typeof data === "object" &&
+          typeof (data as { error?: unknown }).error === "string"
+            ? (data as { error: string }).error
+            : "Не удалось загрузить связи поста";
+        setProjectLinkMessage(error);
+        return;
+      }
+      const relations = Array.isArray((data as { projects?: unknown }).projects)
+        ? ((data as { projects: unknown[] }).projects ?? [])
+        : [];
+      setProjectLinkIds(
+        relations.flatMap((relation) => {
+          if (!relation || typeof relation !== "object") return [];
+          const projectId = (relation as { projectId?: unknown }).projectId;
+          return typeof projectId === "string" ? [projectId] : [];
+        }),
+      );
+    } catch {
+      setProjectLinkMessage("Нет сети или сервер не ответил.");
+    } finally {
+      setProjectLinkLoading(false);
+    }
+  }
+
+  async function saveProjectLinks(
+    nextProjectIds: string[],
+    projectPosts?: { projectId: string; postIds: string[] },
+  ) {
+    setProjectLinkWorking(true);
+    setProjectLinkMessage(null);
+    try {
+      const res = await fetch(`/api/admin/posts/${p.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectIds: nextProjectIds }),
+        ...adminCredentials,
+      });
+      const data = await readAdminResponseJson(res);
+      if (!res.ok) {
+        const error =
+          data &&
+          typeof data === "object" &&
+          typeof (data as { error?: unknown }).error === "string"
+            ? (data as { error: string }).error
+            : `Не удалось сохранить (HTTP ${res.status})`;
+        setProjectLinkMessage(error);
+        return;
+      }
+      if (projectPosts) {
+        const projectRes = await fetch(
+          `/api/admin/projects/${projectPosts.projectId}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              postIds: projectPosts.postIds,
+              status:
+                projectPosts.postIds.length >= 2 ? "PUBLISHED" : "DRAFT",
+            }),
+            ...adminCredentials,
+          },
+        );
+        const projectData = await readAdminResponseJson(projectRes);
+        if (!projectRes.ok) {
+          const error =
+            projectData &&
+            typeof projectData === "object" &&
+            typeof (projectData as { error?: unknown }).error === "string"
+              ? (projectData as { error: string }).error
+              : `Не удалось сохранить подборку (HTTP ${projectRes.status})`;
+          setProjectLinkMessage(error);
+          return;
+        }
+      }
+      setProjectLinkMode(false);
+      dispatchFeedRefreshMerge();
+      router.refresh();
+    } catch {
+      setProjectLinkMessage("Нет сети или сервер не ответил.");
+    } finally {
+      setProjectLinkWorking(false);
     }
   }
 
@@ -444,7 +541,6 @@ export function AdminPostRow({
       displayMode: feedPost.displayMode,
       status,
       categoryId: editCategoryId,
-      projectIds: editProjectIds,
       slug: editSlug.trim(),
       metaTitle: editMetaTitle.trim(),
       metaDescription: editMetaDescription.trim(),
@@ -541,13 +637,31 @@ export function AdminPostRow({
     }
   }, [p.id, router]);
 
+  const toggleShowInAll = useCallback(async () => {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/posts/${p.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ showInAll: !p.showInAll }),
+        ...adminCredentials,
+      });
+      if (!res.ok) return;
+      setMenuOpen(false);
+      dispatchFeedRefreshReplace();
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }, [p.id, p.showInAll, router]);
+
   const rowPreviewClass =
     "relative flex min-h-0 min-w-0 flex-1 items-stretch gap-3 py-2 pl-3 pr-1 transition-[colors,transform] sm:gap-4 sm:py-2.5 sm:pl-4 sm:pr-2 group-hover:bg-stone-50/95";
 
   return (
     <li className="touch-manipulation overflow-visible border-b border-stone-200/50 last:border-b-0">
       <div className="group flex min-h-[5rem] items-stretch overflow-visible sm:min-h-[5.25rem]">
-        {published && !editMode ? (
+        {published && !editMode && !projectLinkMode ? (
           <Link
             href={`/p/${p.slug}`}
             className={`${rowPreviewClass} motion-safe:active:scale-[0.995] motion-safe:active:bg-stone-100/80`}
@@ -557,14 +671,14 @@ export function AdminPostRow({
           </Link>
         ) : (
           <div
-            className={`${rowPreviewClass} ${editMode ? "pointer-events-none opacity-80" : ""}`}
-            aria-hidden={editMode}
+            className={`${rowPreviewClass} ${editMode || projectLinkMode ? "pointer-events-none opacity-80" : ""}`}
+            aria-hidden={editMode || projectLinkMode}
           >
             {previewInner(p, published)}
           </div>
         )}
 
-        {!editMode ? (
+        {!editMode && !projectLinkMode ? (
           <div className="relative z-10 flex w-11 shrink-0 flex-col items-center justify-start self-stretch bg-white/80 pt-3 group-hover:bg-stone-50/90 sm:w-12 sm:pt-3.5">
             <button
               ref={menuTriggerRef}
@@ -603,11 +717,8 @@ export function AdminPostRow({
                       type="button"
                       className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100"
                       role="menuitem"
-                      disabled={busy || fetchingEdit}
-                      onClick={() => {
-                        void startEdit();
-                        setEditMessage("Выберите подборку под текстом и сохраните пост.");
-                      }}
+                      disabled={busy || fetchingEdit || projectLinkLoading}
+                      onClick={() => void startProjectLinking()}
                     >
                       <Link2 size={16} className="text-stone-400" />
                       Связать с подборкой
@@ -637,6 +748,24 @@ export function AdminPostRow({
                         <ExternalLink size={16} className="text-stone-400" />
                         Открыть на сайте
                       </Link>
+                    ) : null}
+                    {p.categoryName ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
+                        role="menuitem"
+                        onClick={() => void toggleShowInAll()}
+                      >
+                        {p.showInAll ? (
+                          <EyeOff size={16} className="text-stone-400" />
+                        ) : (
+                          <Eye size={16} className="text-stone-400" />
+                        )}
+                        {p.showInAll
+                          ? "Скрыть из «Все»"
+                          : "Показывать во «Все»"}
+                      </button>
                     ) : null}
                     <div className="my-1.5 h-px bg-stone-100" />
                     {published ? (
@@ -760,9 +889,6 @@ export function AdminPostRow({
                 onPostCategoryChange={
                   categories.length > 0 ? setEditCategoryId : undefined
                 }
-                projects={projects}
-                postProjectIds={editProjectIds}
-                onPostProjectIdsChange={setEditProjectIds}
               />
 
               <details className="mt-5 overflow-hidden rounded-2xl border border-stone-200/80 bg-white ring-1 ring-stone-100/80">
@@ -813,6 +939,30 @@ export function AdminPostRow({
               </details>
             </>
           ) : null}
+        </div>
+      ) : null}
+
+      {projectLinkMode ? (
+        <div className="border-t border-stone-200/60 bg-white px-3 py-3 sm:px-4 sm:py-4">
+          {projectLinkLoading ? (
+            <div className="h-36 animate-pulse rounded-2xl bg-stone-100" />
+          ) : (
+            <PostProjectLinkEditor
+              post={{ id: p.id, title: p.title, slug: p.slug }}
+              projects={projects}
+              selectedIds={projectLinkIds}
+              onChange={setProjectLinkIds}
+              onCancel={() => {
+                setProjectLinkMode(false);
+                setProjectLinkMessage(null);
+              }}
+              onSave={(ids, projectPosts) =>
+                void saveProjectLinks(ids, projectPosts)
+              }
+              saving={projectLinkWorking}
+              message={projectLinkMessage}
+            />
+          )}
         </div>
       ) : null}
     </li>

@@ -155,6 +155,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     status?: string;
     publishedAt?: Date | null;
     pinned?: boolean;
+    showInAll?: boolean;
     metaTitle?: string;
     metaDescription?: string;
     telegramSourceUrl?: string | null;
@@ -219,6 +220,17 @@ export async function PATCH(req: Request, ctx: Ctx) {
       });
       if (cat) data.categoryId = cat.id;
     }
+  }
+  if (typeof body.showInAll === "boolean") {
+    const effectiveCategoryId =
+      data.categoryId === undefined ? existing.categoryId : data.categoryId;
+    if (!body.showInAll && !effectiveCategoryId) {
+      return NextResponse.json(
+        { error: "Сначала выберите категорию для поста" },
+        { status: 400 },
+      );
+    }
+    data.showInAll = body.showInAll;
   }
 
   try {

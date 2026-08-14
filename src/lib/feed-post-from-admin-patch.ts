@@ -45,6 +45,7 @@ export function feedPostFromAdminPatchJson(json: unknown): FeedPost | null {
     displayMode: p.displayMode === "STACK" ? "STACK" : "GRID",
     publishedAt: typeof p.publishedAt === "string" ? p.publishedAt : null,
     pinned: Boolean(p.pinned),
+    showInAll: p.showInAll !== false,
     categoryId: typeof p.categoryId === "string" ? p.categoryId : null,
     category,
     images,

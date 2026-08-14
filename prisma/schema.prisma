@@ -60,6 +60,7 @@ model Post {
   status             String         @default("DRAFT")
   publishedAt        DateTime?
   pinned             Boolean        @default(false)
+  showInAll          Boolean        @default(true)
   metaTitle          String         @default("")
   metaDescription    String         @default("")
   telegramSourceUrl  String?
@@ -77,7 +78,7 @@ model Post {
 
   @@index([status, publishedAt])
   @@index([categoryId])
-  @@index([status, pinned, publishedAt(sort: Desc)])
+  @@index([status, showInAll, pinned, publishedAt(sort: Desc)])
   @@index([sourcePlatform, sourceUrl])
   @@index([sourcePlatform, sourceExternalId])
 }
