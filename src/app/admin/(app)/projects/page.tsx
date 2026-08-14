@@ -17,9 +17,9 @@ export default async function AdminProjectsPage() {
   return (
     <div className="space-y-6">
       <div className="rounded-[28px] border border-stone-200/80 bg-white/90 p-6">
-        <h1 className="text-3xl font-semibold tracking-tight">Циклы работ</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Подборки работ</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600">
-          Объединяйте связанные публикации из разных категорий и задавайте порядок, в котором их стоит читать.
+          Объединяйте публикации об одной работе. Они будут показаны вместе и первыми в рекомендациях друг друга.
         </p>
       </div>
       <ProjectsPanel initial={projects} />

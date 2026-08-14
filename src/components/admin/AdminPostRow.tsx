@@ -203,10 +203,12 @@ export function AdminPostRow({
   post: p,
   siteUrl,
   categories,
+  projects,
 }: {
   post: AdminPostListRow;
   siteUrl: string;
   categories: FeedCategory[];
+  projects: Array<{ id: string; title: string }>;
 }) {
   const router = useRouter();
   const base = siteUrl.replace(/\/$/, "");
@@ -227,6 +229,7 @@ export function AdminPostRow({
   const [editBody, setEditBody] = useState("");
   const [editImages, setEditImages] = useState<FeedPost["images"]>([]);
   const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
+  const [editProjectIds, setEditProjectIds] = useState<string[]>([]);
   const [editSlug, setEditSlug] = useState("");
   const [editMetaTitle, setEditMetaTitle] = useState("");
   const [editMetaDescription, setEditMetaDescription] = useState("");
@@ -381,6 +384,14 @@ export function AdminPostRow({
         return;
       }
       const raw = data as Record<string, unknown>;
+      const projectRelations = Array.isArray(raw.projects) ? raw.projects : [];
+      setEditProjectIds(
+        projectRelations.flatMap((relation) => {
+          if (!relation || typeof relation !== "object") return [];
+          const projectId = (relation as { projectId?: unknown }).projectId;
+          return typeof projectId === "string" ? [projectId] : [];
+        }),
+      );
       setFeedPost(feed);
       setEditBody(feed.body);
       setEditImages(feed.images);
@@ -432,6 +443,7 @@ export function AdminPostRow({
       displayMode: feedPost.displayMode,
       status,
       categoryId: editCategoryId,
+      projectIds: editProjectIds,
       slug: editSlug.trim(),
       metaTitle: editMetaTitle.trim(),
       metaDescription: editMetaDescription.trim(),
@@ -737,6 +749,9 @@ export function AdminPostRow({
                 onPostCategoryChange={
                   categories.length > 0 ? setEditCategoryId : undefined
                 }
+                projects={projects}
+                postProjectIds={editProjectIds}
+                onPostProjectIdsChange={setEditProjectIds}
               />
 
               <details className="mt-5 overflow-hidden rounded-2xl border border-stone-200/80 bg-white ring-1 ring-stone-100/80">

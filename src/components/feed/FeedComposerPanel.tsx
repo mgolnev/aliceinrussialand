@@ -111,6 +111,10 @@ type Props = {
   categories?: Array<{ id: string; name: string; slug: string }>;
   postCategoryId?: string | null;
   onPostCategoryChange?: (categoryId: string | null) => void;
+  /** Необязательные подборки: связанные посты попадут первыми в «Читайте дальше». */
+  projects?: Array<{ id: string; title: string }>;
+  postProjectIds?: string[];
+  onPostProjectIdsChange?: (projectIds: string[]) => void;
   /** Очередь загрузки фото: прогресс, остановка, повтор по файлу */
   uploadQueue?: {
     rows: UploadQueueRow[];
@@ -153,6 +157,9 @@ export function FeedComposerPanel({
   categories,
   postCategoryId,
   onPostCategoryChange,
+  projects,
+  postProjectIds,
+  onPostProjectIdsChange,
   uploadQueue,
   uploadBlocksSubmit = false,
   quickAddMenu = false,
@@ -247,6 +254,38 @@ export function FeedComposerPanel({
                   {c.name}
                 </button>
               ))}
+            </div>
+          </div>
+        ) : null}
+
+        {projects &&
+        projects.length > 0 &&
+        postProjectIds &&
+        onPostProjectIdsChange ? (
+          <div className="mt-3 min-w-0">
+            <p className="mb-1.5 text-xs font-medium text-stone-500">
+              Связанные подборки
+            </p>
+            <div className="flex gap-1 overflow-x-auto px-0.5 pb-1 pt-0.5 [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden">
+              {projects.map((project) => {
+                const selected = postProjectIds.includes(project.id);
+                return (
+                  <button
+                    key={project.id}
+                    type="button"
+                    className={pillTabClass(selected)}
+                    onClick={() =>
+                      onPostProjectIdsChange(
+                        selected
+                          ? postProjectIds.filter((id) => id !== project.id)
+                          : [...postProjectIds, project.id],
+                      )
+                    }
+                  >
+                    {project.title}
+                  </button>
+                );
+              })}
             </div>
           </div>
         ) : null}

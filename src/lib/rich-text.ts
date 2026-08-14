@@ -22,6 +22,8 @@ function appendText(parts: RichTextPart[], value: string) {
 /** Ссылки в постах не должны уметь запускать javascript: или data:-URL. */
 export function safePostHref(value: string): string | null {
   const raw = value.trim();
+  /** Внутренние подборки и посты остаются ссылками сайта, а не внешними URL. */
+  if (/^\/(?:p|projects)\/[a-z0-9][a-z0-9-]*$/iu.test(raw)) return raw;
   if (!/^(https?:\/\/|mailto:)/iu.test(raw)) return null;
   try {
     const url = new URL(raw);

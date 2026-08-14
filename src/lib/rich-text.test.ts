@@ -22,6 +22,12 @@ describe("rich post text", () => {
     expect(richTextToPlainText("[опасно](javascript:alert(1))")).toContain("опасно");
   });
 
+  it("allows internal links to posts and work collections", () => {
+    expect(safePostHref("/projects/volk-durak")).toBe("/projects/volk-durak");
+    expect(safePostHref("/p/poisk-volka")).toBe("/p/poisk-volka");
+    expect(safePostHref("/admin/projects")).toBeNull();
+  });
+
   it("serializes only allowed editable tags back to markup", () => {
     const root = document.createElement("div");
     root.innerHTML = "<strong>Важно</strong> и <em>точно</em><br><a href='https://example.com'>источник</a>";

@@ -48,7 +48,7 @@ export function AdminFolderNav() {
         prefetch
         className={`relative ${pillTabClass(projectsActive)}`}
       >
-        Циклы
+        Подборки
         <LinkPendingBackdrop />
       </Link>
       <Link

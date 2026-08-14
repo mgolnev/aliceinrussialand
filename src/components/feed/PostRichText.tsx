@@ -1,4 +1,5 @@
 import { parseRichText, type RichTextPart } from "@/lib/rich-text";
+import Link from "next/link";
 
 function RichTextParts({ parts }: { parts: RichTextPart[] }) {
   return parts.map((part, index) => {
@@ -13,13 +14,22 @@ function RichTextParts({ parts }: { parts: RichTextPart[] }) {
     if (part.type === "strike") {
       return <s key={key}><RichTextParts parts={part.children} /></s>;
     }
+    const internal = part.href.startsWith("/");
+    const className = "pointer-events-auto text-blue-600 underline decoration-blue-400 underline-offset-2 transition hover:text-blue-800 hover:decoration-blue-700";
+    if (internal) {
+      return (
+        <Link key={key} href={part.href} className={className}>
+          <RichTextParts parts={part.children} />
+        </Link>
+      );
+    }
     return (
       <a
         key={key}
         href={part.href}
         target="_blank"
         rel="noreferrer"
-        className="pointer-events-auto text-blue-600 underline decoration-blue-400 underline-offset-2 transition hover:text-blue-800 hover:decoration-blue-700"
+        className={className}
       >
         <RichTextParts parts={part.children} />
       </a>

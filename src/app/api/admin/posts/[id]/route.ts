@@ -8,6 +8,7 @@ import { deleteImageFiles } from "@/lib/image-pipeline";
 import { parseVariants } from "@/lib/posts-query";
 import { derivePostTitle } from "@/lib/post-text";
 import { excerptForMetaDescription } from "@/lib/meta-excerpt";
+import { normalizeProjectPostIds } from "@/lib/project-post-ids";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -42,6 +43,11 @@ function revalidatePublicPostPages(slugs: Array<string | null | undefined>) {
   revalidatePath("/category/[slug]", "page");
 }
 
+function revalidateProjectPages(slugs: Iterable<string>) {
+  for (const slug of new Set(slugs)) revalidatePath(`/projects/${slug}`);
+  revalidatePath("/sitemap.xml");
+}
+
 export async function GET(_req: Request, ctx: Ctx) {
   const { id } = await ctx.params;
   const post = await prisma.post.findUnique({
@@ -49,6 +55,10 @@ export async function GET(_req: Request, ctx: Ctx) {
     include: {
       images: { orderBy: { sortOrder: "asc" } },
       category: { select: { id: true, name: true, slug: true } },
+      projects: {
+        orderBy: { sortOrder: "asc" },
+        include: { project: { select: { id: true, title: true, slug: true } } },
+      },
     },
   });
   if (!post) {
@@ -68,7 +78,10 @@ export async function GET(_req: Request, ctx: Ctx) {
 
 export async function PATCH(req: Request, ctx: Ctx) {
   const { id } = await ctx.params;
-  const existing = await prisma.post.findUnique({ where: { id } });
+  const existing = await prisma.post.findUnique({
+    where: { id },
+    include: { projects: { include: { project: { select: { slug: true } } } } },
+  });
   if (!existing) {
     return NextResponse.json({ error: "Не найдено" }, { status: 404 });
   }
@@ -79,6 +92,24 @@ export async function PATCH(req: Request, ctx: Ctx) {
   > | null;
   if (!body) {
     return NextResponse.json({ error: "Некорректный JSON" }, { status: 400 });
+  }
+
+  const requestedProjectIds =
+    "projectIds" in body ? normalizeProjectPostIds(body.projectIds) : undefined;
+  if (requestedProjectIds === null) {
+    return NextResponse.json({ error: "Некорректный список подборок" }, { status: 400 });
+  }
+  const requestedProjects = requestedProjectIds
+    ? await prisma.project.findMany({
+        where: { id: { in: requestedProjectIds } },
+        select: { id: true, slug: true },
+      })
+    : [];
+  if (
+    requestedProjectIds &&
+    requestedProjects.length !== requestedProjectIds.length
+  ) {
+    return NextResponse.json({ error: "Одна из подборок больше не существует" }, { status: 400 });
   }
 
   const nextTitle =
@@ -223,16 +254,61 @@ export async function PATCH(req: Request, ctx: Ctx) {
       );
     }
 
+    if (requestedProjectIds !== undefined) {
+      const existingProjectIds = existing.projects.map((row) => row.projectId);
+      const toRemove = existingProjectIds.filter(
+        (projectId) => !requestedProjectIds.includes(projectId),
+      );
+      const toAdd = requestedProjectIds.filter(
+        (projectId) => !existingProjectIds.includes(projectId),
+      );
+      const changedIds = [...toRemove, ...toAdd];
+      if (changedIds.length) {
+        await prisma.$transaction(async (tx) => {
+          if (toRemove.length) {
+            await tx.postProject.deleteMany({
+              where: { postId: id, projectId: { in: toRemove } },
+            });
+          }
+          for (const projectId of toAdd) {
+            const maxOrder = await tx.postProject.aggregate({
+              where: { projectId },
+              _max: { sortOrder: true },
+            });
+            await tx.postProject.create({
+              data: {
+                postId: id,
+                projectId,
+                sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
+              },
+            });
+          }
+          await tx.project.updateMany({
+            where: { id: { in: changedIds } },
+            data: { updatedAt: new Date() },
+          });
+        });
+      }
+    }
+
     const fresh = await prisma.post.findUnique({
       where: { id },
       include: {
         images: { orderBy: { sortOrder: "asc" } },
         category: { select: { id: true, name: true, slug: true } },
+        projects: {
+          orderBy: { sortOrder: "asc" },
+          include: { project: { select: { id: true, title: true, slug: true } } },
+        },
       },
     });
 
     revalidatePath("/admin/posts");
     revalidatePublicPostPages([existing.slug, fresh?.slug]);
+    revalidateProjectPages([
+      ...existing.projects.map((row) => row.project.slug),
+      ...requestedProjects.map((project) => project.slug),
+    ]);
 
     return NextResponse.json({
       ...fresh,

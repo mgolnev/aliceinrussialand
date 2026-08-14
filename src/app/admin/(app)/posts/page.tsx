@@ -23,7 +23,7 @@ function thumbUrlFromVariantsJson(variantsJson: string): string | null {
 }
 
 export default async function AdminPostsPage() {
-  const [posts, settings, categories] = await Promise.all([
+  const [posts, settings, categories, projects] = await Promise.all([
     prisma.post.findMany({
       orderBy: { updatedAt: "desc" },
       take: 100,
@@ -50,6 +50,10 @@ export default async function AdminPostsPage() {
     prisma.postCategory.findMany({
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true, slug: true, sortOrder: true },
+    }),
+    prisma.project.findMany({
+      orderBy: [{ title: "asc" }],
+      select: { id: true, title: true },
     }),
   ]);
 
@@ -93,7 +97,12 @@ export default async function AdminPostsPage() {
           Пока нет постов. Новую запись можно начать в ленте на главной.
         </div>
       ) : (
-        <AdminPostsList posts={rows} siteUrl={siteUrl} categories={categories} />
+        <AdminPostsList
+          posts={rows}
+          siteUrl={siteUrl}
+          categories={categories}
+          projects={projects}
+        />
       )}
     </div>
   );

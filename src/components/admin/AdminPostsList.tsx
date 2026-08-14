@@ -43,10 +43,12 @@ export function AdminPostsList({
   posts,
   siteUrl,
   categories,
+  projects,
 }: {
   posts: AdminPostListRow[];
   siteUrl: string;
   categories: FeedCategory[];
+  projects: Array<{ id: string; title: string }>;
 }) {
   const sortMode = useSyncExternalStore(
     subscribeToStoredSortMode,
@@ -96,6 +98,7 @@ export function AdminPostsList({
             post={p}
             siteUrl={siteUrl}
             categories={categories}
+            projects={projects}
           />
         ))}
       </ul>

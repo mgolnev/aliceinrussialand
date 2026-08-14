@@ -57,7 +57,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
   if (!body) return NextResponse.json({ error: "Некорректный JSON" }, { status: 400 });
 
   const title = typeof body.title === "string" ? body.title.trim() : existing.title;
-  if (!title) return NextResponse.json({ error: "Укажите название цикла" }, { status: 400 });
+  if (!title) return NextResponse.json({ error: "Укажите название подборки" }, { status: 400 });
   const status =
     body.status === PROJECT_STATUS.DRAFT ||
     body.status === PROJECT_STATUS.PUBLISHED ||
@@ -81,7 +81,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const nextPostCount = postIds === undefined ? existing.posts.length : postIds.length;
   if (status === PROJECT_STATUS.PUBLISHED && nextPostCount < 2) {
     return NextResponse.json(
-      { error: "Чтобы опубликовать цикл, добавьте минимум две публикации" },
+      { error: "Чтобы опубликовать подборку, добавьте минимум две публикации" },
       { status: 400 },
     );
   }

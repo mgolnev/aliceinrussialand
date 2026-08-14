@@ -9,4 +9,11 @@ describe("PostRichText", () => {
     expect(link).toHaveAttribute("href", "https://example.com/");
     expect(link).toHaveClass("text-blue-600", "decoration-blue-400");
   });
+
+  it("keeps internal collection links inside the site", () => {
+    render(<PostRichText value="[Все материалы](/projects/volk-durak)" />);
+    const link = screen.getByRole("link", { name: "Все материалы" });
+    expect(link).toHaveAttribute("href", "/projects/volk-durak");
+    expect(link).not.toHaveAttribute("target", "_blank");
+  });
 });

@@ -129,7 +129,12 @@ async function listCategoryIdsByFeedOrder(): Promise<string[]> {
 export async function getPostCarouselPeers(
   currentPostId: string,
   categoryId: string | null,
-  opts?: { categoryFirst?: number; totalLimit?: number },
+  opts?: {
+    categoryFirst?: number;
+    totalLimit?: number;
+    /** Ручные связи из подборок: они всегда идут до алгоритмических рекомендаций. */
+    priorityPostIds?: string[];
+  },
 ): Promise<PostCarouselItem[]> {
   const categoryFirst = opts?.categoryFirst ?? 5;
   const totalLimit = opts?.totalLimit ?? 16;
@@ -140,12 +145,31 @@ export async function getPostCarouselPeers(
   } as const;
   type CarouselRow = Prisma.PostGetPayload<{ include: typeof carouselInclude }>;
 
+  const requestedPriorityIds = [...new Set(opts?.priorityPostIds ?? [])]
+    .filter((id) => id !== currentPostId)
+    .slice(0, totalLimit);
+  const priorityPool = requestedPriorityIds.length
+    ? await prisma.post.findMany({
+        where: {
+          status: POST_STATUS.PUBLISHED,
+          id: { in: requestedPriorityIds },
+        },
+        include: carouselInclude,
+      })
+    : [];
+  const priorityById = new Map(priorityPool.map((post) => [post.id, post]));
+  const priorityPosts = requestedPriorityIds
+    .map((id) => priorityById.get(id))
+    .filter((post): post is CarouselRow => Boolean(post));
+  const remainingAfterPriority = Math.max(0, totalLimit - priorityPosts.length);
+  if (remainingAfterPriority === 0) return priorityPosts.map(mapPostToCarouselItem);
+
   const SAME_CATEGORY_POOL_CAP = 24;
   const sameCategoryPool = categoryId
     ? await prisma.post.findMany({
         where: {
           status: POST_STATUS.PUBLISHED,
-          id: { not: currentPostId },
+          id: { notIn: [currentPostId, ...priorityPosts.map((post) => post.id)] },
           categoryId,
         },
         orderBy: carouselOrderBy,
@@ -156,7 +180,7 @@ export async function getPostCarouselPeers(
 
   let sameCategory: CarouselRow[] = [];
   if (categoryId && sameCategoryPool.length > 0) {
-    const takeN = Math.min(categoryFirst, sameCategoryPool.length);
+    const takeN = Math.min(categoryFirst, remainingAfterPriority, sameCategoryPool.length);
     const maxOffset = Math.max(0, sameCategoryPool.length - takeN);
     const offset =
       maxOffset === 0
@@ -165,8 +189,12 @@ export async function getPostCarouselPeers(
     sameCategory = sameCategoryPool.slice(offset, offset + takeN);
   }
 
-  const excludeIds = [currentPostId, ...sameCategory.map((p) => p.id)];
-  const remaining = Math.max(0, totalLimit - sameCategory.length);
+  const excludeIds = [
+    currentPostId,
+    ...priorityPosts.map((post) => post.id),
+    ...sameCategory.map((p) => p.id),
+  ];
+  const remaining = Math.max(0, remainingAfterPriority - sameCategory.length);
 
   let tail: CarouselRow[] = [];
   if (remaining > 0) {
@@ -228,7 +256,7 @@ export async function getPostCarouselPeers(
     tail = diversifyByCategoryRoundRobin(merged, remaining);
   }
 
-  return [...sameCategory, ...tail].map(mapPostToCarouselItem);
+  return [...priorityPosts, ...sameCategory, ...tail].map(mapPostToCarouselItem);
 }
 
 export const getPostCarouselPeersCached = cache(getPostCarouselPeers);

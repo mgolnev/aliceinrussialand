@@ -93,7 +93,7 @@ export function RichTextEditor({ value, onChange, placeholder, disabled }: Props
     const href = safePostHref(linkValue.trim());
     const editor = editorRef.current;
     if (!href) {
-      setLinkError("Укажите полный адрес: https://…, http://… или mailto:…");
+      setLinkError("Укажите https://…, mailto:… или путь подборки /projects/…");
       return;
     }
     if (!editor || !savedRangeRef.current) return;

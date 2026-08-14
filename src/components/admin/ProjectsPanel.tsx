@@ -28,7 +28,7 @@ export function ProjectsPanel({ initial }: { initial: ProjectListRow[] }) {
   async function createProject() {
     const safeTitle = title.trim();
     if (!safeTitle) {
-      setError("Укажите название цикла");
+      setError("Укажите название подборки");
       return;
     }
     setSaving(true);
@@ -41,7 +41,7 @@ export function ProjectsPanel({ initial }: { initial: ProjectListRow[] }) {
       });
       const data = (await res.json().catch(() => null)) as { id?: string; error?: string } | null;
       if (!res.ok || !data?.id) {
-        setError(data?.error ?? "Не удалось создать цикл");
+        setError(data?.error ?? "Не удалось создать подборку");
         return;
       }
       router.push(`/admin/projects/${data.id}`);
@@ -61,7 +61,7 @@ export function ProjectsPanel({ initial }: { initial: ProjectListRow[] }) {
         }}
       >
         <label className="block text-sm font-medium text-stone-800">
-          Новый цикл
+          Новая подборка
           <div className="mt-2 flex flex-col gap-2 sm:flex-row">
             <input
               value={title}
@@ -97,7 +97,7 @@ export function ProjectsPanel({ initial }: { initial: ProjectListRow[] }) {
                   <span className="shrink-0 text-xs text-stone-500">{statusLabel(project.status)}</span>
                 </div>
                 <p className="mt-2 text-sm text-stone-600">
-                  {project._count.posts} публикаций в цикле
+                  {project._count.posts} публикаций в подборке
                 </p>
               </Link>
             </li>
@@ -105,7 +105,7 @@ export function ProjectsPanel({ initial }: { initial: ProjectListRow[] }) {
         </ul>
       ) : (
         <p className="rounded-2xl border border-dashed border-stone-300 px-4 py-8 text-sm leading-6 text-stone-500">
-          Пока нет циклов. Создайте первый, затем добавьте в него связанные публикации.
+          Пока нет подборок. Создайте первую, затем добавьте связанные публикации.
         </p>
       )}
     </div>

@@ -70,7 +70,7 @@ export function ProjectEditor({ initial, posts }: Props) {
         | { error?: string; slug?: string; status?: string }
         | null;
       if (!res.ok) {
-        setMessage(data?.error ?? "Не удалось сохранить цикл");
+        setMessage(data?.error ?? "Не удалось сохранить подборку");
         return;
       }
       setProject((current) => ({
@@ -78,7 +78,7 @@ export function ProjectEditor({ initial, posts }: Props) {
         slug: typeof data?.slug === "string" ? data.slug : current.slug,
         status: typeof data?.status === "string" ? data.status : status,
       }));
-      setMessage(status === "PUBLISHED" ? "Цикл опубликован" : "Сохранено");
+      setMessage(status === "PUBLISHED" ? "Подборка опубликована" : "Сохранено");
       router.refresh();
     } finally {
       setSaving(false);
@@ -86,12 +86,12 @@ export function ProjectEditor({ initial, posts }: Props) {
   }
 
   async function deleteProject() {
-    if (!window.confirm("Удалить цикл? Публикации сайта останутся на месте.")) return;
+    if (!window.confirm("Удалить подборку? Публикации сайта останутся на месте.")) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/admin/projects/${project.id}`, { method: "DELETE" });
       if (!res.ok) {
-        setMessage("Не удалось удалить цикл");
+        setMessage("Не удалось удалить подборку");
         return;
       }
       router.push("/admin/projects");
@@ -105,11 +105,11 @@ export function ProjectEditor({ initial, posts }: Props) {
     <div className="mx-auto max-w-3xl space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm text-stone-500">Авторский цикл</p>
-          <h1 className="text-2xl font-semibold tracking-tight text-stone-900">{project.title || "Новый цикл"}</h1>
+          <p className="text-sm text-stone-500">Подборка работы</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-stone-900">{project.title || "Новая подборка"}</h1>
         </div>
         <Link href="/admin/projects" className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm text-stone-700 hover:bg-stone-50">
-          К циклам
+          К подборкам
         </Link>
       </div>
 
@@ -122,7 +122,7 @@ export function ProjectEditor({ initial, posts }: Props) {
         <label className="block text-sm font-medium text-stone-800">Slug (URL)
           <input value={project.slug} onChange={(event) => setProject((current) => ({ ...current, slug: event.target.value }))} className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2.5 font-mono text-sm outline-none focus:border-stone-500" />
         </label>
-        <label className="block text-sm font-medium text-stone-800">Описание цикла
+        <label className="block text-sm font-medium text-stone-800">Описание
           <textarea value={project.description} onChange={(event) => setProject((current) => ({ ...current, description: event.target.value }))} rows={4} placeholder="Что объединяет эти публикации?" className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2.5 text-sm leading-6 outline-none focus:border-stone-500" />
         </label>
         <details className="rounded-xl bg-stone-50 px-3 py-2.5">
@@ -135,8 +135,8 @@ export function ProjectEditor({ initial, posts }: Props) {
       </section>
 
       <section className="rounded-[28px] border border-stone-200/80 bg-white/90 p-4 sm:p-5">
-        <h2 className="text-lg font-semibold tracking-tight text-stone-900">Публикации цикла</h2>
-        <p className="mt-1 text-sm leading-6 text-stone-600">Их порядок станет порядком чтения на странице цикла и в блоке под постом.</p>
+        <h2 className="text-lg font-semibold tracking-tight text-stone-900">Публикации</h2>
+        <p className="mt-1 text-sm leading-6 text-stone-600">Они появятся на странице подборки и первыми в рекомендациях друг друга.</p>
         <ol className="mt-4 space-y-2">
           {selected.map((post, index) => (
             <li key={post.id} className="flex items-center gap-2 rounded-xl border border-stone-200 px-3 py-2.5">
@@ -149,7 +149,7 @@ export function ProjectEditor({ initial, posts }: Props) {
             </li>
           ))}
         </ol>
-        {!selected.length ? <p className="mt-4 text-sm text-stone-500">Добавьте минимум две публикации, чтобы цикл можно было опубликовать.</p> : null}
+        {!selected.length ? <p className="mt-4 text-sm text-stone-500">Добавьте минимум две публикации, чтобы подборку можно было опубликовать.</p> : null}
         <div className="mt-5 border-t border-stone-100 pt-4">
           <label className="block text-sm font-medium text-stone-800">Добавить публикацию
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти по названию или slug" className="mt-2 w-full rounded-xl border border-stone-300 px-3 py-2.5 text-sm outline-none focus:border-stone-500" />

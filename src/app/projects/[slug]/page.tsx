@@ -20,7 +20,7 @@ function projectDescription(
 ): string {
   return (
     description.trim() ||
-    `Материалы авторского цикла «${title}»: связанные публикации в заданном порядке.`
+    `Все публикации о работе «${title}».`
   );
 }
 
@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   ]);
   if (!project) {
     return {
-      title: "Цикл не найден",
+      title: "Подборка не найдена",
       robots: { index: false, follow: true },
     };
   }
@@ -101,7 +101,7 @@ export default async function ProjectPage({ params }: PageProps) {
       />
       <main className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-8">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-400">
-          Авторский цикл
+          Материалы о работе
         </p>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
           {project.title}
@@ -109,10 +109,10 @@ export default async function ProjectPage({ params }: PageProps) {
         <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-600 sm:text-base">
           {description}
         </p>
-        <section className="mt-6 sm:mt-8" aria-label="Публикации цикла">
+        <section className="mt-6 sm:mt-8" aria-label="Публикации подборки">
           <SeoPostList
             items={project.posts}
-            emptyText="В этом цикле пока нет опубликованных материалов."
+            emptyText="В этой подборке пока нет опубликованных материалов."
           />
         </section>
       </main>

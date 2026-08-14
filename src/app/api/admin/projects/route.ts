@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as { title?: unknown } | null;
   const title = typeof body?.title === "string" ? body.title.trim() : "";
   if (!title) {
-    return NextResponse.json({ error: "Укажите название цикла" }, { status: 400 });
+    return NextResponse.json({ error: "Укажите название подборки" }, { status: 400 });
   }
 
   const project = await prisma.project.create({
