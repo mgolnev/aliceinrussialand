@@ -17,6 +17,7 @@ import {
   ExternalLink,
   EyeOff,
   ImageIcon,
+  Link2,
   MoreHorizontal,
   Send,
   Trash2,
@@ -597,6 +598,19 @@ export function AdminPostRow({
                     >
                       <Edit3 size={16} className="text-stone-400" />
                       Редактировать
+                    </button>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100"
+                      role="menuitem"
+                      disabled={busy || fetchingEdit}
+                      onClick={() => {
+                        void startEdit();
+                        setEditMessage("Выберите подборку под текстом и сохраните пост.");
+                      }}
+                    >
+                      <Link2 size={16} className="text-stone-400" />
+                      Связать с подборкой
                     </button>
                     <button
                       type="button"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   DndContext,
   PointerSensor,
@@ -259,34 +260,42 @@ export function FeedComposerPanel({
         ) : null}
 
         {projects &&
-        projects.length > 0 &&
         postProjectIds &&
         onPostProjectIdsChange ? (
           <div className="mt-3 min-w-0">
             <p className="mb-1.5 text-xs font-medium text-stone-500">
               Связанные подборки
             </p>
-            <div className="flex gap-1 overflow-x-auto px-0.5 pb-1 pt-0.5 [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden">
-              {projects.map((project) => {
-                const selected = postProjectIds.includes(project.id);
-                return (
-                  <button
-                    key={project.id}
-                    type="button"
-                    className={pillTabClass(selected)}
-                    onClick={() =>
-                      onPostProjectIdsChange(
-                        selected
-                          ? postProjectIds.filter((id) => id !== project.id)
-                          : [...postProjectIds, project.id],
-                      )
-                    }
-                  >
-                    {project.title}
-                  </button>
-                );
-              })}
-            </div>
+            {projects.length ? (
+              <div className="flex gap-1 overflow-x-auto px-0.5 pb-1 pt-0.5 [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden">
+                {projects.map((project) => {
+                  const selected = postProjectIds.includes(project.id);
+                  return (
+                    <button
+                      key={project.id}
+                      type="button"
+                      className={pillTabClass(selected)}
+                      onClick={() =>
+                        onPostProjectIdsChange(
+                          selected
+                            ? postProjectIds.filter((id) => id !== project.id)
+                            : [...postProjectIds, project.id],
+                        )
+                      }
+                    >
+                      {project.title}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <Link
+                href="/admin/projects"
+                className="text-sm text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-950"
+              >
+                Создать первую подборку
+              </Link>
+            )}
           </div>
         ) : null}
 
