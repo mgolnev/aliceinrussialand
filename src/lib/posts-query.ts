@@ -146,8 +146,7 @@ export async function getPostCarouselPeers(
   type CarouselRow = Prisma.PostGetPayload<{ include: typeof carouselInclude }>;
 
   const requestedPriorityIds = [...new Set(opts?.priorityPostIds ?? [])]
-    .filter((id) => id !== currentPostId)
-    .slice(0, totalLimit);
+    .filter((id) => id !== currentPostId);
   const priorityPool = requestedPriorityIds.length
     ? await prisma.post.findMany({
         where: {
@@ -161,9 +160,6 @@ export async function getPostCarouselPeers(
   const priorityPosts = requestedPriorityIds
     .map((id) => priorityById.get(id))
     .filter((post): post is CarouselRow => Boolean(post));
-  const remainingAfterPriority = Math.max(0, totalLimit - priorityPosts.length);
-  if (remainingAfterPriority === 0) return priorityPosts.map(mapPostToCarouselItem);
-
   const SAME_CATEGORY_POOL_CAP = 24;
   const sameCategoryPool = categoryId
     ? await prisma.post.findMany({
@@ -180,7 +176,7 @@ export async function getPostCarouselPeers(
 
   let sameCategory: CarouselRow[] = [];
   if (categoryId && sameCategoryPool.length > 0) {
-    const takeN = Math.min(categoryFirst, remainingAfterPriority, sameCategoryPool.length);
+    const takeN = Math.min(categoryFirst, sameCategoryPool.length);
     const maxOffset = Math.max(0, sameCategoryPool.length - takeN);
     const offset =
       maxOffset === 0
@@ -194,7 +190,8 @@ export async function getPostCarouselPeers(
     ...priorityPosts.map((post) => post.id),
     ...sameCategory.map((p) => p.id),
   ];
-  const remaining = Math.max(0, remainingAfterPriority - sameCategory.length);
+  // Ручные связи добавляются сверх обычной подборки, а не занимают её слоты.
+  const remaining = Math.max(0, totalLimit - sameCategory.length);
 
   let tail: CarouselRow[] = [];
   if (remaining > 0) {

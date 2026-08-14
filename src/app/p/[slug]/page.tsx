@@ -102,6 +102,11 @@ export default async function PostPage({ params }: PageProps) {
       projects.flatMap((project) => project.posts.map((related) => related.id)),
     ),
   ].filter((id) => id !== post.id);
+  const relatedPostSlugs = [
+    ...new Set(
+      projects.flatMap((project) => project.posts.map((related) => related.slug)),
+    ),
+  ].filter((relatedSlug) => relatedSlug !== post.slug);
   const readNextItems = await getPostCarouselPeersCached(post.id, post.categoryId, {
     priorityPostIds: relatedPostIds,
   });
@@ -203,6 +208,7 @@ export default async function PostPage({ params }: PageProps) {
           items={readNextItems}
           categories={allFeedCategories}
           currentPostCategoryId={post.categoryId}
+          relatedPostSlugs={relatedPostSlugs}
         />
       </div>
       <SiteFooter />
