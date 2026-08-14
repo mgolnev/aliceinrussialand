@@ -16,6 +16,19 @@ export type PublishedProjectPost = {
   body: string;
   updatedAt: Date;
   publishedAt: Date | null;
+  displayMode: string;
+  pinned: boolean;
+  showInAll: boolean;
+  categoryId: string | null;
+  category: { id: string; name: string; slug: string } | null;
+  images: Array<{
+    id: string;
+    caption: string;
+    alt: string;
+    variantsJson: string;
+    width: number | null;
+    height: number | null;
+  }>;
 };
 
 export type PublishedProject = {
@@ -41,6 +54,22 @@ const publishedPostsSelect = {
         body: true,
         updatedAt: true,
         publishedAt: true,
+        displayMode: true,
+        pinned: true,
+        showInAll: true,
+        categoryId: true,
+        category: { select: { id: true, name: true, slug: true } },
+        images: {
+          orderBy: { sortOrder: "asc" },
+          select: {
+            id: true,
+            caption: true,
+            alt: true,
+            variantsJson: true,
+            width: true,
+            height: true,
+          },
+        },
       },
     },
   },
