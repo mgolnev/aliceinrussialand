@@ -17,6 +17,10 @@ import { ShareForwardIcon } from "@/components/ui/ShareForwardIcon";
 import { PostRichText } from "@/components/feed/PostRichText";
 import { PostImpression } from "./PostImpression";
 import { PostOpenLinkOverlay } from "./PostOpenLinkOverlay";
+import {
+  PostProjectTags,
+  type ProjectTag,
+} from "@/components/seo/PostProjectTags";
 import type { FeedCategory, FeedPost } from "@/types/feed";
 import { MediaGrid } from "./MediaGrid";
 import { ImageLightbox } from "./ImageLightbox";
@@ -75,6 +79,8 @@ type Props = {
   prioritizeMedia?: boolean;
   /** Страница отдельного поста — без кнопки «Открыть отдельно» */
   standalone?: boolean;
+  /** Связанные подборки — строкой сразу после текста отдельного поста. */
+  projectTags?: ProjectTag[];
 };
 
 function formatDate(iso: string | null) {
@@ -126,6 +132,7 @@ export function PostCard({
   canManage = false,
   prioritizeMedia = false,
   standalone = false,
+  projectTags = [],
 }: Props) {
   const router = useRouter();
   const postUrl = `/p/${post.slug}`;
@@ -820,6 +827,12 @@ export function PostCard({
               >
                 <PostRichText value={postBodyForRender} />
               </div>
+            ) : null}
+            {standalone && projectTags.length > 0 ? (
+              <PostProjectTags
+                projects={projectTags}
+                className="mb-3 text-base leading-7 text-stone-700 sm:mb-5"
+              />
             ) : null}
             {!standalone && post.images.length > 0 ? (
               <div className="pointer-events-auto min-w-0">
