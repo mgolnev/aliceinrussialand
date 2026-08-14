@@ -18,6 +18,7 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { PostBackTray } from "@/components/feed/PostBackTray";
 import { PostCard } from "@/components/feed/PostCard";
 import { PostReadNextCarousel } from "@/components/feed/PostReadNextCarousel";
+import { PostProjectTags } from "@/components/seo/PostProjectTags";
 import type { FeedCategory, FeedPost } from "@/types/feed";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 import { resolveSiteOrigin } from "@/lib/site-origin";
@@ -197,6 +198,7 @@ export default async function PostPage({ params }: PageProps) {
           prioritizeMedia
           standalone
         />
+        <PostProjectTags projects={projects} />
         <PostReadNextCarousel
           items={readNextItems}
           categories={allFeedCategories}
