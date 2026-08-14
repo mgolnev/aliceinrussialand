@@ -2,29 +2,10 @@ import Link from "next/link";
 import { getSiteSettings } from "@/lib/site";
 import { listSeoCategories } from "@/lib/seo-content";
 
-const PRIMARY_CATEGORY_NAMES = [
-  "Керамика",
-  "Наброски",
-  "Выставки",
-  "Иллюстрация",
-  "#Это другое",
-] as const;
-
-function normalizeCategoryName(value: string): string {
-  return value.replace(/^#\s*/u, "").trim().toLowerCase();
-}
-
-const PRIMARY_CATEGORY_NAME_SET = new Set(
-  PRIMARY_CATEGORY_NAMES.map((name) => normalizeCategoryName(name)),
-);
-
 export async function SiteFooter() {
   const settings = await getSiteSettings();
   const siteContext = [settings.tagline, settings.bio].filter(Boolean).join(" ");
-  const categories = await listSeoCategories(siteContext);
-  const footerCategories = categories.filter((category) =>
-    PRIMARY_CATEGORY_NAME_SET.has(normalizeCategoryName(category.name)),
-  );
+  const footerCategories = await listSeoCategories(siteContext);
 
   return (
     <footer className="mt-14 border-t border-stone-200/70 bg-white/65 py-10 backdrop-blur-sm">
