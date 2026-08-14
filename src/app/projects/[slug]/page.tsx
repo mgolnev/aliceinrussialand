@@ -11,7 +11,7 @@ import { listFeedCategories } from "@/lib/feed-server";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { SiteFooter } from "@/components/site/SiteFooter";
-import { BackToFeedButton } from "@/components/feed/BackToFeedButton";
+import { PostBackTray } from "@/components/feed/PostBackTray";
 import { PostCard } from "@/components/feed/PostCard";
 import type { FeedPost } from "@/types/feed";
 
@@ -134,17 +134,10 @@ export default async function ProjectPage({ params }: PageProps) {
         tagline={settings.tagline}
         avatarUrl={parseAvatarUrl(settings.avatarMediaPath)}
         contactsLabel={settings.contactsLabel}
+        stickyTray={<PostBackTray title={project.title} />}
       />
       <main className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-10">
-        <div className="relative flex min-h-11 items-center justify-center">
-          <div className="absolute left-0">
-            <BackToFeedButton variant="pill" />
-          </div>
-          <h1 className="max-w-[calc(100%-8rem)] truncate text-center text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl">
-            {project.title}
-          </h1>
-        </div>
-        <section className="mt-4 space-y-4 sm:mt-6 sm:space-y-7" aria-label="Публикации подборки">
+        <section className="space-y-4 sm:space-y-7" aria-label="Публикации подборки">
           {feedPosts.map((post, index) => (
             <PostCard
               key={post.id}
