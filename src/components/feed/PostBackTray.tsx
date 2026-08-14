@@ -6,7 +6,7 @@ import { BackToFeedButton } from "./BackToFeedButton";
 export function PostBackTray({ title }: { title?: string }) {
   return (
     <nav
-      className="relative flex h-9 items-center gap-1 overflow-x-auto pb-0.5 pt-0.5 [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden"
+      className="relative flex h-9 items-center gap-1 overflow-x-auto [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden"
       aria-label="Навигация по посту"
     >
       <BackToFeedButton variant="pill" />
