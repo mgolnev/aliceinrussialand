@@ -27,9 +27,8 @@ describe("PostProjectTags", () => {
         ]}
       />,
     );
-    expect(screen.getByRole("link", { name: "#дом" })).toHaveAttribute(
-      "href",
-      "/projects/dom",
-    );
+    const tag = screen.getByRole("link", { name: "#дом" });
+    expect(tag).toHaveAttribute("href", "/projects/dom");
+    expect(tag).toHaveClass("pointer-events-auto");
   });
 });

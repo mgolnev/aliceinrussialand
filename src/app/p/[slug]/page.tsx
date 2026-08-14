@@ -122,6 +122,11 @@ export default async function PostPage({ params }: PageProps) {
     showInAll: post.showInAll,
     categoryId: post.categoryId,
     category: post.category,
+    projects: projects.map((project) => ({
+      id: project.id,
+      slug: project.slug,
+      title: project.title,
+    })),
     images: post.images.map((im) => ({
       id: im.id,
       caption: im.caption,

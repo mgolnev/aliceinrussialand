@@ -20,6 +20,7 @@ function samplePost(overrides: Partial<FeedPost> = {}): FeedPost {
     showInAll: true,
     categoryId: null,
     category: null,
+    projects: [],
     images: [],
     ...overrides,
   };

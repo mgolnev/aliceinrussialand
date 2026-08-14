@@ -10,6 +10,7 @@ export const FEED_POST_JSON_KEYS = [
   "showInAll",
   "categoryId",
   "category",
+  "projects",
   "images",
 ] as const;
 

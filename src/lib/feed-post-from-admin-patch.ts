@@ -37,6 +37,25 @@ export function feedPostFromAdminPatchJson(json: unknown): FeedPost | null {
     }
   }
 
+  const projects: FeedPost["projects"] = [];
+  if (Array.isArray(p.projects)) {
+    for (const relation of p.projects) {
+      if (!relation || typeof relation !== "object") continue;
+      const project = (relation as Record<string, unknown>).project;
+      if (!project || typeof project !== "object") continue;
+      const row = project as Record<string, unknown>;
+      if (
+        typeof row.id !== "string" ||
+        typeof row.slug !== "string" ||
+        typeof row.title !== "string" ||
+        row.status !== "PUBLISHED"
+      ) {
+        continue;
+      }
+      projects.push({ id: row.id, slug: row.slug, title: row.title });
+    }
+  }
+
   return {
     id: p.id,
     slug: p.slug,
@@ -48,6 +67,7 @@ export function feedPostFromAdminPatchJson(json: unknown): FeedPost | null {
     showInAll: p.showInAll !== false,
     categoryId: typeof p.categoryId === "string" ? p.categoryId : null,
     category,
+    projects,
     images,
   };
 }

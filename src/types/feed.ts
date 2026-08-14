@@ -5,6 +5,13 @@ export type FeedCategory = {
   sortOrder: number;
 };
 
+/** Опубликованная подборка, в которой состоит пост ленты. */
+export type FeedPostProject = {
+  id: string;
+  slug: string;
+  title: string;
+};
+
 /** Превью для карусели «дальше читайте» на странице поста. */
 export type PostCarouselItem = {
   slug: string;
@@ -52,6 +59,7 @@ export type FeedPost = {
   showInAll: boolean;
   categoryId: string | null;
   category: { id: string; name: string; slug: string } | null;
+  projects: FeedPostProject[];
   images: Array<{
     id: string;
     caption: string;

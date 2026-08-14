@@ -98,6 +98,7 @@ export default async function ProjectPage({ params }: PageProps) {
     showInAll: post.showInAll,
     categoryId: post.categoryId,
     category: post.category,
+    projects: [],
     images: post.images.map((image) => ({
       id: image.id,
       caption: image.caption,

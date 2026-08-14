@@ -83,7 +83,7 @@ type Props = {
   prioritizeMedia?: boolean;
   /** Страница отдельного поста — без кнопки «Открыть отдельно» */
   standalone?: boolean;
-  /** Связанные подборки — строкой сразу после текста отдельного поста. */
+  /** Связанные подборки — строкой сразу после текста поста. */
   projectTags?: ProjectTag[];
 };
 
@@ -1038,7 +1038,7 @@ export function PostCard({
                 <PostRichText value={postBodyForRender} />
               </div>
             ) : null}
-            {standalone && projectTags.length > 0 ? (
+            {projectTags.length > 0 ? (
               <PostProjectTags
                 projects={projectTags}
                 className="mb-3 text-base leading-7 text-stone-700 sm:mb-5"

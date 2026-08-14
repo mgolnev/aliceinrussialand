@@ -310,7 +310,9 @@ export async function PATCH(req: Request, ctx: Ctx) {
         category: { select: { id: true, name: true, slug: true } },
         projects: {
           orderBy: { sortOrder: "asc" },
-          include: { project: { select: { id: true, title: true, slug: true } } },
+          include: {
+            project: { select: { id: true, title: true, slug: true, status: true } },
+          },
         },
       },
     });

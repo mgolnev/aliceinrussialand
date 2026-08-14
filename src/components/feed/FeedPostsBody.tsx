@@ -88,6 +88,7 @@ export function FeedPostsBody({
           siteUrl={siteUrl}
           canManage={canManage}
           prioritizeMedia={index === 0}
+          projectTags={post.projects}
         />
       ))}
       <div ref={sentinelRef} />

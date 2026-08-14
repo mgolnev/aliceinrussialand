@@ -30,7 +30,7 @@ export function PostProjectTags({
           {index ? " " : null}
           <Link
             href={`/projects/${project.slug}`}
-            className="underline decoration-stone-300 underline-offset-4 transition hover:text-stone-950 hover:decoration-stone-700"
+            className="pointer-events-auto underline decoration-stone-300 underline-offset-4 transition hover:text-stone-950 hover:decoration-stone-700"
           >
             {projectTagLabel(project.title)}
           </Link>

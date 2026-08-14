@@ -118,6 +118,24 @@ export async function getFeedPage(
       pinned: true,
       showInAll: true,
       categoryId: true,
+      projects: {
+        where: { project: { status: "PUBLISHED" } },
+        orderBy: { sortOrder: "asc" },
+        select: {
+          project: {
+            select: {
+              id: true,
+              slug: true,
+              title: true,
+              posts: {
+                where: { post: { status: POST_STATUS.PUBLISHED } },
+                take: 2,
+                select: { id: true },
+              },
+            },
+          },
+        },
+      },
       images:
         feedProfile === "admin"
           ? {
@@ -163,6 +181,10 @@ export async function getFeedPage(
       showInAll: p.showInAll,
       categoryId: p.categoryId,
       category: p.category,
+      projects: p.projects
+        .map((relation) => relation.project)
+        .filter((project) => project.posts.length >= 2)
+        .map(({ posts: _posts, ...project }) => project),
       images: p.images.map((im) => ({
         id: im.id,
         caption: im.caption,

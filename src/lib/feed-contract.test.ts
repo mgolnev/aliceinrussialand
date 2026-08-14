@@ -17,6 +17,7 @@ describe("feed JSON contract", () => {
       showInAll: true,
       categoryId: null,
       category: null,
+      projects: [],
       images: [],
     };
     expect(() => assertFeedPostJsonShape(item)).not.toThrow();
@@ -34,6 +35,7 @@ describe("feed JSON contract", () => {
       showInAll: true,
       categoryId: null,
       category: null,
+      projects: [],
       images: [],
       extra: 1,
     };
@@ -52,6 +54,7 @@ describe("feed JSON contract", () => {
       "showInAll",
       "categoryId",
       "category",
+      "projects",
       "images",
     ]);
   });
