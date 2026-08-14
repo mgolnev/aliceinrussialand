@@ -17,8 +17,9 @@ export async function GET(req: Request) {
       ...(q
         ? {
             OR: [
-              { title: { contains: q } },
-              { slug: { contains: q } },
+              { title: { contains: q, mode: "insensitive" } },
+              { slug: { contains: q, mode: "insensitive" } },
+              { body: { contains: q, mode: "insensitive" } },
             ],
           }
         : {}),

@@ -184,7 +184,11 @@ export async function getFeedPage(
       projects: p.projects
         .map((relation) => relation.project)
         .filter((project) => project.posts.length >= 2)
-        .map(({ posts: _posts, ...project }) => project),
+        .map((project) => ({
+          id: project.id,
+          slug: project.slug,
+          title: project.title,
+        })),
       images: p.images.map((im) => ({
         id: im.id,
         caption: im.caption,
