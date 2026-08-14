@@ -693,10 +693,7 @@ export function AdminPostRow({
             </p>
           ) : feedPost ? (
             <>
-              <header className="mb-3 flex items-center justify-between gap-3 border-b border-stone-100 pb-2.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">
-                  Редактирование
-                </span>
+              <header className="mb-2 flex justify-end">
                 <button
                   type="button"
                   aria-label="Закрыть редактирование"
