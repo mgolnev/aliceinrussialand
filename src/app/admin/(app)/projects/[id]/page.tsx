@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ProjectEditor } from "@/components/admin/ProjectEditor";
+import { projectOrderMode } from "@/lib/project-order";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -39,7 +40,11 @@ export default async function AdminProjectPage({ params }: PageProps) {
 
   return (
     <ProjectEditor
-      initial={{ ...project, postIds: project.posts.map((row) => row.postId) }}
+      initial={{
+        ...project,
+        orderMode: projectOrderMode(project.orderMode),
+        postIds: project.posts.map((row) => row.postId),
+      }}
       posts={posts.map((post) => ({
         ...post,
         publishedAt: post.publishedAt?.toISOString() ?? null,
