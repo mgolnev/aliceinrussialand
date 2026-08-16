@@ -27,6 +27,7 @@ const SLIDE_SPRING_STIFFNESS = 280;
 const SLIDE_SPRING_DAMPING = 34;
 const SLIDE_SPRING_REST_DISTANCE_PX = 0.5;
 const SLIDE_SPRING_REST_VELOCITY = 8;
+const DIRECTION_LOCK_PX = 6;
 /** Закрытие вертикальным свайпом при scale≈1; только если вертикаль доминирует над горизонталью. */
 const SWIPE_CLOSE_PX = 96;
 /** Затухание при закрытии: заметнее, чем 200 ms, и не обрывается до конца анимации. */
@@ -127,6 +128,10 @@ export function ImageLightbox({
   const slideAnimationFrameRef = useRef<number | null>(null);
   const isSlideAnimatingRef = useRef(false);
   const swipeVelocityRef = useRef({ x: 0, lastX: 0, lastAt: 0 });
+  const activePointersRef = useRef(
+    new Map<number, { clientX: number; clientY: number }>(),
+  );
+  const gestureAxisRef = useRef<"horizontal" | "vertical" | null>(null);
   const [closingMode, setClosingMode] = useState<null | "fade" | "swipe">(null);
   const closeTimerRef = useRef<number | null>(null);
   const tapRef = useRef<{ t: number; x: number; y: number } | null>(null);
@@ -310,89 +315,82 @@ export function ImageLightbox({
     }
   }, [index, shareBusy, slide]);
 
-  /** Нативный non-passive touchmove: iOS иначе может тянуть страницу под оверлеем. */
+  /** Не отдаём браузеру ctrl/cmd-wheel, когда жестом меняется масштаб фото. */
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
-    const onMove = (e: TouchEvent) => {
-      if (e.touches.length >= 2) e.preventDefault();
-      else if (e.touches.length === 1 && scaleRef.current > 1.01) {
-        e.preventDefault();
-      } else if (
-        e.touches.length === 1 &&
-        scaleRef.current <= 1.01 &&
-        swipeStartRef.current
-      ) {
-        const t = e.touches[0];
-        const s = swipeStartRef.current;
-        const dx = t.clientX - s.x;
-        const dy = t.clientY - s.y;
-        if (
-          (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) ||
-          (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy))
-        ) {
-          e.preventDefault();
-        }
-      }
-    };
-    const onWheel = (e: WheelEvent) => {
+    const preventPageZoom = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) e.preventDefault();
     };
-    el.addEventListener("touchmove", onMove, { passive: false });
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => {
-      el.removeEventListener("touchmove", onMove);
-      el.removeEventListener("wheel", onWheel);
-    };
+    el.addEventListener("wheel", preventPageZoom, { passive: false });
+    return () => el.removeEventListener("wheel", preventPageZoom);
   }, []);
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    if (isSlideAnimatingRef.current) return;
-    if (e.touches.length === 2) {
+  /** Pointer Events дают единый поток для пальца, мыши и стилуса + pointer capture. */
+  const beginSinglePointerGesture = (point: {
+    clientX: number;
+    clientY: number;
+  }) => {
+    gestureAxisRef.current = null;
+    pinchRef.current = null;
+    if (scaleRef.current > 1.01) {
+      panRef.current = {
+        startX: point.clientX,
+        startY: point.clientY,
+        originPanX: panX,
+        originPanY: panY,
+      };
       swipeStartRef.current = null;
+    } else {
+      panRef.current = null;
+      swipeStartRef.current = { x: point.clientX, y: point.clientY };
+      swipeVelocityRef.current = {
+        x: 0,
+        lastX: point.clientX,
+        lastAt: performance.now(),
+      };
+    }
+    setOverlayPullY(0);
+    setIsPulling(false);
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isSlideAnimatingRef.current) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const pointers = activePointersRef.current;
+    pointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+
+    if (pointers.size >= 2) {
+      const [first, second] = [...pointers.values()];
+      if (!first || !second) return;
+      swipeStartRef.current = null;
+      panRef.current = null;
+      gestureAxisRef.current = null;
       setOverlayPullY(0);
       setIsPulling(false);
-      panRef.current = null;
+      setIsSliding(false);
+      setSlideOffsetX(0);
       pinchRef.current = {
-        startDist: touchDistance(e.touches[0], e.touches[1]),
-        startScale: scale,
+        startDist: touchDistance(first, second),
+        startScale: scaleRef.current,
       };
       return;
     }
-    if (e.touches.length === 1) {
-      const t = e.touches[0];
-      pinchRef.current = null;
-      if (scale > 1.01) {
-        panRef.current = {
-          startX: t.clientX,
-          startY: t.clientY,
-          originPanX: panX,
-          originPanY: panY,
-        };
-        swipeStartRef.current = null;
-        setOverlayPullY(0);
-        setIsPulling(false);
-      } else {
-        panRef.current = null;
-        swipeStartRef.current = { x: t.clientX, y: t.clientY };
-        swipeVelocityRef.current = {
-          x: 0,
-          lastX: t.clientX,
-          lastAt: performance.now(),
-        };
-        setOverlayPullY(0);
-        setIsPulling(false);
-      }
-    }
+
+    beginSinglePointerGesture({ clientX: e.clientX, clientY: e.clientY });
   };
 
-  /** Без preventDefault: у React touchmove часто passive — блокировка скролла в нативном слушателе ниже. */
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 2 && pinchRef.current) {
-      const d = touchDistance(e.touches[0], e.touches[1]);
-      if (pinchRef.current.startDist < 1) return;
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const pointers = activePointersRef.current;
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+
+    if (pointers.size >= 2 && pinchRef.current) {
+      const [first, second] = [...pointers.values()];
+      if (!first || !second || pinchRef.current.startDist < 1) return;
       const next = clamp(
-        pinchRef.current.startScale * (d / pinchRef.current.startDist),
+        pinchRef.current.startScale *
+          (touchDistance(first, second) / pinchRef.current.startDist),
         MIN_SCALE,
         MAX_SCALE,
       );
@@ -403,51 +401,44 @@ export function ImageLightbox({
       }
       return;
     }
-    if (e.touches.length === 1 && panRef.current && scale > 1.01) {
-      const t = e.touches[0];
-      setPanX(
-        panRef.current.originPanX + (t.clientX - panRef.current.startX),
-      );
-      setPanY(
-        panRef.current.originPanY + (t.clientY - panRef.current.startY),
-      );
+
+    if (pointers.size !== 1) return;
+    if (panRef.current && scaleRef.current > 1.01) {
+      setPanX(panRef.current.originPanX + (e.clientX - panRef.current.startX));
+      setPanY(panRef.current.originPanY + (e.clientY - panRef.current.startY));
       return;
     }
-    if (
-      e.touches.length === 1 &&
-      scaleRef.current <= 1.01 &&
-      swipeStartRef.current
-    ) {
-      const t = e.touches[0];
-      const s = swipeStartRef.current;
-      const dx = t.clientX - s.x;
-      const dy = t.clientY - s.y;
-      if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) {
-        setIsSliding(false);
-        setSlideOffsetX(0);
-        setIsPulling(true);
-        setOverlayPullY(clamp(dy, -360, 360));
-      } else if (
-        slides.length > 1 &&
-        Math.abs(dx) > Math.abs(dy) &&
-        Math.abs(dx) > 12
-      ) {
-        const now = performance.now();
-        const previous = swipeVelocityRef.current;
-        const dt = now - previous.lastAt;
-        if (dt > 0) {
-          const instantVelocity = ((t.clientX - previous.lastX) / dt) * 1000;
-          // Небольшое сглаживание убирает случайные скачки в touchmove на iOS.
-          previous.x = previous.x * 0.65 + instantVelocity * 0.35;
-        }
-        previous.lastX = t.clientX;
-        previous.lastAt = now;
-        setIsPulling(false);
-        setOverlayPullY(0);
-        setIsSliding(true);
-        setSlideOffsetX(dx);
-      }
+
+    const start = swipeStartRef.current;
+    if (scaleRef.current > 1.01 || !start) return;
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    if (!gestureAxisRef.current && Math.max(Math.abs(dx), Math.abs(dy)) >= DIRECTION_LOCK_PX) {
+      gestureAxisRef.current = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
     }
+
+    if (gestureAxisRef.current === "vertical") {
+      setIsSliding(false);
+      setSlideOffsetX(0);
+      setIsPulling(true);
+      setOverlayPullY(clamp(dy, -360, 360));
+      return;
+    }
+    if (gestureAxisRef.current !== "horizontal" || slides.length < 2) return;
+
+    const now = performance.now();
+    const previous = swipeVelocityRef.current;
+    const dt = now - previous.lastAt;
+    if (dt > 0) {
+      const instantVelocity = ((e.clientX - previous.lastX) / dt) * 1000;
+      previous.x = previous.x * 0.65 + instantVelocity * 0.35;
+    }
+    previous.lastX = e.clientX;
+    previous.lastAt = now;
+    setIsPulling(false);
+    setOverlayPullY(0);
+    setIsSliding(true);
+    setSlideOffsetX(dx);
   };
 
   const settleSlideSwipe = (dx: number, velocityX: number) => {
@@ -519,61 +510,64 @@ export function ImageLightbox({
     return nextIndex !== null && isHorizontal;
   };
 
-  const onTouchEnd = (e: React.TouchEvent) => {
-    if (e.touches.length >= 1) {
-      if (e.touches.length === 1 && pinchRef.current) {
-        pinchRef.current = null;
-      }
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    const pointers = activePointersRef.current;
+    if (!pointers.has(e.pointerId)) return;
+    pointers.delete(e.pointerId);
+
+    if (pointers.size >= 1) {
+      // После pinch продолжаем обычный жест оставшимся пальцем без скачка координат.
+      const remaining = pointers.values().next().value as
+        | { clientX: number; clientY: number }
+        | undefined;
+      if (remaining) beginSinglePointerGesture(remaining);
       return;
     }
 
     pinchRef.current = null;
     panRef.current = null;
-
     if (scaleRef.current <= 1.01) {
       setPanX(0);
       setPanY(0);
       if (scaleRef.current < 1) setScale(1);
     }
 
-    const t = e.changedTouches[0];
-    if (!t) {
-      swipeStartRef.current = null;
-      setOverlayPullY(0);
-      return;
-    }
-
     const start = swipeStartRef.current;
+    const axis = gestureAxisRef.current;
     swipeStartRef.current = null;
+    gestureAxisRef.current = null;
     setIsPulling(false);
 
     if (start && scaleRef.current <= 1.01) {
-      const dx = t.clientX - start.x;
-      const dy = t.clientY - start.y;
-      if (Math.abs(dy) > SWIPE_CLOSE_PX && Math.abs(dy) > Math.abs(dx)) {
-        setOverlayPullY(
-          dy > 0
-            ? clamp(dy, SWIPE_CLOSE_PX, 420)
-            : clamp(dy, -420, -SWIPE_CLOSE_PX),
-        );
-        requestClose("swipe");
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      if (axis === "vertical") {
+        if (Math.abs(dy) > SWIPE_CLOSE_PX) {
+          setOverlayPullY(
+            dy > 0
+              ? clamp(dy, SWIPE_CLOSE_PX, 420)
+              : clamp(dy, -420, -SWIPE_CLOSE_PX),
+          );
+          requestClose("swipe");
+          return;
+        }
+        setOverlayPullY(0);
         return;
       }
-      if (slides.length > 1 && Math.abs(dx) > Math.abs(dy)) {
+      if (axis === "horizontal" && slides.length > 1) {
         settleSlideSwipe(dx, swipeVelocityRef.current.x);
         return;
       }
     }
 
     setOverlayPullY(0);
-
     const now = Date.now();
     const prev = tapRef.current;
-    tapRef.current = { t: now, x: t.clientX, y: t.clientY };
+    tapRef.current = { t: now, x: e.clientX, y: e.clientY };
     if (
       prev &&
       now - prev.t < 280 &&
-      Math.hypot(t.clientX - prev.x, t.clientY - prev.y) < 32
+      Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 32
     ) {
       tapRef.current = null;
       if (scaleRef.current > 1.01) {
@@ -582,6 +576,19 @@ export function ImageLightbox({
         setScale(DOUBLE_TAP_SCALE);
       }
     }
+  };
+
+  const onPointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    const pointers = activePointersRef.current;
+    pointers.delete(e.pointerId);
+    pinchRef.current = null;
+    panRef.current = null;
+    swipeStartRef.current = null;
+    gestureAxisRef.current = null;
+    setIsPulling(false);
+    setOverlayPullY(0);
+    if (isSliding) settleSlideSwipe(0, 0);
+    else setSlideOffsetX(0);
   };
 
   const onWheel = (e: React.WheelEvent) => {
@@ -720,9 +727,10 @@ export function ImageLightbox({
         className="relative flex min-h-0 min-w-0 flex-col px-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]"
         style={{ touchAction: "none" }}
         onClick={(ev) => ev.stopPropagation()}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
         onWheel={onWheel}
       >
         <div
