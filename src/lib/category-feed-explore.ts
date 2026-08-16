@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import { POST_STATUS } from "./constants";
 import { parseVariants } from "./posts-query";
-import { derivePostTitle } from "./post-text";
+import { derivePostTitle, plainPostPreview } from "./post-text";
 import { listFeedCategories } from "./feed-server";
 import { isNextProductionBuild } from "./site-settings-db";
 import { compareCarouselQuality, diversifyByCategoryRoundRobin } from "./rec-diversify";
@@ -34,7 +34,7 @@ function mapExplorePost(p: {
   const im = p.images[0];
   const variants = im ? parseVariants(im.variantsJson) : {};
   const title = derivePostTitle(p.title, p.body);
-  const normalizedBody = p.body.replace(/\s+/g, " ").trim();
+  const normalizedBody = plainPostPreview(p.body);
   const preview = (normalizedBody || title).slice(0, 500);
   const letter = title.trim().slice(0, 1).toUpperCase() || "•";
   return {

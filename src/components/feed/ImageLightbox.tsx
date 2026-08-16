@@ -21,7 +21,8 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const DOUBLE_TAP_SCALE = 2.5;
 const SWIPE_PX = 56;
-const SLIDE_SNAP_MS = 260;
+const SLIDE_SNAP_MS = 340;
+const SLIDE_SNAP_EASING = "cubic-bezier(0.22, 0.75, 0.36, 1)";
 /** Закрытие вертикальным свайпом при scale≈1; только если вертикаль доминирует над горизонталью. */
 const SWIPE_CLOSE_PX = 96;
 /** Затухание при закрытии: заметнее, чем 200 ms, и не обрывается до конца анимации. */
@@ -39,6 +40,53 @@ function touchDistance(
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
+}
+
+/** Не заменяем уже видимый кадр, пока новая версия изображения не загрузится и не декодируется. */
+function BufferedLightboxImage({
+  src,
+  alt,
+}: {
+  src: string;
+  alt: string;
+}) {
+  const [displayedSrc, setDisplayedSrc] = useState(src);
+
+  useEffect(() => {
+    if (src === displayedSrc) return;
+
+    let cancelled = false;
+    const preload = new Image();
+    const showLoadedImage = () => {
+      if (!cancelled) setDisplayedSrc(src);
+    };
+    const onLoad = () => {
+      if (typeof preload.decode === "function") {
+        void preload.decode().then(showLoadedImage, showLoadedImage);
+      } else {
+        showLoadedImage();
+      }
+    };
+
+    preload.addEventListener("load", onLoad);
+    preload.src = src;
+    if (preload.complete) onLoad();
+
+    return () => {
+      cancelled = true;
+      preload.removeEventListener("load", onLoad);
+    };
+  }, [src, displayedSrc]);
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={displayedSrc}
+      alt={alt}
+      className="h-full w-full select-none rounded-lg object-contain object-center"
+      draggable={false}
+    />
+  );
 }
 
 export function ImageLightbox({
@@ -366,7 +414,11 @@ export function ImageLightbox({
         setSlideOffsetX(0);
         setIsPulling(true);
         setOverlayPullY(clamp(dy, -360, 360));
-      } else if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 12) {
+      } else if (
+        slides.length > 1 &&
+        Math.abs(dx) > Math.abs(dy) &&
+        Math.abs(dx) > 12
+      ) {
         setIsPulling(false);
         setOverlayPullY(0);
         setIsSliding(true);
@@ -509,17 +561,19 @@ export function ImageLightbox({
       ? [
           {
             slide: slides[(index - 1 + slides.length) % slides.length]!,
+            slideIndex: (index - 1 + slides.length) % slides.length,
             position: -100,
             isCurrent: false,
           },
-          { slide, position: 0, isCurrent: true },
+          { slide, slideIndex: index, position: 0, isCurrent: true },
           {
             slide: slides[(index + 1) % slides.length]!,
+            slideIndex: (index + 1) % slides.length,
             position: 100,
             isCurrent: false,
           },
         ]
-      : [{ slide, position: 0, isCurrent: true }];
+      : [{ slide, slideIndex: index, position: 0, isCurrent: true }];
   const pullTransition = "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)";
   const fadeTransition = "opacity 220ms cubic-bezier(0.22, 1, 0.36, 1)";
   const closeFadeTransition = `opacity ${CLOSE_FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
@@ -634,14 +688,14 @@ export function ImageLightbox({
           >
             {carouselSlides.map((carouselSlide) => (
               <div
-                key={`${carouselSlide.position}-${carouselSlide.slide.src}`}
+                key={`${carouselSlide.position}-${carouselSlide.slideIndex}`}
                 className="absolute inset-0 flex min-h-0 min-w-0 flex-col"
                 style={{
                   transform: `translate3d(calc(${carouselSlide.position}% + ${slideOffsetX}px), 0, 0)`,
                   willChange: "transform",
                   transition: isSliding || isRebasingSlide
                     ? "none"
-                    : `transform ${SLIDE_SNAP_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+                    : `transform ${SLIDE_SNAP_MS}ms ${SLIDE_SNAP_EASING}`,
                 }}
               >
                 <div className="relative min-h-0 min-w-0 flex-1">
@@ -655,12 +709,9 @@ export function ImageLightbox({
                         transformOrigin: "center center",
                       }}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <BufferedLightboxImage
                         src={carouselSlide.slide.src}
                         alt={carouselSlide.slide.alt}
-                        className="h-full w-full select-none rounded-lg object-contain object-center"
-                        draggable={false}
                       />
                     </div>
                   </div>

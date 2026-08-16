@@ -2,7 +2,7 @@ import { cache } from "react";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { POST_STATUS } from "./constants";
-import { derivePostTitle } from "./post-text";
+import { derivePostTitle, plainPostPreview } from "./post-text";
 import { diversifyByCategoryRoundRobin } from "./rec-diversify";
 import { shuffleDeterministic, stringToSeed32 } from "./rec-seed";
 import type { PostCarouselItem } from "@/types/feed";
@@ -96,7 +96,7 @@ function mapPostToCarouselItem(p: {
   const im = p.images[0];
   const variants = im ? parseVariants(im.variantsJson) : {};
   const title = derivePostTitle(p.title, p.body);
-  const normalizedBody = p.body.replace(/\s+/g, " ").trim();
+  const normalizedBody = plainPostPreview(p.body);
   /** В карусели только тело поста (без отдельного заголовка), чтобы не дублировать первую строку. */
   const preview = normalizedBody || title;
   const previewCapped = preview.slice(0, 900);

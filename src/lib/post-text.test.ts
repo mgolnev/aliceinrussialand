@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { extractFirstSentence, derivePostTitle } from "./post-text";
+import {
+  derivePostTitle,
+  extractFirstSentence,
+  plainPostPreview,
+} from "./post-text";
 
 describe("extractFirstSentence", () => {
   it("восстанавливает границу после точки без пробела (кириллица)", () => {
@@ -28,5 +32,15 @@ describe("derivePostTitle", () => {
     expect(derivePostTitle("", "Стакан супер.тонкий дальше")).toBe(
       "Стакан супер.",
     );
+  });
+});
+
+describe("plainPostPreview", () => {
+  it("оставляет подпись ссылки, но убирает Markdown и URL", () => {
+    expect(
+      plainPostPreview(
+        "Встречайте [Волк-дурень](https://aliceinrussialand.ru/p/volk-duren) теперь и на английском.",
+      ),
+    ).toBe("Встречайте Волк-дурень теперь и на английском.");
   });
 });

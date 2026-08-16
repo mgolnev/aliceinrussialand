@@ -47,6 +47,11 @@ export function extractFirstSentence(text: string) {
   return clean.slice(0, 140).trim();
 }
 
+/** Текст для компактных превью: без Markdown-разметки и технических URL ссылок. */
+export function plainPostPreview(body: string) {
+  return richTextToPlainText(body).replace(/\s+/g, " ").trim();
+}
+
 export function derivePostTitle(title: string | null | undefined, body: string) {
   const explicit = title?.trim();
   if (explicit) return explicit;
