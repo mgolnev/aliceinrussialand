@@ -20,9 +20,10 @@ type Props = {
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const DOUBLE_TAP_SCALE = 2.5;
-const SWIPE_PX = 56;
-const SLIDE_SNAP_MS = 420;
-const SLIDE_SNAP_EASING = "cubic-bezier(0.25, 0.55, 0.25, 1)";
+/** Небольшого, но намеренного горизонтального смахивания достаточно для смены кадра. */
+const SWIPE_PX = 16;
+const SLIDE_SNAP_MS = 580;
+const SLIDE_SNAP_EASING = "cubic-bezier(0.2, 0.45, 0.2, 1)";
 /** Закрытие вертикальным свайпом при scale≈1; только если вертикаль доминирует над горизонталью. */
 const SWIPE_CLOSE_PX = 96;
 /** Затухание при закрытии: заметнее, чем 200 ms, и не обрывается до конца анимации. */
