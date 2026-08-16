@@ -445,8 +445,15 @@ export function ImageLightbox({
     return null;
   }
 
-  const overlayOpacity =
-    overlayPullY > 0 ? Math.max(0.4, 1 - overlayPullY / 480) : 1;
+  /** При вертикальном закрытии панель закреплена, а фото уезжает отдельно. */
+  const pullProgress = clamp(overlayPullY / 420, 0, 1);
+  const overlayOpacity = 1 - pullProgress * 0.9;
+  const controlsOpacity = 1 - pullProgress;
+  const mediaOpacity = 1 - pullProgress * 0.8;
+  const mediaPullY =
+    closingMode === "swipe"
+      ? Math.max(overlayPullY, 180)
+      : overlayPullY;
   const pullTransition = "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)";
   const fadeTransition = "opacity 220ms cubic-bezier(0.22, 1, 0.36, 1)";
   const closeFadeTransition = `opacity ${CLOSE_FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
@@ -474,14 +481,7 @@ export function ImageLightbox({
       <div
         className="relative z-[1] grid h-full grid-rows-[auto_minmax(0,1fr)]"
         style={{
-          transform:
-            closingMode === "swipe"
-              ? `translate3d(0, ${Math.max(overlayPullY, 180)}px, 0)`
-              : overlayPullY > 0
-                ? `translate3d(0, ${overlayPullY}px, 0)`
-                : undefined,
-          willChange: "transform",
-          transition: isPulling ? "none" : pullTransition,
+          willChange: "opacity",
         }}
       >
       {/* Панель сверху — не наезжает на фото; safe-area сверху здесь */}
@@ -491,6 +491,9 @@ export function ImageLightbox({
           paddingTop: "max(0.625rem, env(safe-area-inset-top, 0px))",
           paddingLeft: "max(0.75rem, env(safe-area-inset-left, 0px))",
           paddingRight: "max(0.75rem, env(safe-area-inset-right, 0px))",
+          opacity: controlsOpacity,
+          willChange: "opacity",
+          transition: isPulling ? "none" : fadeTransition,
         }}
         onClick={(ev) => ev.stopPropagation()}
       >
@@ -546,36 +549,50 @@ export function ImageLightbox({
         onTouchEnd={onTouchEnd}
         onWheel={onWheel}
       >
-        <div className="relative min-h-0 min-w-0 flex-1">
-          <div className="absolute inset-0 min-h-0 min-w-0 overflow-hidden">
-            <div
-              className="flex h-full w-full min-h-0 min-w-0 items-center justify-center will-change-transform"
-              style={{
-                transform: `translate(${panX}px, ${panY}px) scale(${scale})`,
-                transformOrigin: "center center",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={slide.src}
-                alt={slide.alt}
-                className="h-full w-full select-none rounded-lg object-contain object-center "
-                draggable={false}
-              />
+        <div
+          className="flex min-h-0 min-w-0 flex-1 flex-col"
+          style={{
+            transform: mediaPullY
+              ? `translate3d(0, ${mediaPullY}px, 0)`
+              : undefined,
+            opacity: mediaOpacity,
+            willChange: "transform, opacity",
+            transition: isPulling
+              ? "none"
+              : `${pullTransition}, ${fadeTransition}`,
+          }}
+        >
+          <div className="relative min-h-0 min-w-0 flex-1">
+            <div className="absolute inset-0 min-h-0 min-w-0 overflow-hidden">
+              <div
+                className="flex h-full w-full min-h-0 min-w-0 items-center justify-center will-change-transform"
+                style={{
+                  transform: `translate(${panX}px, ${panY}px) scale(${scale})`,
+                  transformOrigin: "center center",
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={slide.src}
+                  alt={slide.alt}
+                  className="h-full w-full select-none rounded-lg object-contain object-center "
+                  draggable={false}
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        {slide.caption ? (
-          <div
-            className="shrink-0 px-2 pb-2 pt-1"
-            onClick={(ev) => ev.stopPropagation()}
-          >
-            <p className="mx-auto max-w-2xl rounded-2xl bg-black/40 p-3 text-center text-[15px] leading-relaxed text-white/90 backdrop-blur-md">
-              {slide.caption}
-            </p>
-          </div>
-        ) : null}
+          {slide.caption ? (
+            <div
+              className="shrink-0 px-2 pb-2 pt-1"
+              onClick={(ev) => ev.stopPropagation()}
+            >
+              <p className="mx-auto max-w-2xl rounded-2xl bg-black/40 p-3 text-center text-[15px] leading-relaxed text-white/90 backdrop-blur-md">
+                {slide.caption}
+              </p>
+            </div>
+          ) : null}
+        </div>
       </div>
       </div>
     </div>
