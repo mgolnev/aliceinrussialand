@@ -21,8 +21,8 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const DOUBLE_TAP_SCALE = 2.5;
 const SWIPE_PX = 56;
-const SLIDE_SNAP_MS = 340;
-const SLIDE_SNAP_EASING = "cubic-bezier(0.22, 0.75, 0.36, 1)";
+const SLIDE_SNAP_MS = 420;
+const SLIDE_SNAP_EASING = "cubic-bezier(0.25, 0.55, 0.25, 1)";
 /** Закрытие вертикальным свайпом при scale≈1; только если вертикаль доминирует над горизонталью. */
 const SWIPE_CLOSE_PX = 96;
 /** Затухание при закрытии: заметнее, чем 200 ms, и не обрывается до конца анимации. */
