@@ -3,7 +3,11 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { toSlug } from "@/lib/slug";
 import { normalizeProjectPostIds } from "@/lib/project-post-ids";
-import { PROJECT_STATUS } from "@/lib/projects";
+import {
+  PROJECT_ORDER_MODE,
+  PROJECT_STATUS,
+  projectOrderMode,
+} from "@/lib/projects";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -68,6 +72,11 @@ export async function PATCH(req: Request, ctx: Ctx) {
     body.status === PROJECT_STATUS.ARCHIVED
       ? body.status
       : existing.status;
+  const orderMode =
+    body.orderMode === PROJECT_ORDER_MODE.NEWEST_FIRST ||
+    body.orderMode === PROJECT_ORDER_MODE.MANUAL
+      ? projectOrderMode(body.orderMode)
+      : projectOrderMode(existing.orderMode);
   const postIds = "postIds" in body ? normalizeProjectPostIds(body.postIds) : undefined;
   if (postIds === null) {
     return NextResponse.json({ error: "Некорректный список публикаций" }, { status: 400 });
@@ -108,7 +117,15 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const project = await prisma.$transaction(async (tx) => {
     const updated = await tx.project.update({
       where: { id },
-      data: { title, slug, description, metaTitle, metaDescription, status },
+      data: {
+        title,
+        slug,
+        description,
+        metaTitle,
+        metaDescription,
+        orderMode,
+        status,
+      },
     });
     if (postIds !== undefined) {
       await tx.postProject.deleteMany({ where: { projectId: id } });

@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import {
+  comparePostsNewestFirst,
+  PROJECT_ORDER_MODE,
+  type ProjectOrderMode,
+} from "@/lib/project-order";
 
 type PostOption = {
   id: string;
@@ -19,6 +24,7 @@ type InitialProject = {
   description: string;
   metaTitle: string;
   metaDescription: string;
+  orderMode: ProjectOrderMode;
   status: string;
   postIds: string[];
 };
@@ -37,7 +43,16 @@ export function ProjectEditor({ initial, posts }: Props) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const postById = useMemo(() => new Map(posts.map((post) => [post.id, post])), [posts]);
-  const selected = postIds.map((id) => postById.get(id)).filter((post): post is PostOption => Boolean(post));
+  const selectedByManualOrder = postIds
+    .map((id) => postById.get(id))
+    .filter((post): post is PostOption => Boolean(post));
+  const selected = useMemo(
+    () =>
+      project.orderMode === PROJECT_ORDER_MODE.NEWEST_FIRST
+        ? [...selectedByManualOrder].sort(comparePostsNewestFirst)
+        : selectedByManualOrder,
+    [project.orderMode, selectedByManualOrder],
+  );
   const available = posts
     .filter((post) => !postIds.includes(post.id))
     .filter((post) => {
@@ -55,6 +70,14 @@ export function ProjectEditor({ initial, posts }: Props) {
       [next[from], next[to]] = [next[to]!, next[from]!];
       return next;
     });
+  }
+
+  function setOrderMode(orderMode: ProjectOrderMode) {
+    if (orderMode === PROJECT_ORDER_MODE.MANUAL) {
+      // Ручной режим начинает с уже понятной автору хронологии, а не со старого технического порядка.
+      setPostIds(selected.map((post) => post.id));
+    }
+    setProject((current) => ({ ...current, orderMode }));
   }
 
   async function save(status = project.status) {
@@ -137,14 +160,50 @@ export function ProjectEditor({ initial, posts }: Props) {
       <section className="rounded-[28px] border border-stone-200/80 bg-white/90 p-4 sm:p-5">
         <h2 className="text-lg font-semibold tracking-tight text-stone-900">Публикации</h2>
         <p className="mt-1 text-sm leading-6 text-stone-600">Они появятся на странице подборки и первыми в рекомендациях друг друга.</p>
+        <div className="mt-4 flex flex-wrap items-center gap-2" aria-label="Порядок публикаций">
+          <span className="mr-1 text-sm text-stone-500">Порядок:</span>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => setOrderMode(PROJECT_ORDER_MODE.NEWEST_FIRST)}
+            className={`rounded-full px-3 py-1.5 text-sm transition ${
+              project.orderMode === PROJECT_ORDER_MODE.NEWEST_FIRST
+                ? "bg-stone-900 font-medium text-white"
+                : "border border-stone-300 bg-white text-stone-700 hover:bg-stone-50"
+            }`}
+          >
+            Сначала новые
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => setOrderMode(PROJECT_ORDER_MODE.MANUAL)}
+            className={`rounded-full px-3 py-1.5 text-sm transition ${
+              project.orderMode === PROJECT_ORDER_MODE.MANUAL
+                ? "bg-stone-900 font-medium text-white"
+                : "border border-stone-300 bg-white text-stone-700 hover:bg-stone-50"
+            }`}
+          >
+            Вручную
+          </button>
+        </div>
+        <p className="mt-2 text-sm text-stone-500">
+          {project.orderMode === PROJECT_ORDER_MODE.NEWEST_FIRST
+            ? "Новые публикации сверху, как в ленте."
+            : "Порядок чтения задаётся стрелками ниже; новые публикации добавятся в конец."}
+        </p>
         <ol className="mt-4 space-y-2">
           {selected.map((post, index) => (
             <li key={post.id} className="flex items-center gap-2 rounded-xl border border-stone-200 px-3 py-2.5">
               <span className="w-5 shrink-0 text-right text-sm tabular-nums text-stone-400">{index + 1}</span>
               <span className="min-w-0 flex-1 truncate text-sm text-stone-800">{postLabel(post)}</span>
               <span className="hidden text-xs text-stone-400 sm:inline">{post.status === "PUBLISHED" ? "опубликовано" : "черновик"}</span>
-              <button type="button" onClick={() => move(post.id, -1)} disabled={index === 0 || saving} className="rounded-lg px-2 py-1 text-sm text-stone-600 hover:bg-stone-100 disabled:opacity-30" aria-label="Переместить выше">↑</button>
-              <button type="button" onClick={() => move(post.id, 1)} disabled={index === selected.length - 1 || saving} className="rounded-lg px-2 py-1 text-sm text-stone-600 hover:bg-stone-100 disabled:opacity-30" aria-label="Переместить ниже">↓</button>
+              {project.orderMode === PROJECT_ORDER_MODE.MANUAL ? (
+                <>
+                  <button type="button" onClick={() => move(post.id, -1)} disabled={index === 0 || saving} className="rounded-lg px-2 py-1 text-sm text-stone-600 hover:bg-stone-100 disabled:opacity-30" aria-label="Переместить выше">↑</button>
+                  <button type="button" onClick={() => move(post.id, 1)} disabled={index === selected.length - 1 || saving} className="rounded-lg px-2 py-1 text-sm text-stone-600 hover:bg-stone-100 disabled:opacity-30" aria-label="Переместить ниже">↓</button>
+                </>
+              ) : null}
               <button type="button" onClick={() => setPostIds((current) => current.filter((id) => id !== post.id))} disabled={saving} className="rounded-lg px-2 py-1 text-sm text-red-700 hover:bg-red-50 disabled:opacity-30">Убрать</button>
             </li>
           ))}

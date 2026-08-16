@@ -104,8 +104,10 @@ export function PostProjectLinkEditor({
             : [];
         });
         if (!cancelled) {
+          // Не переставляем уже собранный цикл при добавлении поста из быстрой формы.
+          // В ручном порядке новый пост должен оказаться последним.
           setProjectPosts(
-            loaded.some((item) => item.id === post.id) ? loaded : [post, ...loaded],
+            loaded.some((item) => item.id === post.id) ? loaded : [...loaded, post],
           );
         }
       } finally {

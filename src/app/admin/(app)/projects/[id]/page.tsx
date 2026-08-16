@@ -16,6 +16,7 @@ export default async function AdminProjectPage({ params }: PageProps) {
         description: true,
         metaTitle: true,
         metaDescription: true,
+        orderMode: true,
         status: true,
         posts: {
           orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],

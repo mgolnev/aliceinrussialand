@@ -2,12 +2,21 @@ import { cache } from "react";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { POST_STATUS } from "@/lib/constants";
+import {
+  comparePostsNewestFirst,
+  projectOrderMode,
+  PROJECT_ORDER_MODE,
+  type ProjectOrderMode,
+} from "@/lib/project-order";
 
 export const PROJECT_STATUS = {
   DRAFT: "DRAFT",
   PUBLISHED: "PUBLISHED",
   ARCHIVED: "ARCHIVED",
 } as const;
+
+export { PROJECT_ORDER_MODE, projectOrderMode };
+export type { ProjectOrderMode };
 
 export type PublishedProjectPost = {
   id: string;
@@ -38,6 +47,7 @@ export type PublishedProject = {
   description: string;
   metaTitle: string;
   metaDescription: string;
+  orderMode: ProjectOrderMode;
   updatedAt: Date;
   posts: PublishedProjectPost[];
 };
@@ -46,6 +56,8 @@ const publishedPostsSelect = {
   where: { post: { status: POST_STATUS.PUBLISHED } },
   orderBy: [{ sortOrder: "asc" as const }, { createdAt: "asc" as const }],
   select: {
+    sortOrder: true,
+    createdAt: true,
     post: {
       select: {
         id: true,
@@ -82,12 +94,30 @@ function projectWithPublishedPosts(row: {
   description: string;
   metaTitle: string;
   metaDescription: string;
+  orderMode: string;
   updatedAt: Date;
-  posts: Array<{ post: PublishedProjectPost }>;
+  posts: Array<{
+    sortOrder: number;
+    createdAt: Date;
+    post: PublishedProjectPost;
+  }>;
 }): PublishedProject {
+  const orderMode = projectOrderMode(row.orderMode);
+  const orderedRelations = [...row.posts].sort((a, b) => {
+    if (orderMode === PROJECT_ORDER_MODE.MANUAL) {
+      return a.sortOrder - b.sortOrder || a.createdAt.getTime() - b.createdAt.getTime();
+    }
+    return (
+      comparePostsNewestFirst(a.post, b.post) ||
+      a.sortOrder - b.sortOrder ||
+      a.createdAt.getTime() - b.createdAt.getTime()
+    );
+  });
+
   return {
     ...row,
-    posts: row.posts.map((relation) => relation.post),
+    orderMode,
+    posts: orderedRelations.map((relation) => relation.post),
   };
 }
 
@@ -104,6 +134,7 @@ export async function getPublishedProjectBySlug(
       description: true,
       metaTitle: true,
       metaDescription: true,
+      orderMode: true,
       updatedAt: true,
       posts: publishedPostsSelect,
     },
@@ -131,6 +162,7 @@ export async function getPublishedPostProjects(
           description: true,
           metaTitle: true,
           metaDescription: true,
+          orderMode: true,
           updatedAt: true,
           posts: publishedPostsSelect,
         },

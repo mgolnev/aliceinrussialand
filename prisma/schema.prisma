@@ -91,6 +91,8 @@ model Project {
   description     String        @default("")
   metaTitle       String        @default("")
   metaDescription String        @default("")
+  /// NEWEST_FIRST или MANUAL. По умолчанию подборка повторяет порядок основной ленты.
+  orderMode       String        @default("NEWEST_FIRST")
   /// DRAFT, PUBLISHED или ARCHIVED. Строка оставлена намеренно: статус совпадает по подходу с Post.
   status          String        @default("DRAFT")
   createdAt       DateTime      @default(now())
