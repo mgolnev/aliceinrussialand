@@ -22,8 +22,11 @@ const MAX_SCALE = 4;
 const DOUBLE_TAP_SCALE = 2.5;
 /** Небольшого, но намеренного горизонтального смахивания достаточно для смены кадра. */
 const SWIPE_PX = 16;
-const SLIDE_SNAP_MS = 580;
-const SLIDE_SNAP_EASING = "cubic-bezier(0.2, 0.45, 0.2, 1)";
+/** Параметры критически затухающей пружины для завершения интерактивного свайпа. */
+const SLIDE_SPRING_STIFFNESS = 280;
+const SLIDE_SPRING_DAMPING = 34;
+const SLIDE_SPRING_REST_DISTANCE_PX = 0.5;
+const SLIDE_SPRING_REST_VELOCITY = 8;
 /** Закрытие вертикальным свайпом при scale≈1; только если вертикаль доминирует над горизонталью. */
 const SWIPE_CLOSE_PX = 96;
 /** Затухание при закрытии: заметнее, чем 200 ms, и не обрывается до конца анимации. */
@@ -119,9 +122,11 @@ export function ImageLightbox({
   const [isPulling, setIsPulling] = useState(false);
   const [slideOffsetX, setSlideOffsetX] = useState(0);
   const [isSliding, setIsSliding] = useState(false);
+  const [isSettlingSlide, setIsSettlingSlide] = useState(false);
   const [isRebasingSlide, setIsRebasingSlide] = useState(false);
-  const slideTimerRef = useRef<number | null>(null);
+  const slideAnimationFrameRef = useRef<number | null>(null);
   const isSlideAnimatingRef = useRef(false);
+  const swipeVelocityRef = useRef({ x: 0, lastX: 0, lastAt: 0 });
   const [closingMode, setClosingMode] = useState<null | "fade" | "swipe">(null);
   const closeTimerRef = useRef<number | null>(null);
   const tapRef = useRef<{ t: number; x: number; y: number } | null>(null);
@@ -158,7 +163,9 @@ export function ImageLightbox({
   useEffect(() => {
     return () => {
       if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
-      if (slideTimerRef.current) window.clearTimeout(slideTimerRef.current);
+      if (slideAnimationFrameRef.current) {
+        window.cancelAnimationFrame(slideAnimationFrameRef.current);
+      }
     };
   }, []);
 
@@ -368,6 +375,11 @@ export function ImageLightbox({
       } else {
         panRef.current = null;
         swipeStartRef.current = { x: t.clientX, y: t.clientY };
+        swipeVelocityRef.current = {
+          x: 0,
+          lastX: t.clientX,
+          lastAt: performance.now(),
+        };
         setOverlayPullY(0);
         setIsPulling(false);
       }
@@ -420,6 +432,16 @@ export function ImageLightbox({
         Math.abs(dx) > Math.abs(dy) &&
         Math.abs(dx) > 12
       ) {
+        const now = performance.now();
+        const previous = swipeVelocityRef.current;
+        const dt = now - previous.lastAt;
+        if (dt > 0) {
+          const instantVelocity = ((t.clientX - previous.lastX) / dt) * 1000;
+          // Небольшое сглаживание убирает случайные скачки в touchmove на iOS.
+          previous.x = previous.x * 0.65 + instantVelocity * 0.35;
+        }
+        previous.lastX = t.clientX;
+        previous.lastAt = now;
         setIsPulling(false);
         setOverlayPullY(0);
         setIsSliding(true);
@@ -428,40 +450,73 @@ export function ImageLightbox({
     }
   };
 
-  const settleSlideSwipe = (dx: number) => {
+  const settleSlideSwipe = (dx: number, velocityX: number) => {
     const isHorizontal = Math.abs(dx) > 12;
     const shouldGoPrevious = dx > SWIPE_PX;
     const shouldGoNext = dx < -SWIPE_PX;
 
     setIsSliding(false);
-    if (!isHorizontal || (!shouldGoPrevious && !shouldGoNext)) {
-      setSlideOffsetX(0);
-      return false;
-    }
+    isSlideAnimatingRef.current = true;
+    setIsSettlingSlide(true);
 
-    // Карточки уже, чем viewport из-за px-2: берём именно их ширину,
-    // чтобы после долистывания не было обратного микросдвига.
+    // Карточки уже, чем viewport из-за px-2: берём именно их ширину.
     const viewportWidth =
       carouselRef.current?.clientWidth ??
       viewportRef.current?.clientWidth ??
       window.innerWidth;
-    const nextIndex = shouldGoPrevious
-      ? (index - 1 + slides.length) % slides.length
-      : (index + 1) % slides.length;
+    const direction = shouldGoPrevious ? 1 : shouldGoNext ? -1 : 0;
+    const target = direction * viewportWidth;
+    const nextIndex =
+      direction === 1
+        ? (index - 1 + slides.length) % slides.length
+        : direction === -1
+          ? (index + 1) % slides.length
+          : null;
 
-    isSlideAnimatingRef.current = true;
-    setSlideOffsetX(shouldGoPrevious ? viewportWidth : -viewportWidth);
-    if (slideTimerRef.current) window.clearTimeout(slideTimerRef.current);
-    slideTimerRef.current = window.setTimeout(() => {
-      slideTimerRef.current = null;
-      // Технически возвращаем трек в ноль без CSS-перехода: входящий кадр уже в центре.
-      setIsRebasingSlide(true);
-      setSlideOffsetX(0);
-      onIndexChange(nextIndex);
+    let position = dx;
+    let velocity = velocityX;
+    let previousTime = performance.now();
+
+    const finish = () => {
+      slideAnimationFrameRef.current = null;
+      setSlideOffsetX(target);
+      setIsSettlingSlide(false);
+
+      if (nextIndex !== null && isHorizontal) {
+        // Переустановка индекса без промежуточного кадра: входящая карточка уже по центру.
+        setIsRebasingSlide(true);
+        setSlideOffsetX(0);
+        onIndexChange(nextIndex);
+        requestAnimationFrame(() => setIsRebasingSlide(false));
+      }
       isSlideAnimatingRef.current = false;
-      requestAnimationFrame(() => setIsRebasingSlide(false));
-    }, SLIDE_SNAP_MS);
-    return true;
+    };
+
+    const step = (now: number) => {
+      const deltaSeconds = Math.min((now - previousTime) / 1000, 0.032);
+      previousTime = now;
+      const displacement = target - position;
+      const acceleration =
+        SLIDE_SPRING_STIFFNESS * displacement - SLIDE_SPRING_DAMPING * velocity;
+      velocity += acceleration * deltaSeconds;
+      position += velocity * deltaSeconds;
+      setSlideOffsetX(position);
+
+      if (
+        Math.abs(target - position) <= SLIDE_SPRING_REST_DISTANCE_PX &&
+        Math.abs(velocity) <= SLIDE_SPRING_REST_VELOCITY
+      ) {
+        finish();
+        return;
+      }
+      slideAnimationFrameRef.current = window.requestAnimationFrame(step);
+    };
+
+    if (slideAnimationFrameRef.current) {
+      window.cancelAnimationFrame(slideAnimationFrameRef.current);
+    }
+    slideAnimationFrameRef.current = window.requestAnimationFrame(step);
+    return nextIndex !== null && isHorizontal;
   };
 
   const onTouchEnd = (e: React.TouchEvent) => {
@@ -505,7 +560,7 @@ export function ImageLightbox({
         return;
       }
       if (slides.length > 1 && Math.abs(dx) > Math.abs(dy)) {
-        settleSlideSwipe(dx);
+        settleSlideSwipe(dx, swipeVelocityRef.current.x);
         return;
       }
     }
@@ -694,9 +749,9 @@ export function ImageLightbox({
                 style={{
                   transform: `translate3d(calc(${carouselSlide.position}% + ${slideOffsetX}px), 0, 0)`,
                   willChange: "transform",
-                  transition: isSliding || isRebasingSlide
+                  transition: isSliding || isSettlingSlide || isRebasingSlide
                     ? "none"
-                    : `transform ${SLIDE_SNAP_MS}ms ${SLIDE_SNAP_EASING}`,
+                    : undefined,
                 }}
               >
                 <div className="relative min-h-0 min-w-0 flex-1">
