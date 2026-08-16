@@ -21,8 +21,9 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const DOUBLE_TAP_SCALE = 2.5;
 const SWIPE_PX = 56;
-/** Закрытие свайпом вниз при scale≈1; только если вертикаль доминирует над горизонталью. */
-const SWIPE_DOWN_CLOSE_PX = 96;
+const SLIDE_SNAP_MS = 260;
+/** Закрытие вертикальным свайпом при scale≈1; только если вертикаль доминирует над горизонталью. */
+const SWIPE_CLOSE_PX = 96;
 /** Затухание при закрытии: заметнее, чем 200 ms, и не обрывается до конца анимации. */
 const CLOSE_FADE_MS = 320;
 const CLOSE_UNMOUNT_AFTER_MS = CLOSE_FADE_MS + 40;
@@ -50,6 +51,7 @@ export function ImageLightbox({
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
 
@@ -66,6 +68,11 @@ export function ImageLightbox({
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const [overlayPullY, setOverlayPullY] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
+  const [slideOffsetX, setSlideOffsetX] = useState(0);
+  const [isSliding, setIsSliding] = useState(false);
+  const [isRebasingSlide, setIsRebasingSlide] = useState(false);
+  const slideTimerRef = useRef<number | null>(null);
+  const isSlideAnimatingRef = useRef(false);
   const [closingMode, setClosingMode] = useState<null | "fade" | "swipe">(null);
   const closeTimerRef = useRef<number | null>(null);
   const tapRef = useRef<{ t: number; x: number; y: number } | null>(null);
@@ -102,6 +109,7 @@ export function ImageLightbox({
   useEffect(() => {
     return () => {
       if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+      if (slideTimerRef.current) window.clearTimeout(slideTimerRef.current);
     };
   }, []);
 
@@ -263,7 +271,12 @@ export function ImageLightbox({
         const s = swipeStartRef.current;
         const dx = t.clientX - s.x;
         const dy = t.clientY - s.y;
-        if (dy > 12 && dy > Math.abs(dx)) e.preventDefault();
+        if (
+          (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) ||
+          (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy))
+        ) {
+          e.preventDefault();
+        }
       }
     };
     const onWheel = (e: WheelEvent) => {
@@ -278,6 +291,7 @@ export function ImageLightbox({
   }, []);
 
   const onTouchStart = (e: React.TouchEvent) => {
+    if (isSlideAnimatingRef.current) return;
     if (e.touches.length === 2) {
       swipeStartRef.current = null;
       setOverlayPullY(0);
@@ -347,14 +361,54 @@ export function ImageLightbox({
       const s = swipeStartRef.current;
       const dx = t.clientX - s.x;
       const dy = t.clientY - s.y;
-      if (dy > 12 && dy > Math.abs(dx)) {
+      if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) {
+        setIsSliding(false);
+        setSlideOffsetX(0);
         setIsPulling(true);
-        setOverlayPullY(Math.min(dy, 360));
+        setOverlayPullY(clamp(dy, -360, 360));
       } else if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 12) {
         setIsPulling(false);
         setOverlayPullY(0);
+        setIsSliding(true);
+        setSlideOffsetX(dx);
       }
     }
+  };
+
+  const settleSlideSwipe = (dx: number) => {
+    const isHorizontal = Math.abs(dx) > 12;
+    const shouldGoPrevious = dx > SWIPE_PX;
+    const shouldGoNext = dx < -SWIPE_PX;
+
+    setIsSliding(false);
+    if (!isHorizontal || (!shouldGoPrevious && !shouldGoNext)) {
+      setSlideOffsetX(0);
+      return false;
+    }
+
+    // Карточки уже, чем viewport из-за px-2: берём именно их ширину,
+    // чтобы после долистывания не было обратного микросдвига.
+    const viewportWidth =
+      carouselRef.current?.clientWidth ??
+      viewportRef.current?.clientWidth ??
+      window.innerWidth;
+    const nextIndex = shouldGoPrevious
+      ? (index - 1 + slides.length) % slides.length
+      : (index + 1) % slides.length;
+
+    isSlideAnimatingRef.current = true;
+    setSlideOffsetX(shouldGoPrevious ? viewportWidth : -viewportWidth);
+    if (slideTimerRef.current) window.clearTimeout(slideTimerRef.current);
+    slideTimerRef.current = window.setTimeout(() => {
+      slideTimerRef.current = null;
+      // Технически возвращаем трек в ноль без CSS-перехода: входящий кадр уже в центре.
+      setIsRebasingSlide(true);
+      setSlideOffsetX(0);
+      onIndexChange(nextIndex);
+      isSlideAnimatingRef.current = false;
+      requestAnimationFrame(() => setIsRebasingSlide(false));
+    }, SLIDE_SNAP_MS);
+    return true;
   };
 
   const onTouchEnd = (e: React.TouchEvent) => {
@@ -388,28 +442,22 @@ export function ImageLightbox({
     if (start && scaleRef.current <= 1.01) {
       const dx = t.clientX - start.x;
       const dy = t.clientY - start.y;
-      if (dy > SWIPE_DOWN_CLOSE_PX && dy > Math.abs(dx)) {
-        setOverlayPullY(Math.min(Math.max(dy, SWIPE_DOWN_CLOSE_PX), 420));
+      if (Math.abs(dy) > SWIPE_CLOSE_PX && Math.abs(dy) > Math.abs(dx)) {
+        setOverlayPullY(
+          dy > 0
+            ? clamp(dy, SWIPE_CLOSE_PX, 420)
+            : clamp(dy, -420, -SWIPE_CLOSE_PX),
+        );
         requestClose("swipe");
+        return;
+      }
+      if (slides.length > 1 && Math.abs(dx) > Math.abs(dy)) {
+        settleSlideSwipe(dx);
         return;
       }
     }
 
     setOverlayPullY(0);
-
-    const swipeOk = slides.length > 1 && scaleRef.current <= 1.01;
-    if (swipeOk && start) {
-      const dx = t.clientX - start.x;
-      const dy = t.clientY - start.y;
-      if (Math.abs(dx) > Math.abs(dy) && dx > SWIPE_PX) {
-        onIndexChange((index - 1 + slides.length) % slides.length);
-        return;
-      }
-      if (Math.abs(dx) > Math.abs(dy) && dx < -SWIPE_PX) {
-        onIndexChange((index + 1) % slides.length);
-        return;
-      }
-    }
 
     const now = Date.now();
     const prev = tapRef.current;
@@ -446,14 +494,32 @@ export function ImageLightbox({
   }
 
   /** При вертикальном закрытии панель закреплена, а фото уезжает отдельно. */
-  const pullProgress = clamp(overlayPullY / 420, 0, 1);
+  const pullProgress = clamp(Math.abs(overlayPullY) / 420, 0, 1);
   const overlayOpacity = 1 - pullProgress * 0.9;
   const controlsOpacity = 1 - pullProgress;
   const mediaOpacity = 1 - pullProgress * 0.8;
   const mediaPullY =
     closingMode === "swipe"
-      ? Math.max(overlayPullY, 180)
+      ? overlayPullY < 0
+        ? Math.min(overlayPullY, -180)
+        : Math.max(overlayPullY, 180)
       : overlayPullY;
+  const carouselSlides =
+    slides.length > 1
+      ? [
+          {
+            slide: slides[(index - 1 + slides.length) % slides.length]!,
+            position: -100,
+            isCurrent: false,
+          },
+          { slide, position: 0, isCurrent: true },
+          {
+            slide: slides[(index + 1) % slides.length]!,
+            position: 100,
+            isCurrent: false,
+          },
+        ]
+      : [{ slide, position: 0, isCurrent: true }];
   const pullTransition = "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)";
   const fadeTransition = "opacity 220ms cubic-bezier(0.22, 1, 0.36, 1)";
   const closeFadeTransition = `opacity ${CLOSE_FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
@@ -562,36 +628,54 @@ export function ImageLightbox({
               : `${pullTransition}, ${fadeTransition}`,
           }}
         >
-          <div className="relative min-h-0 min-w-0 flex-1">
-            <div className="absolute inset-0 min-h-0 min-w-0 overflow-hidden">
+          <div
+            ref={carouselRef}
+            className="relative min-h-0 min-w-0 flex-1 overflow-hidden"
+          >
+            {carouselSlides.map((carouselSlide) => (
               <div
-                className="flex h-full w-full min-h-0 min-w-0 items-center justify-center will-change-transform"
+                key={`${carouselSlide.position}-${carouselSlide.slide.src}`}
+                className="absolute inset-0 flex min-h-0 min-w-0 flex-col"
                 style={{
-                  transform: `translate(${panX}px, ${panY}px) scale(${scale})`,
-                  transformOrigin: "center center",
+                  transform: `translate3d(calc(${carouselSlide.position}% + ${slideOffsetX}px), 0, 0)`,
+                  willChange: "transform",
+                  transition: isSliding || isRebasingSlide
+                    ? "none"
+                    : `transform ${SLIDE_SNAP_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
                 }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={slide.src}
-                  alt={slide.alt}
-                  className="h-full w-full select-none rounded-lg object-contain object-center "
-                  draggable={false}
-                />
-              </div>
-            </div>
-          </div>
+                <div className="relative min-h-0 min-w-0 flex-1">
+                  <div className="absolute inset-0 min-h-0 min-w-0 overflow-hidden">
+                    <div
+                      className="flex h-full w-full min-h-0 min-w-0 items-center justify-center will-change-transform"
+                      style={{
+                        transform: carouselSlide.isCurrent
+                          ? `translate(${panX}px, ${panY}px) scale(${scale})`
+                          : undefined,
+                        transformOrigin: "center center",
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={carouselSlide.slide.src}
+                        alt={carouselSlide.slide.alt}
+                        className="h-full w-full select-none rounded-lg object-contain object-center"
+                        draggable={false}
+                      />
+                    </div>
+                  </div>
+                </div>
 
-          {slide.caption ? (
-            <div
-              className="shrink-0 px-2 pb-2 pt-1"
-              onClick={(ev) => ev.stopPropagation()}
-            >
-              <p className="mx-auto max-w-2xl rounded-2xl bg-black/40 p-3 text-center text-[15px] leading-relaxed text-white/90 backdrop-blur-md">
-                {slide.caption}
-              </p>
-            </div>
-          ) : null}
+                {carouselSlide.slide.caption ? (
+                  <div className="shrink-0 px-2 pb-2 pt-1">
+                    <p className="mx-auto max-w-2xl rounded-2xl bg-black/40 p-3 text-center text-[15px] leading-relaxed text-white/90 backdrop-blur-md">
+                      {carouselSlide.slide.caption}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
       </div>
