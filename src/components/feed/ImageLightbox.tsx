@@ -28,6 +28,8 @@ const SLIDE_SPRING_DAMPING = 34;
 const SLIDE_SPRING_REST_DISTANCE_PX = 0.5;
 const SLIDE_SPRING_REST_VELOCITY = 8;
 const DIRECTION_LOCK_PX = 6;
+/** Быстрый короткий flick тоже листает — не требует пройти SWIPE_PX. */
+const FLICK_VELOCITY_PX_PER_SECOND = 260;
 /** Закрытие вертикальным свайпом при scale≈1; только если вертикаль доминирует над горизонталью. */
 const SWIPE_CLOSE_PX = 96;
 /** Затухание при закрытии: заметнее, чем 200 ms, и не обрывается до конца анимации. */
@@ -107,6 +109,7 @@ export function ImageLightbox({
   const carouselRef = useRef<HTMLDivElement>(null);
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
+  const indexRef = useRef(index);
 
   const pinchRef = useRef<{
     startDist: number;
@@ -127,6 +130,7 @@ export function ImageLightbox({
   const [isRebasingSlide, setIsRebasingSlide] = useState(false);
   const slideAnimationFrameRef = useRef<number | null>(null);
   const isSlideAnimatingRef = useRef(false);
+  const pendingSlideIndexRef = useRef<number | null>(null);
   const swipeVelocityRef = useRef({ x: 0, lastX: 0, lastAt: 0 });
   const activePointersRef = useRef(
     new Map<number, { clientX: number; clientY: number }>(),
@@ -162,8 +166,22 @@ export function ImageLightbox({
   }, []);
 
   useEffect(() => {
-    resetTransform();
+    indexRef.current = index;
+    // При быстром следующем свайпе индекс первого кадра уже меняется,
+    // пока второй палец на экране. Не сбрасываем его стартовые координаты.
+    if (activePointersRef.current.size === 0) resetTransform();
   }, [index, resetTransform]);
+
+  /**
+   * При быстром листании следующий после соседнего кадр ещё не успевает
+   * оказаться в DOM. Подогреваем его запрос заранее, без decode и лишней
+   * нагрузки на главный поток.
+   */
+  useEffect(() => {
+    if (slides.length < 3) return;
+    const preload = new Image();
+    preload.src = slides[(index + 2) % slides.length]!.src;
+  }, [index, slides]);
 
   useEffect(() => {
     return () => {
@@ -354,8 +372,30 @@ export function ImageLightbox({
     setIsPulling(false);
   };
 
+  /** Новый жест не ждёт окончания старой пружины: завершаем уже выбранный кадр. */
+  const completeActiveSlide = () => {
+    if (!isSlideAnimatingRef.current) return;
+    if (slideAnimationFrameRef.current) {
+      window.cancelAnimationFrame(slideAnimationFrameRef.current);
+      slideAnimationFrameRef.current = null;
+    }
+
+    const pendingIndex = pendingSlideIndexRef.current;
+    pendingSlideIndexRef.current = null;
+    setIsSliding(false);
+    setIsSettlingSlide(false);
+    setSlideOffsetX(0);
+    if (pendingIndex !== null) {
+      setIsRebasingSlide(true);
+      indexRef.current = pendingIndex;
+      onIndexChange(pendingIndex);
+      requestAnimationFrame(() => setIsRebasingSlide(false));
+    }
+    isSlideAnimatingRef.current = false;
+  };
+
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (isSlideAnimatingRef.current) return;
+    completeActiveSlide();
     e.currentTarget.setPointerCapture(e.pointerId);
     const pointers = activePointersRef.current;
     pointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
@@ -442,9 +482,12 @@ export function ImageLightbox({
   };
 
   const settleSlideSwipe = (dx: number, velocityX: number) => {
-    const isHorizontal = Math.abs(dx) > 12;
-    const shouldGoPrevious = dx > SWIPE_PX;
-    const shouldGoNext = dx < -SWIPE_PX;
+    const isFlick = Math.abs(velocityX) >= FLICK_VELOCITY_PX_PER_SECOND;
+    const isHorizontal = Math.abs(dx) > 12 || isFlick;
+    const shouldGoPrevious =
+      dx > SWIPE_PX || velocityX > FLICK_VELOCITY_PX_PER_SECOND;
+    const shouldGoNext =
+      dx < -SWIPE_PX || velocityX < -FLICK_VELOCITY_PX_PER_SECOND;
 
     setIsSliding(false);
     isSlideAnimatingRef.current = true;
@@ -457,12 +500,14 @@ export function ImageLightbox({
       window.innerWidth;
     const direction = shouldGoPrevious ? 1 : shouldGoNext ? -1 : 0;
     const target = direction * viewportWidth;
+    const currentIndex = indexRef.current;
     const nextIndex =
       direction === 1
-        ? (index - 1 + slides.length) % slides.length
+        ? (currentIndex - 1 + slides.length) % slides.length
         : direction === -1
-          ? (index + 1) % slides.length
+          ? (currentIndex + 1) % slides.length
           : null;
+    pendingSlideIndexRef.current = nextIndex;
 
     let position = dx;
     let velocity = velocityX;
@@ -473,11 +518,14 @@ export function ImageLightbox({
       setSlideOffsetX(target);
       setIsSettlingSlide(false);
 
-      if (nextIndex !== null && isHorizontal) {
+      const completedIndex = pendingSlideIndexRef.current;
+      pendingSlideIndexRef.current = null;
+      if (completedIndex !== null && isHorizontal) {
         // Переустановка индекса без промежуточного кадра: входящая карточка уже по центру.
         setIsRebasingSlide(true);
         setSlideOffsetX(0);
-        onIndexChange(nextIndex);
+        indexRef.current = completedIndex;
+        onIndexChange(completedIndex);
         requestAnimationFrame(() => setIsRebasingSlide(false));
       }
       isSlideAnimatingRef.current = false;
@@ -533,14 +581,30 @@ export function ImageLightbox({
     }
 
     const start = swipeStartRef.current;
-    const axis = gestureAxisRef.current;
+    const dx = start ? e.clientX - start.x : 0;
+    const dy = start ? e.clientY - start.y : 0;
+    const previousVelocity = swipeVelocityRef.current;
+    const elapsed = performance.now() - previousVelocity.lastAt;
+    if (elapsed > 0) {
+      const releaseVelocity =
+        ((e.clientX - previousVelocity.lastX) / elapsed) * 1000;
+      previousVelocity.x =
+        previousVelocity.x * 0.5 + releaseVelocity * 0.5;
+    }
+    const axis =
+      gestureAxisRef.current ??
+      (Math.max(Math.abs(dx), Math.abs(dy)) >= DIRECTION_LOCK_PX ||
+      (Math.abs(previousVelocity.x) >= FLICK_VELOCITY_PX_PER_SECOND &&
+        Math.abs(dx) > 2)
+        ? Math.abs(dx) > Math.abs(dy)
+          ? "horizontal"
+          : "vertical"
+        : null);
     swipeStartRef.current = null;
     gestureAxisRef.current = null;
     setIsPulling(false);
 
     if (start && scaleRef.current <= 1.01) {
-      const dx = e.clientX - start.x;
-      const dy = e.clientY - start.y;
       if (axis === "vertical") {
         if (Math.abs(dy) > SWIPE_CLOSE_PX) {
           setOverlayPullY(
@@ -752,7 +816,13 @@ export function ImageLightbox({
           >
             {carouselSlides.map((carouselSlide) => (
               <div
-                key={`${carouselSlide.position}-${carouselSlide.slideIndex}`}
+                // При ≥3 фото две соседние карточки сохраняют свой DOM и уже
+                // загруженный bitmap вместо пересоздания на каждом переходе.
+                key={
+                  slides.length > 2
+                    ? carouselSlide.slideIndex
+                    : `${carouselSlide.position}-${carouselSlide.slideIndex}`
+                }
                 className="absolute inset-0 flex min-h-0 min-w-0 flex-col"
                 style={{
                   transform: `translate3d(calc(${carouselSlide.position}% + ${slideOffsetX}px), 0, 0)`,
