@@ -73,7 +73,6 @@ export function HomePageClient({
             categoryLoading={feed.categoryLoading}
             loadMore={feed.loadMore}
             categorySlug={feed.categorySlug}
-            onSelectCategory={feed.applyCategory}
             categories={categories}
             plausibleDomain={plausibleDomain}
             yandexMetrikaId={yandexMetrikaId}

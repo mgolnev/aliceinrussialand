@@ -17,6 +17,8 @@ enum SocialSourcePlatform {
 model SiteSettings {
   id                   Int     @id @default(1)
   displayName          String  @default("Иллюстратор")
+  /// Полное имя автора для поисковой выдачи и разметки Person; бренд в шапке остаётся отдельным.
+  authorName           String  @default("")
   tagline              String  @default("")
   bio                  String  @default("")
   aboutMarkdown        String  @default("")

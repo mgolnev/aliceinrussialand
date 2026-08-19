@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
+import { getAuthorName, getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { getFeedPage } from "@/lib/feed-server";
 import { absoluteUrl } from "@/lib/absolute-url";
 import { SiteFooter } from "@/components/site/SiteFooter";
@@ -7,7 +7,6 @@ import { HomePageClient } from "@/components/feed/HomePageClient";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 import { cookies } from "next/headers";
 import { resolveSiteOrigin } from "@/lib/site-origin";
-import Link from "next/link";
 import { getSeoCategoryBySlug } from "@/lib/seo-content";
 
 type HomeProps = { searchParams: Promise<{ category?: string }> };
@@ -26,7 +25,7 @@ export async function generateMetadata({
     s.seoDescription?.trim() ||
     DEFAULT_HOME_DESCRIPTION;
   const homeTitle =
-    s.seoTitle?.trim() || `${s.displayName} — иллюстрация и керамика`;
+    s.seoTitle?.trim() || `${getAuthorName(s)} — иллюстрация и керамика`;
   const avatar = parseAvatarUrl(s.avatarMediaPath);
   const og = avatar ? absoluteUrl(siteUrl, avatar) : undefined;
   if (categoryParam) {
@@ -102,13 +101,23 @@ export default async function HomePage({ searchParams }: HomeProps) {
     process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID?.trim() ||
     "";
   const siteOrigin = siteUrl.replace(/\/$/, "");
+  const authorName = getAuthorName(settings);
+  const aboutUrl = absoluteUrl(siteUrl, "/about");
   const webSiteJsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
     "@id": `${siteOrigin}#website`,
     url: siteOrigin,
     name: settings.displayName,
+    ...(authorName !== settings.displayName
+      ? { alternateName: authorName }
+      : {}),
     inLanguage: settings.defaultLocale === "en" ? "en" : "ru",
+    creator: {
+      "@type": "Person",
+      name: authorName,
+      url: aboutUrl,
+    },
   };
 
   return (
@@ -117,6 +126,9 @@ export default async function HomePage({ searchParams }: HomeProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteJsonLd) }}
       />
+      <h1 className="sr-only">
+        {authorName} — иллюстрация, керамика и авторские проекты
+      </h1>
       <HomePageClient
         displayName={settings.displayName}
         tagline={settings.tagline}
@@ -131,25 +143,6 @@ export default async function HomePage({ searchParams }: HomeProps) {
         siteUrl={siteUrl}
         canManage={isAdmin}
       />
-      <div className="mx-auto mt-4 w-full max-w-3xl px-3 sm:px-5">
-        <nav aria-label="Публичные ссылки по разделам" className="rounded-2xl border border-stone-200/80 bg-white/80 px-4 py-3 text-sm text-stone-600">
-          <p className="mb-2 font-medium text-stone-800">Разделы</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-2">
-            <Link href="/archive" className="underline decoration-stone-300 underline-offset-2">
-              Все публикации
-            </Link>
-            {categories.map((category) => (
-              <Link
-                key={category.id}
-                href={`/category/${category.slug}`}
-                className="underline decoration-stone-300 underline-offset-2"
-              >
-                {category.name}
-              </Link>
-            ))}
-          </div>
-        </nav>
-      </div>
       <SiteFooter />
     </>
   );

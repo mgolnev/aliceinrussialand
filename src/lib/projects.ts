@@ -52,6 +52,8 @@ export type PublishedProject = {
   posts: PublishedProjectPost[];
 };
 
+export type PublishedProjectLink = Pick<PublishedProject, "id" | "slug" | "title">;
+
 const publishedPostsSelect = {
   where: { post: { status: POST_STATUS.PUBLISHED } },
   orderBy: [{ sortOrder: "asc" as const }, { createdAt: "asc" as const }],
@@ -177,3 +179,29 @@ export async function getPublishedPostProjects(
 
 export const getPublishedProjectBySlugCached = cache(getPublishedProjectBySlug);
 export const getPublishedPostProjectsCached = cache(getPublishedPostProjects);
+
+/** Короткий список циклов для единственного статичного блока навигации в подвале. */
+export async function listPublishedProjectLinks(): Promise<PublishedProjectLink[]> {
+  const rows = await prisma.project.findMany({
+    where: {
+      status: PROJECT_STATUS.PUBLISHED,
+      posts: { some: { post: { status: POST_STATUS.PUBLISHED } } },
+    },
+    orderBy: [{ updatedAt: "desc" }],
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      posts: {
+        where: { post: { status: POST_STATUS.PUBLISHED } },
+        select: { id: true },
+      },
+    },
+  });
+
+  return rows.filter((project) => project.posts.length >= 2).map(({ id, slug, title }) => ({
+    id,
+    slug,
+    title,
+  }));
+}

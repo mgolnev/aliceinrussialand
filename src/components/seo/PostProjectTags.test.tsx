@@ -18,11 +18,6 @@ describe("PostProjectTags", () => {
             id: "home",
             slug: "dom",
             title: "Дом",
-            description: "",
-            metaTitle: "",
-            metaDescription: "",
-            updatedAt: new Date("2026-08-14"),
-            posts: [],
           },
         ]}
       />,

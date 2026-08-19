@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { absoluteUrl } from "@/lib/absolute-url";
-import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
+import { getAuthorName, getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { resolveSiteOrigin } from "@/lib/site-origin";
 import { getArchivePostsPage, parsePageNumber } from "@/lib/seo-content";
 import { SiteChrome } from "@/components/site/SiteChrome";
@@ -26,7 +26,9 @@ export async function generateMetadata({
   const [sp, settings] = await Promise.all([searchParams, getSiteSettings()]);
   const page = parsePageNumber(sp.page);
   const title =
-    page > 1 ? `Все публикации, стр. ${page}` : "Все публикации";
+    page > 1
+      ? `Все публикации ${getAuthorName(settings)}, стр. ${page}`
+      : `Все публикации — ${getAuthorName(settings)}`;
   const description =
     "Все заметки, иллюстрации, керамика и личные истории Алисы — от новых публикаций к ранним.";
   const canonicalPath = archivePath(page);

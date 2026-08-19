@@ -7,10 +7,6 @@ import {
   richTextToEditorHtml,
   safePostHref,
 } from "@/lib/rich-text";
-import {
-  handleMobileEditableBlur,
-  handleMobileEditableFocus,
-} from "@/lib/mobile-editable-scroll";
 
 type Props = {
   value: string;
@@ -123,11 +119,9 @@ export function RichTextEditor({ value, onChange, placeholder, disabled }: Props
         className="rich-text-editor min-h-[120px] w-full whitespace-pre-wrap border-none bg-transparent p-0 text-base leading-relaxed text-stone-900 outline-none placeholder:text-stone-400 sm:min-h-[160px] [&_a]:text-blue-600 [&_a]:underline [&_a]:decoration-blue-400 [&_a]:underline-offset-2"
         style={{ fontSize: "max(16px, 1rem)", unicodeBidi: "plaintext" }}
         onInput={emitValue}
-        onFocus={(event) => {
-          handleMobileEditableFocus(event);
+        onFocus={() => {
           document.execCommand("defaultParagraphSeparator", false, "br");
         }}
-        onBlur={handleMobileEditableBlur}
         onPaste={(event) => {
           event.preventDefault();
           document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));

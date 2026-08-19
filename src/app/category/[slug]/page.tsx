@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { notFound } from "next/navigation";
-import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
+import { getAuthorName, getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { absoluteUrl } from "@/lib/absolute-url";
 import { resolveSiteOrigin } from "@/lib/site-origin";
 import {
@@ -74,7 +74,7 @@ export async function generateMetadata({
   }
 
   const categoryName = readableCategoryName(category.name);
-  const titleBase = `${categoryName} — ${settings.displayName}`;
+  const titleBase = `${categoryName} — ${getAuthorName(settings)}`;
   const title = page > 1 ? `${titleBase}, стр. ${page}` : titleBase;
   const canonicalPath = pagePath(category.slug, page);
   const siteUrl = resolveSiteOrigin(settings.siteUrl);

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PostBackTray } from "@/components/feed/PostBackTray";
 import {
   getSiteSettings,
+  getAuthorName,
   parseAboutPhotoUrl,
   parseAvatarUrl,
   parseSocialLinks,
@@ -44,7 +45,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const avatar = parseAvatarUrl(s.avatarMediaPath);
   const ogPath = aboutImg || avatar;
   const og = ogPath ? absoluteUrl(siteUrl, ogPath) : undefined;
-  const title = "Обо мне";
+  const title = `${getAuthorName(s)} — обо мне`;
 
   return {
     title,
@@ -82,6 +83,7 @@ export default async function AboutPage() {
     .map((x) => x.url.trim())
     .filter((u) => /^https?:\/\//i.test(u));
   const metaDescription = aboutPageDescription(s);
+  const authorName = getAuthorName(s);
   const personDescription =
     s.bio?.trim() || s.tagline?.trim() || metaDescription;
 
@@ -92,7 +94,7 @@ export default async function AboutPage() {
         "@type": "WebPage",
         "@id": `${pageUrl}#webpage`,
         url: pageUrl,
-        name: "Обо мне",
+        name: `${authorName} — обо мне`,
         description: metaDescription,
         isPartOf: {
           "@type": "WebSite",
@@ -113,7 +115,8 @@ export default async function AboutPage() {
       {
         "@type": "Person",
         "@id": `${pageUrl}#person`,
-        name: s.displayName,
+        name: authorName,
+        ...(authorName !== s.displayName ? { alternateName: s.displayName } : {}),
         url: pageUrl,
         ...(profileImageAbs ? { image: profileImageAbs } : {}),
         description: personDescription.slice(0, 500),
@@ -146,8 +149,9 @@ export default async function AboutPage() {
             ]}
           />
           <h1 className="text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
-            Обо мне
+            {authorName}
           </h1>
+          <p className="mt-2 text-lg text-stone-600">Обо мне</p>
           {aboutPhotoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img

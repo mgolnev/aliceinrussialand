@@ -1,13 +1,10 @@
 "use client";
 
-import type { FeedCategory, PostCarouselItem } from "@/types/feed";
+import type { PostCarouselItem } from "@/types/feed";
 import { WatchNextEditorialFlow } from "./WatchNextEditorialFlow";
 
 type Props = {
   items: PostCarouselItem[];
-  categories: FeedCategory[];
-  /** Категория текущего поста — исключается из чипов «Темы». */
-  currentPostCategoryId: string | null;
   /** Slug-и ручных связей: они показываются перед обычными рекомендациями. */
   relatedPostSlugs?: string[];
 };
@@ -34,26 +31,18 @@ export function splitPostRecommendations(
   };
 }
 
-/** Editorial flow после поста: hero + продолжение + темы. */
+/** Editorial flow после поста: связанные и рекомендованные публикации. */
 export function PostReadNextCarousel({
   items,
-  categories,
-  currentPostCategoryId,
   relatedPostSlugs,
 }: Props) {
   if (items.length === 0) return null;
 
   const { featured, continuation } = splitPostRecommendations(items, relatedPostSlugs);
-  const topics = categories
-    .filter((c) => c.id !== currentPostCategoryId)
-    .slice(0, 5);
-
   return (
     <WatchNextEditorialFlow
       featured={featured}
       continuation={continuation}
-      topics={topics}
-      currentPostCategoryId={currentPostCategoryId}
       sectionHeadingId="post-read-next-heading"
       horizontalArticleFlow
     />

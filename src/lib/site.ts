@@ -22,6 +22,16 @@ export type SocialLink = {
 /** Одно чтение настроек на запрос React (RSC): дедуп в layout + page + generateMetadata. */
 export const getSiteSettings = cache(querySiteSettingsRow);
 
+/**
+ * Имя реального автора для Person-разметки и поисковых заголовков. Бренд сайта
+ * (`displayName`) может отличаться, поэтому не подменяем им это значение.
+ */
+export function getAuthorName(settings: Pick<SiteSettingsRow, "authorName" | "displayName">): string {
+  // Не прерываем отдачу страницы у уже запущенного dev-сервера до его
+  // перезапуска после миграции: старый Prisma Client не вернёт новое поле.
+  return settings.authorName?.trim() || settings.displayName.trim() || "Автор";
+}
+
 /** Создать строку настроек при отсутствии — только перед записями (admin API). */
 export async function ensureSiteSettings(): Promise<SiteSettingsRow> {
   return prisma.siteSettings.upsert({

@@ -22,6 +22,7 @@ export default async function AdminSettingsPage() {
       <SettingsForm
         initial={{
           displayName: s.displayName,
+          authorName: s.authorName,
           tagline: s.tagline,
           bio: s.bio,
           aboutMarkdown: s.aboutMarkdown,

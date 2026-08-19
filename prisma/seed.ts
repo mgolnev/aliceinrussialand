@@ -8,6 +8,7 @@ async function main() {
     create: {
       id: 1,
       displayName: "Алиса в Стране",
+      authorName: "Алиса Гольнева",
       tagline: "Иллюстрации и наброски",
       bio: "Авторский канал работ.",
       aboutMarkdown:

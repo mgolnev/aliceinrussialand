@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
-import { getSiteSettings } from "@/lib/site";
+import { getAuthorName, getSiteSettings } from "@/lib/site";
 import { Analytics } from "@/components/site/Analytics";
 import { ScrollMetrics } from "@/components/site/ScrollMetrics";
 import { GlobalScrollManager } from "@/components/navigation/GlobalScrollManager";
@@ -31,7 +31,7 @@ export const viewport: Viewport = {
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSiteSettings();
   const base = resolveSiteOrigin(s.siteUrl);
-  const seoTitle = s.seoTitle?.trim() || s.displayName;
+  const seoTitle = s.seoTitle?.trim() || `${getAuthorName(s)} · ${s.displayName}`;
   const seoDescription =
     s.seoDescription?.trim() || DEFAULT_SITE_DESCRIPTION;
 

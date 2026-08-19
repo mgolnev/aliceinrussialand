@@ -8,7 +8,7 @@ import {
 } from "@/lib/posts-query";
 import { getPublishedPostProjectsCached } from "@/lib/projects";
 import { listFeedCategories } from "@/lib/feed-server";
-import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
+import { getAuthorName, getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { absoluteUrl } from "@/lib/absolute-url";
 import { excerptForMetaDescription } from "@/lib/meta-excerpt";
 import { buildImplicitPostDocumentTitle } from "@/lib/post-document-title";
@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ? metaTitleTrim
     : buildImplicitPostDocumentTitle(
         post.title,
-        settings.displayName,
+        getAuthorName(settings),
         post.category?.name,
       );
   const descriptionRaw =
@@ -87,6 +87,7 @@ export default async function PostPage({ params }: PageProps) {
   if (!post) notFound();
 
   const siteUrl = resolveSiteOrigin(settings.siteUrl);
+  const authorName = getAuthorName(settings);
   const plausible =
     settings.plausibleDomain || process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || "";
   const yandexMetrikaId =
@@ -145,7 +146,7 @@ export default async function PostPage({ params }: PageProps) {
     post.metaDescription?.trim() || excerptForMetaDescription(post.body);
   const articleHeadline =
     post.title?.trim() ||
-    buildImplicitPostDocumentTitle(post.title, settings.displayName, post.category?.name);
+    buildImplicitPostDocumentTitle(post.title, authorName, post.category?.name);
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -161,7 +162,7 @@ export default async function PostPage({ params }: PageProps) {
     dateModified: post.updatedAt?.toISOString() ?? post.publishedAt?.toISOString(),
     author: {
       "@type": "Person",
-      name: settings.displayName,
+      name: authorName,
       url: aboutUrl,
     },
     publisher: {
@@ -198,6 +199,7 @@ export default async function PostPage({ params }: PageProps) {
         stickyTray={<PostBackTray />}
       />
       <div className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-10">
+        <h1 className="sr-only">{articleHeadline}</h1>
         <PostCard
           post={feedPost}
           categories={isAdmin ? allFeedCategories : []}
@@ -211,8 +213,6 @@ export default async function PostPage({ params }: PageProps) {
         />
         <PostReadNextCarousel
           items={readNextItems}
-          categories={allFeedCategories}
-          currentPostCategoryId={post.categoryId}
           relatedPostSlugs={relatedPostSlugs}
         />
       </div>

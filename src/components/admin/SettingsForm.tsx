@@ -8,6 +8,7 @@ import { SOCIAL_KIND_OPTIONS } from "@/lib/social-link-kinds";
 type Props = {
   initial: {
     displayName: string;
+    authorName: string;
     tagline: string;
     bio: string;
     aboutMarkdown: string;
@@ -50,6 +51,7 @@ export function SettingsForm({ initial }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         displayName: form.displayName,
+        authorName: form.authorName,
         tagline: form.tagline,
         bio: form.bio,
         aboutMarkdown: form.aboutMarkdown,
@@ -290,6 +292,20 @@ export function SettingsForm({ initial }: Props) {
               setForm((f) => ({ ...f, displayName: e.target.value }))
             }
           />
+        </label>
+        <label className="block text-sm font-medium sm:col-span-2">
+          Полное имя автора (SEO)
+          <input
+            className="mt-1 w-full rounded-2xl border border-stone-300 px-3 py-2.5 outline-none focus:border-stone-400"
+            placeholder="Алиса Гольнева"
+            value={form.authorName}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, authorName: e.target.value }))
+            }
+          />
+          <span className="mt-1 block text-xs font-normal text-stone-500">
+            Используется в поисковой разметке и на странице «Обо мне»; название бренда в шапке не меняется.
+          </span>
         </label>
         <label className="block text-sm font-medium sm:col-span-2">
           Короткое описание (шапка)

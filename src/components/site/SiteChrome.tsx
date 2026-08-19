@@ -73,9 +73,9 @@ export function SiteChrome({
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-lg font-bold tracking-tight text-stone-900 sm:text-xl">
+            <p className="truncate text-lg font-bold tracking-tight text-stone-900 sm:text-xl">
               {displayName}
-            </h1>
+            </p>
             {tagline ? (
               <p className="truncate text-xs text-stone-500 sm:text-sm">{tagline}</p>
             ) : null}

@@ -10,6 +10,7 @@ export function defaultSiteSettings(): SiteSettingsRow {
   return {
     id: 1,
     displayName: "Иллюстратор",
+    authorName: "",
     tagline: "",
     bio: "",
     aboutMarkdown: "",

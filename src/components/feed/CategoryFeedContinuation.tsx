@@ -10,7 +10,6 @@ import { WatchNextEditorialFlow } from "./WatchNextEditorialFlow";
 
 type Props = {
   categorySlug: string;
-  onSelectCategory: (slug: string | null) => void;
 };
 
 function exploreToCarousel(p: CategoryExplorePost): PostCarouselItem {
@@ -29,7 +28,6 @@ function exploreToCarousel(p: CategoryExplorePost): PostCarouselItem {
 
 export function CategoryFeedContinuation({
   categorySlug,
-  onSelectCategory,
 }: Props) {
   const [data, setData] = useState<CategoryFeedExplorePayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,10 +61,7 @@ export function CategoryFeedContinuation({
     <WatchNextEditorialFlow
       featured={featured}
       continuation={continuation}
-      topics={data?.topics ?? []}
-      onSelectCategory={onSelectCategory}
       sectionHeadingId="category-feed-read-next-heading"
-      currentPostCategoryId={undefined}
       horizontalArticleFlow
     />
   );

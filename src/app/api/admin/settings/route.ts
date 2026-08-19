@@ -21,6 +21,9 @@ export async function PATCH(req: Request) {
     typeof body[k] === "string" ? (body[k] as string) : undefined;
 
   if (str("displayName") !== undefined) data.displayName = str("displayName");
+  if (str("authorName") !== undefined) {
+    data.authorName = (str("authorName") ?? "").trim().slice(0, 100);
+  }
   if (str("tagline") !== undefined) data.tagline = str("tagline");
   if (str("bio") !== undefined) data.bio = str("bio");
   if (str("aboutMarkdown") !== undefined) {

@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import Image, { type ImageLoaderProps } from "next/image";
-import { useMemo, useCallback } from "react";
-import type { FeedCategory, PostCarouselItem } from "@/types/feed";
+import { useCallback } from "react";
+import type { PostCarouselItem } from "@/types/feed";
 import {
   intrinsicSizeForImage,
   pickDefaultVariantUrl,
@@ -22,11 +22,6 @@ import { LinkPendingBackdrop } from "@/components/ui/LinkPendingBackdrop";
 type Props = {
   featured: PostCarouselItem | null;
   continuation: PostCarouselItem[];
-  topics: FeedCategory[];
-  /** ID текущей категории поста (исключаем из тем). */
-  currentPostCategoryId?: string | null;
-  /** Если не задано, темы ведут на главную с параметром `category`. */
-  onSelectCategory?: (slug: string | null) => void;
   sectionHeadingId: string;
   /**
    * После статьи: один столбец широких «полос» (~5:4, почти квадрат по высоте), тот же язык карточки
@@ -151,57 +146,6 @@ function detectCardKind(item: PostCarouselItem): "hero" | "imageLed" | "textLed"
   // Если изображение есть, но текст "короткий" и выглядит как заметка — делаем text-led-ощущение.
   if (len <= 160) return "imageLed";
   return "imageLed";
-}
-
-function TopicsBlock({
-  topics,
-  currentPostCategoryId,
-  onSelectCategory,
-}: {
-  topics: FeedCategory[];
-  currentPostCategoryId?: string | null;
-  onSelectCategory?: (slug: string | null) => void;
-}) {
-  const filtered = useMemo(() => {
-    const c = currentPostCategoryId ?? null;
-    return c ? topics.filter((t) => t.id !== c) : topics;
-  }, [topics, currentPostCategoryId]);
-
-  if (filtered.length === 0) return null;
-
-  const chipClassName =
-    "rounded-full bg-stone-100/70 px-3 py-1.5 text-xs font-medium text-stone-800 ring-1 ring-stone-200/70 transition hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-300";
-
-  return (
-    <div className="pt-4">
-      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-stone-500">
-        Темы
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {filtered.map((c) =>
-          onSelectCategory ? (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => onSelectCategory(c.slug)}
-              className={chipClassName}
-            >
-              {c.name}
-            </button>
-          ) : (
-            <Link
-              key={c.id}
-              href={`/?category=${encodeURIComponent(c.slug)}`}
-              scroll={false}
-              className={chipClassName}
-            >
-              {c.name}
-            </Link>
-          ),
-        )}
-      </div>
-    </div>
-  );
 }
 
 function HeroStory({
@@ -519,14 +463,11 @@ function StoryCard({
 export function WatchNextEditorialFlow({
   featured,
   continuation,
-  topics,
-  currentPostCategoryId,
-  onSelectCategory,
   sectionHeadingId,
   horizontalArticleFlow = false,
 }: Props) {
   const hasStories = Boolean(featured) || continuation.length > 0;
-  if (!hasStories && topics.length === 0) return null;
+  if (!hasStories) return null;
 
   const bandGap = horizontalArticleFlow ? "space-y-4" : "space-y-3";
 
@@ -565,12 +506,6 @@ export function WatchNextEditorialFlow({
             />
           ))}
         </div>
-
-        <TopicsBlock
-          topics={topics}
-          currentPostCategoryId={currentPostCategoryId}
-          onSelectCategory={onSelectCategory}
-        />
       </section>
     </div>
   );

@@ -16,7 +16,6 @@ type Props = {
   categoryLoading: boolean;
   loadMore: () => Promise<void>;
   categorySlug: string | null;
-  onSelectCategory: (slug: string | null) => void;
   categories: FeedCategory[];
   plausibleDomain?: string;
   yandexMetrikaId?: string;
@@ -34,7 +33,6 @@ export function FeedPostsBody({
   categoryLoading,
   loadMore,
   categorySlug,
-  onSelectCategory,
   categories,
   plausibleDomain,
   yandexMetrikaId,
@@ -62,7 +60,6 @@ export function FeedPostsBody({
           <CategoryFeedContinuation
             key={categorySlug}
             categorySlug={categorySlug}
-            onSelectCategory={onSelectCategory}
           />
         ) : null}
       </div>
@@ -108,11 +105,10 @@ export function FeedPostsBody({
         </div>
       ) : null}
       {showCategoryExplore && categorySlug ? (
-        <CategoryFeedContinuation
-          key={categorySlug}
-          categorySlug={categorySlug}
-          onSelectCategory={onSelectCategory}
-        />
+          <CategoryFeedContinuation
+            key={categorySlug}
+            categorySlug={categorySlug}
+          />
       ) : null}
     </div>
   );

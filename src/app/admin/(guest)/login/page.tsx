@@ -1,34 +1,25 @@
-"use client";
+type SearchParams = Promise<{ from?: string; error?: string }>;
 
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-
-function LoginForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
-    setLoading(false);
-    if (!res.ok) {
-      const data = (await res.json().catch(() => null)) as { error?: string };
-      setError(data?.error ?? "Ошибка входа");
-      return;
-    }
-    const from = searchParams.get("from") || "/";
-    router.replace(from);
-    router.refresh();
+function safeReturnPath(value: string | undefined) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/";
   }
+  return value;
+}
+
+export default async function AdminLoginPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const params = await searchParams;
+  const from = safeReturnPath(params.from);
+  const error =
+    params.error === "invalid_password"
+      ? "Неверный пароль"
+      : params.error === "server_error"
+        ? "Не удалось выполнить вход. Проверьте настройки сервера."
+        : null;
 
   return (
     <div className="w-full max-w-md rounded-[32px] border border-stone-200/80 bg-white/92 p-8 backdrop-blur-sm">
@@ -47,14 +38,15 @@ function LoginForm() {
         Здесь можно быстро публиковать новые работы, импортировать посты из
         Telegram и настраивать сайт.
       </p>
-      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+      <form action="/api/auth/login" method="post" className="mt-6 space-y-4">
+        <input type="hidden" name="from" value={from} />
         <label className="block text-sm font-medium text-stone-700">
           Пароль
           <input
             type="password"
+            name="password"
             autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            required
             className="mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900 outline-none ring-stone-300 focus:ring-2"
           />
         </label>
@@ -65,26 +57,11 @@ function LoginForm() {
         ) : null}
         <button
           type="submit"
-          disabled={loading}
-          className="w-full rounded-2xl bg-stone-900 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:opacity-60"
+          className="w-full rounded-2xl bg-stone-900 py-3 text-sm font-medium text-white transition hover:bg-stone-800"
         >
-          {loading ? "Вход…" : "Войти"}
+          Войти
         </button>
       </form>
     </div>
-  );
-}
-
-export default function AdminLoginPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="w-full max-w-md rounded-[32px] border border-stone-200 bg-white p-8 text-center text-sm text-stone-500 ">
-          Загрузка…
-        </div>
-      }
-    >
-      <LoginForm />
-    </Suspense>
   );
 }

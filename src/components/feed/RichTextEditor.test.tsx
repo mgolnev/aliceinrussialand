@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { RichTextEditor } from "./RichTextEditor";
 
 function ControlledEditor() {
@@ -32,5 +32,41 @@ describe("RichTextEditor", () => {
     const editor = screen.getByRole("textbox", { name: "Текст публикации" });
     expect(editor).toHaveAttribute("dir", "ltr");
     expect(editor).toHaveStyle({ unicodeBidi: "plaintext" });
+  });
+
+  it("does not pull the page back to the editor after it receives focus", () => {
+    const originalExecCommand = document.execCommand;
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(document, "execCommand", {
+      configurable: true,
+      value: vi.fn(),
+    });
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+
+    render(<RichTextEditor value="Привет" onChange={() => {}} placeholder="Текст" />);
+    fireEvent.focus(screen.getByRole("textbox", { name: "Текст публикации" }));
+
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
+    if (originalExecCommand) {
+      Object.defineProperty(document, "execCommand", {
+        configurable: true,
+        value: originalExecCommand,
+      });
+    } else {
+      Reflect.deleteProperty(document, "execCommand");
+    }
+    if (originalScrollIntoView) {
+      Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+        configurable: true,
+        value: originalScrollIntoView,
+      });
+    } else {
+      Reflect.deleteProperty(HTMLElement.prototype, "scrollIntoView");
+    }
   });
 });

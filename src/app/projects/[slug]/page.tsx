@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
-import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
+import { getAuthorName, getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { absoluteUrl } from "@/lib/absolute-url";
 import { resolveSiteOrigin } from "@/lib/site-origin";
 import { excerptForMetaDescription } from "@/lib/meta-excerpt";
@@ -47,7 +47,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     project.metaDescription.trim() || projectDescription(project.description, project.title),
     180,
   );
-  const title = project.metaTitle.trim() || `${project.title} — ${settings.displayName}`;
+  const authorName = getAuthorName(settings);
+  const title =
+    project.metaTitle.trim() ||
+    `${project.title} — подборка работ ${authorName}`;
   const siteUrl = resolveSiteOrigin(settings.siteUrl);
   const path = `/projects/${project.slug}`;
 
@@ -87,6 +90,7 @@ export default async function ProjectPage({ params }: PageProps) {
   const path = `/projects/${project.slug}`;
   const url = absoluteUrl(siteUrl, path);
   const description = projectDescription(project.description, project.title);
+  const authorName = getAuthorName(settings);
   const feedPosts: FeedPost[] = project.posts.map((post) => ({
     id: post.id,
     slug: post.slug,
@@ -138,6 +142,9 @@ export default async function ProjectPage({ params }: PageProps) {
         stickyTray={<PostBackTray title={project.title} />}
       />
       <main className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-10">
+        <h1 className="sr-only">
+          {project.title} — подборка работ {authorName}
+        </h1>
         <section className="space-y-4 sm:space-y-7" aria-label="Публикации подборки">
           {feedPosts.map((post, index) => (
             <PostCard
