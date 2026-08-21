@@ -28,11 +28,25 @@ export type AiSeoPostInput = {
   body: string;
   categoryName: string | null;
   projectTitles: string[];
+  /** Уже подготовленные alt помогают не потерять видимый мотив в коротком title. */
+  imageAlts?: string[];
 };
 
 export type AiSeoImageInput = AiSeoPostInput & {
   caption: string;
   variantsJson: string;
+};
+
+export type AiSeoProjectInput = {
+  authorName: string;
+  title: string;
+  description: string;
+  posts: Array<{
+    title: string;
+    body: string;
+    categoryName: string | null;
+    imageAlts: string[];
+  }>;
 };
 
 function outboundProxyUrl(): string | undefined {
@@ -153,11 +167,13 @@ function compactPostText(body: string, limit = 6_000): string {
 
 function postContext(input: AiSeoPostInput): string {
   const projects = input.projectTitles.filter(Boolean).join(", ") || "нет";
+  const imageAlts = input.imageAlts?.filter(Boolean).slice(0, 2).join("; ") || "нет";
   return [
     `Автор: ${input.authorName || "Алиса Гольнева"}`,
     `Первая строка импорта: ${input.title || "нет"} (это техническая подсказка, а не готовое название)`,
     `Тема: ${input.categoryName || "не указана"}`,
     `Подборки: ${projects}`,
+    `Главные мотивы на работах: ${imageAlts}`,
     `Текст публикации: ${compactPostText(input.body) || "нет текста"}`,
   ].join("\n");
 }
@@ -173,6 +189,43 @@ export async function generatePostSeo(input: AiSeoPostInput) {
       },
     ],
     320,
+  );
+  return parseGeneratedPostSeo(raw);
+}
+
+function projectContext(input: AiSeoProjectInput): string {
+  const posts = input.posts.slice(0, 10).map((post, index) => {
+    const alts = post.imageAlts.filter(Boolean).slice(0, 2).join("; ") || "нет";
+    return [
+      `Публикация ${index + 1}: ${post.title || "без названия"}`,
+      `Рубрика: ${post.categoryName || "не указана"}`,
+      `Текст: ${compactPostText(post.body, 900) || "нет"}`,
+      `Что видно на работах: ${alts}`,
+    ].join("\n");
+  }).join("\n\n");
+  return [
+    `Автор: ${input.authorName || "Алиса Гольнева"}`,
+    `Название подборки: ${input.title || "нет"}`,
+    `Описание автора: ${input.description || "нет"}`,
+    `Материалы подборки:\n${posts || "пока нет опубликованных материалов"}`,
+  ].join("\n");
+}
+
+/**
+ * Подборка — отдельная посадочная страница, поэтому AI получает состав цикла,
+ * а не только её короткое имя. Результат всё равно остаётся предложением.
+ */
+export async function generateProjectSeo(input: AiSeoProjectInput) {
+  const raw = await askOpenRouter(
+    [
+      {
+        type: "text",
+        text:
+          "Составь SEO title и description для подборки работ художника. Определи, что объединяет публикации, только по предоставленным данным. Title: 25–70 символов, называет серию, сюжет или место; полное имя автора добавляй естественно, обычно в конце. Description: 70–180 символов, объясняет идею подборки и что читатель увидит. Не выдавай обычную ленту за законченную серию, если этого нет в данных. Не повторяй название механически, не перечисляй ключевые слова и не используй эмодзи. Верни JSON: {\"title\": string, \"description\": string, \"confidence\": number}.\n\n" +
+          projectContext(input),
+      },
+    ],
+    380,
   );
   return parseGeneratedPostSeo(raw);
 }

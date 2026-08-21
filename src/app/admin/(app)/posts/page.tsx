@@ -11,6 +11,8 @@ import {
 } from "@/components/admin/AdminPostsList";
 import { AiSeoBackfillControl } from "@/components/admin/AiSeoBackfillControl";
 import { getAiSeoBackfillStatus } from "@/lib/ai-seo-jobs";
+import { AiSeoReviewControl } from "@/components/admin/AiSeoReviewControl";
+import { getAiSeoReviewStatus } from "@/lib/ai-seo-reviews";
 
 function thumbUrlFromVariantsJson(variantsJson: string): string | null {
   const v = parseVariants(variantsJson);
@@ -25,7 +27,7 @@ function thumbUrlFromVariantsJson(variantsJson: string): string | null {
 }
 
 export default async function AdminPostsPage() {
-  const [posts, settings, categories, projects, aiSeoBackfill] = await Promise.all([
+  const [posts, settings, categories, projects, aiSeoBackfill, aiSeoReviews] = await Promise.all([
     prisma.post.findMany({
       orderBy: { updatedAt: "desc" },
       take: 100,
@@ -59,6 +61,7 @@ export default async function AdminPostsPage() {
       select: { id: true, title: true },
     }),
     getAiSeoBackfillStatus(),
+    getAiSeoReviewStatus(),
   ]);
 
   const siteUrl =
@@ -98,6 +101,7 @@ export default async function AdminPostsPage() {
         </p>
       </div>
       <AiSeoBackfillControl initial={aiSeoBackfill} />
+      <AiSeoReviewControl initial={aiSeoReviews} />
       {rows.length === 0 ? (
         <div className="rounded-xl border border-dashed border-stone-300 bg-white/75 px-4 py-8 text-center text-[14px] leading-relaxed text-stone-500">
           Пока нет постов. Новую запись можно начать в ленте на главной.

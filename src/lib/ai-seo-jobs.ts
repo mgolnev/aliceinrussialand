@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { POST_STATUS } from "@/lib/constants";
 import { generateImageAlt, generatePostSeo } from "@/lib/ai-seo";
+import { processAiSeoReviews } from "@/lib/ai-seo-reviews";
 
 const JOB_TYPE = {
   POST_SEO: "POST_SEO",
@@ -276,6 +277,17 @@ export async function processAiSeoJobs(options?: {
         else result.retrying += 1;
       }
     }
+  }
+
+  // Обычная автогенерация для новых постов обрабатывается адресно через
+  // `jobIds`. Предложения для старых ручных полей забирает только общий
+  // фоновый проход (after/cron), чтобы импорт не тратил лимит на чужие задачи.
+  if (!options?.jobIds?.length && result.claimed < limit) {
+    const reviews = await processAiSeoReviews({ limit: limit - result.claimed });
+    result.claimed += reviews.claimed;
+    result.done += reviews.ready;
+    result.retrying += reviews.retrying;
+    result.failed += reviews.failed;
   }
   return result;
 }

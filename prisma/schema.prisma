@@ -81,6 +81,7 @@ model Post {
   updatedAt          DateTime       @updatedAt
   images             PostImage[]
   aiSeoJobs          AiSeoJob[]
+  aiSeoReviews       AiSeoReview[]
 
   @@index([status, publishedAt])
   @@index([categoryId])
@@ -104,6 +105,7 @@ model Project {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   posts           PostProject[]
+  aiSeoReviews    AiSeoReview[]
 
   @@index([status, updatedAt])
 }
@@ -167,4 +169,35 @@ model AiSeoJob {
   @@unique([postId, type, subjectKey])
   @@index([status, runAfter])
   @@index([postId, updatedAt])
+}
+
+// Предложения AI живут отдельно от опубликованных полей: автор всегда видит
+// вариант и сам решает, применить его или оставить текущий текст.
+model AiSeoReview {
+  id                   String   @id @default(cuid())
+  postId               String?  @unique
+  projectId            String?  @unique
+  post                 Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  project              Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // CRITICAL — общий/дублирующийся title; IMPROVE — уточнение уже заполненного текста.
+  priority             String
+  // PENDING, RUNNING, READY, APPLIED, DISMISSED, FAILED.
+  status               String   @default("PENDING")
+  revision             Int      @default(0)
+  inputHash            String   @default("")
+  suggestedTitle       String   @default("")
+  suggestedDescription String   @default("")
+  confidence           Float    @default(0)
+  attempts             Int      @default(0)
+  runAfter             DateTime @default(now())
+  lockedAt             DateTime?
+  completedAt          DateTime?
+  appliedAt            DateTime?
+  dismissedAt          DateTime?
+  lastError            String   @default("")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([status, runAfter])
+  @@index([priority, status, updatedAt])
 }
