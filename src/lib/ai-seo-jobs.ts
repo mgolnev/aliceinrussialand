@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { POST_STATUS } from "@/lib/constants";
 import { generateImageAlt, generatePostSeo } from "@/lib/ai-seo";
 import { processAiSeoReviews } from "@/lib/ai-seo-reviews";
+import { SEO_REVIEW_PRIORITY } from "@/lib/seo-review";
 
 const JOB_TYPE = {
   POST_SEO: "POST_SEO",
@@ -221,6 +222,29 @@ export async function processAiSeoJobs(options?: {
   const now = new Date();
   const expiredLock = new Date(Date.now() - 10 * 60_000);
 
+  const mergeReviews = (reviews: Awaited<ReturnType<typeof processAiSeoReviews>>) => {
+    result.claimed += reviews.claimed;
+    result.done += reviews.ready;
+    result.retrying += reviews.retrying;
+    result.failed += reviews.failed;
+  };
+
+  // При явном запуске очереди автором срочные предложения SEO важнее
+  // автоматического backfill alt. Иначе автор нажимает «Предложить», но может
+  // долго ничего не увидеть за крупной очередью изображений.
+  const isGeneralRun = !options?.jobIds?.length;
+  if (isGeneralRun) {
+    mergeReviews(
+      await processAiSeoReviews({
+        limit,
+        priority: SEO_REVIEW_PRIORITY.CRITICAL,
+      }),
+    );
+  }
+
+  const availableSlots = limit - result.claimed;
+  if (!availableSlots) return result;
+
   // Если инстанс завершился во время запроса к модели, задача не теряется.
   await prisma.aiSeoJob.updateMany({
     where: { status: JOB_STATUS.RUNNING, lockedAt: { lt: expiredLock } },
@@ -234,7 +258,7 @@ export async function processAiSeoJobs(options?: {
       runAfter: { lte: now },
     },
     orderBy: [{ runAfter: "asc" }, { createdAt: "asc" }],
-    take: limit,
+    take: availableSlots,
     select: { id: true },
   });
 
@@ -282,12 +306,13 @@ export async function processAiSeoJobs(options?: {
   // Обычная автогенерация для новых постов обрабатывается адресно через
   // `jobIds`. Предложения для старых ручных полей забирает только общий
   // фоновый проход (after/cron), чтобы импорт не тратил лимит на чужие задачи.
-  if (!options?.jobIds?.length && result.claimed < limit) {
-    const reviews = await processAiSeoReviews({ limit: limit - result.claimed });
-    result.claimed += reviews.claimed;
-    result.done += reviews.ready;
-    result.retrying += reviews.retrying;
-    result.failed += reviews.failed;
+  if (isGeneralRun && result.claimed < limit) {
+    mergeReviews(
+      await processAiSeoReviews({
+        limit: limit - result.claimed,
+        priority: SEO_REVIEW_PRIORITY.IMPROVE,
+      }),
+    );
   }
   return result;
 }

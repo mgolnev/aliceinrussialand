@@ -41,6 +41,7 @@ export function AiSeoReviewControl({ initial }: { initial: AiSeoReviewStatus }) 
 
   const pending = snapshot.status.critical.pending + snapshot.status.improve.pending;
   const running = snapshot.status.critical.running + snapshot.status.improve.running;
+  const failed = snapshot.status.critical.failed + snapshot.status.improve.failed;
   useEffect(() => {
     if (!pending && !running) return;
     void refresh();
@@ -94,6 +95,33 @@ export function AiSeoReviewControl({ initial }: { initial: AiSeoReviewStatus }) 
       setLoading(null);
     }
   }, [criticalQueueable, improveQueueable]);
+
+  const processNow = useCallback(async () => {
+    if (
+      !window.confirm(
+        "Подготовить до 4 вариантов SEO сейчас? Текущие title и description не изменятся.",
+      )
+    ) {
+      return;
+    }
+    setLoading(SEO_REVIEW_PRIORITY.CRITICAL);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/admin/seo/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "process" }),
+      });
+      const data = (await response.json().catch(() => null)) as ApiResponse | null;
+      if (!response.ok || !data) throw new Error(data?.error ?? "Не удалось обработать очередь");
+      setSnapshot({ status: data.status, items: data.items });
+      setMessage("Очередь обработана. Готовые варианты появились ниже.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Не удалось обработать очередь");
+    } finally {
+      setLoading(null);
+    }
+  }, []);
 
   const act = useCallback(async (id: string, action: "apply" | "dismiss") => {
     if (action === "apply" && !window.confirm("Применить предложенные title и description к опубликованной странице?")) {
@@ -170,12 +198,28 @@ export function AiSeoReviewControl({ initial }: { initial: AiSeoReviewStatus }) 
                 : `Улучшить ещё ${improveQueueable}`}
             </button>
           ) : null}
+          {pending || running ? (
+            <button
+              type="button"
+              disabled={loading !== null}
+              onClick={() => void processNow()}
+              className="rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-800 transition hover:bg-stone-50 disabled:cursor-wait disabled:opacity-55"
+            >
+              {loading ? "Готовим…" : "Обработать 4 сейчас"}
+            </button>
+          ) : null}
         </div>
       </div>
 
       {pending || running ? (
         <p className="mt-4 rounded-2xl bg-stone-50 px-3 py-2.5 text-sm leading-5 text-stone-600">
           {pending + running} вариантов готовятся в фоне. Вкладку можно закрыть.
+        </p>
+      ) : null}
+      {failed ? (
+        <p className="mt-4 rounded-2xl bg-rose-50 px-3 py-2.5 text-sm leading-5 text-rose-800">
+          Для {failed} вариантов AI трижды не смог подготовить текст. Повторить можно кнопкой
+          «Предложить».
         </p>
       ) : null}
 

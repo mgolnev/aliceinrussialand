@@ -414,6 +414,12 @@ export async function enqueueAiSeoReviews(priority: SeoReviewPriority): Promise<
 
 export async function processAiSeoReviews(options?: {
   limit?: number;
+  /**
+   * Срочные предложения не должны ждать большой очереди alt. Для обычного
+   * фонового прохода исполнитель запрашивает их отдельно, сохраняя остаток
+   * лимита для новых публикаций и менее важных улучшений.
+   */
+  priority?: SeoReviewPriority;
 }): Promise<AiSeoReviewProcessSummary> {
   const result: AiSeoReviewProcessSummary = {
     claimed: 0,
@@ -430,7 +436,11 @@ export async function processAiSeoReviews(options?: {
   });
 
   const jobs = await prisma.aiSeoReview.findMany({
-    where: { status: REVIEW_STATUS.PENDING, runAfter: { lte: now } },
+    where: {
+      status: REVIEW_STATUS.PENDING,
+      runAfter: { lte: now },
+      ...(options?.priority ? { priority: options.priority } : {}),
+    },
     orderBy: [{ priority: "asc" }, { runAfter: "asc" }, { createdAt: "asc" }],
     take: limit,
     select: { id: true },

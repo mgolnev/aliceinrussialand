@@ -63,6 +63,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, queued, ...(await snapshot()) });
   }
 
+  // Запасной ручной запуск нужен только если внешний планировщик задержался.
+  // Он не применяет текст: создаёт лишь предложения, которые автор потом
+  // отдельно подтверждает кнопкой «Применить».
+  if (body.action === "process") {
+    const processed = await processAiSeoJobs({ limit: 4 });
+    return NextResponse.json({ ok: true, processed, ...(await snapshot()) });
+  }
+
   if (typeof body.id !== "string" || !body.id) {
     return NextResponse.json({ error: "Не найдено предложение" }, { status: 400 });
   }

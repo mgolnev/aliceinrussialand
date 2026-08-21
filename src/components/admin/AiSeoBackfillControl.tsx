@@ -81,6 +81,27 @@ export function AiSeoBackfillControl({
     }
   }, [status.imagesNeedingAlt, status.postsNeedingSeo]);
 
+  const processNow = useCallback(async () => {
+    if (!window.confirm("Обработать до 4 SEO-задач сейчас? Ручные поля не будут изменены.")) {
+      return;
+    }
+    setWorking(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/admin/seo/backfill?mode=process", { method: "POST" });
+      const data = (await res.json().catch(() => null)) as BackfillResponse | null;
+      if (!res.ok || !data?.status) {
+        throw new Error(data?.error ?? "Не удалось обработать очередь");
+      }
+      setStatus(data.status);
+      setMessage("Следующая пачка обработана. Статус обновлён.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Не удалось обработать очередь");
+    } finally {
+      setWorking(false);
+    }
+  }, []);
+
   const remaining = remainingText(status);
   const isComplete = !status.postsNeedingSeo && !status.imagesNeedingAlt;
 
@@ -113,6 +134,15 @@ export function AiSeoBackfillControl({
             className="shrink-0 rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-wait disabled:opacity-55"
           >
             {working ? "Подготавливаем…" : "Подготовить автоматически"}
+          </button>
+        ) : isProcessing ? (
+          <button
+            type="button"
+            disabled={working}
+            onClick={() => void processNow()}
+            className="shrink-0 rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-800 transition hover:bg-stone-50 disabled:cursor-wait disabled:opacity-55"
+          >
+            {working ? "Обрабатываем…" : "Обработать 4 сейчас"}
           </button>
         ) : null}
       </div>
