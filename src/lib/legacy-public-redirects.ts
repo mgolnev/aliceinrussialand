@@ -12,6 +12,8 @@ export const LEGACY_PUBLIC_REDIRECTS: Readonly<Record<string, string>> = {
   "/p/novaya-publikaciya-4": "/p/keramicheskie-raboty-i-skulptura",
   "/p/novaya-publikaciya-5": "/p/kolokolnya-v-kolomne",
   "/p/novaya-publikaciya-6": "/p/grafika-s-plenera-pejzazh-u-vody",
+  "/p/novaya-publikaciya-7": "/p/grafika-ryba-v-shortah",
+  "/p/novaya-publikaciya-8": "/p/portretnyj-nabrosok",
 };
 
 export function getLegacyPublicRedirect(pathname: string): string | null {

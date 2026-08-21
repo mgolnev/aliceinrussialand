@@ -9,6 +9,9 @@ describe("getLegacyPublicRedirect", () => {
     expect(getLegacyPublicRedirect("/p/novaya-publikaciya-6")).toBe(
       "/p/grafika-s-plenera-pejzazh-u-vody",
     );
+    expect(getLegacyPublicRedirect("/p/novaya-publikaciya-8")).toBe(
+      "/p/portretnyj-nabrosok",
+    );
     expect(getLegacyPublicRedirect("/p/does-not-exist")).toBeNull();
   });
 });
