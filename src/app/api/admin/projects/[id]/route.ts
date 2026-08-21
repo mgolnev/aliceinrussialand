@@ -8,6 +8,7 @@ import {
   PROJECT_STATUS,
   projectOrderMode,
 } from "@/lib/projects";
+import { invalidatePublicFeedCache } from "@/lib/cache-tags";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -142,6 +143,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     [existing.slug, project.slug],
     [...existing.posts.map((row) => row.post.slug), ...selectedPosts.map((post) => post.slug)],
   );
+  invalidatePublicFeedCache();
   return NextResponse.json(project);
 }
 
@@ -154,6 +156,7 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   if (!project) return NextResponse.json({ error: "Не найдено" }, { status: 404 });
 
   await prisma.project.delete({ where: { id } });
+  invalidatePublicFeedCache();
   revalidateProjectPages([project.slug], project.posts.map((row) => row.post.slug));
   return NextResponse.json({ ok: true });
 }

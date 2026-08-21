@@ -36,7 +36,10 @@ export function getPublishedPostsQuery(take = 12, cursor?: string) {
 
 export async function getPublishedPostBySlug(slug: string) {
   return prisma.post.findFirst({
-    where: { slug, status: POST_STATUS.PUBLISHED },
+    where: {
+      status: POST_STATUS.PUBLISHED,
+      OR: [{ slug }, { oldSlugs: { has: slug } }],
+    },
     include: {
       images: { orderBy: { sortOrder: "asc" }, select: imageSelect },
       category: { select: { id: true, name: true, slug: true } },

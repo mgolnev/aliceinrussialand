@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import slugify from "slugify";
 import { prisma } from "@/lib/prisma";
 import { invalidateFeedCategoriesCache } from "@/lib/cache-tags";
@@ -75,6 +76,9 @@ export async function POST(req: Request) {
       );
     }
     invalidateFeedCategoriesCache();
+    revalidatePath("/");
+    revalidatePath("/category/[slug]", "page");
+    revalidatePath("/sitemap.xml");
     return NextResponse.json({ ...row, description });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Ошибка сохранения";

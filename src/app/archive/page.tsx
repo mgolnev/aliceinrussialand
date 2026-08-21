@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { absoluteUrl } from "@/lib/absolute-url";
 import { getAuthorName, getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { resolveSiteOrigin } from "@/lib/site-origin";
@@ -8,6 +9,7 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { SeoPostList } from "@/components/seo/SeoPostList";
 import { SeoPager } from "@/components/seo/SeoPager";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
+import { buildSeoDocumentTitle } from "@/lib/seo-document-title";
 
 type ArchivePageProps = {
   searchParams: Promise<{ page?: string }>;
@@ -25,10 +27,11 @@ export async function generateMetadata({
 }: ArchivePageProps): Promise<Metadata> {
   const [sp, settings] = await Promise.all([searchParams, getSiteSettings()]);
   const page = parsePageNumber(sp.page);
-  const title =
+  const titleBase =
     page > 1
-      ? `Все публикации ${getAuthorName(settings)}, стр. ${page}`
-      : `Все публикации — ${getAuthorName(settings)}`;
+      ? `Все публикации, стр. ${page}`
+      : "Все публикации";
+  const title = buildSeoDocumentTitle(titleBase, getAuthorName(settings));
   const description =
     "Все заметки, иллюстрации, керамика и личные истории Алисы — от новых публикаций к ранним.";
   const canonicalPath = archivePath(page);
@@ -56,6 +59,7 @@ export default async function ArchivePage({ searchParams }: ArchivePageProps) {
   const [sp, settings] = await Promise.all([searchParams, getSiteSettings()]);
   const page = parsePageNumber(sp.page);
   const archive = await getArchivePostsPage(page);
+  if (page > 1 && !archive.items.length) notFound();
 
   return (
     <>

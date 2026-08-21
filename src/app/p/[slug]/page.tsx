@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { cookies } from "next/headers";
+import { notFound, permanentRedirect } from "next/navigation";
 import {
   getPostCarouselPeersCached,
   getPublishedPostBySlugCached,
@@ -20,7 +19,9 @@ import { PostCard } from "@/components/feed/PostCard";
 import { PostReadNextCarousel } from "@/components/feed/PostReadNextCarousel";
 import type { FeedCategory, FeedPost } from "@/types/feed";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
+import { cookies } from "next/headers";
 import { resolveSiteOrigin } from "@/lib/site-origin";
+import { buildSeoDocumentTitle } from "@/lib/seo-document-title";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
@@ -48,7 +49,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const descriptionRaw =
     post.metaDescription?.trim() || excerptForMetaDescription(post.body);
   /** В выдаче и соцсетях — без эмодзи; текст поста на странице не меняем. */
-  const title = stripEmojiForSeo(titleRaw) || titleRaw.trim() || "Публикация";
+  const titleWithoutEmoji = stripEmojiForSeo(titleRaw) || titleRaw.trim() || "Публикация";
+  const title = buildSeoDocumentTitle(titleWithoutEmoji, getAuthorName(settings));
   const description = stripEmojiForSeo(descriptionRaw) || descriptionRaw.trim();
   const first = post.images[0];
   const og =
@@ -57,7 +59,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       : undefined;
 
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: { canonical: `/p/${post.slug}` },
     openGraph: {
@@ -85,6 +87,10 @@ export default async function PostPage({ params }: PageProps) {
     cookies(),
   ]);
   if (!post) notFound();
+  if (post.slug !== slug) permanentRedirect(`/p/${post.slug}`);
+
+  const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const canManage = sessionToken ? await verifySessionToken(sessionToken) : false;
 
   const siteUrl = resolveSiteOrigin(settings.siteUrl);
   const authorName = getAuthorName(settings);
@@ -94,8 +100,6 @@ export default async function PostPage({ params }: PageProps) {
     settings.yandexMetrikaId?.trim() ||
     process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID?.trim() ||
     "";
-  const session = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const isAdmin = session ? await verifySessionToken(session) : false;
   const projects = await getPublishedPostProjectsCached(post.id);
   const relatedPostIds = [
     ...new Set(
@@ -110,8 +114,7 @@ export default async function PostPage({ params }: PageProps) {
   const readNextItems = await getPostCarouselPeersCached(post.id, post.categoryId, {
     priorityPostIds: relatedPostIds,
   });
-  const allFeedCategories: FeedCategory[] = await listFeedCategories();
-
+  const allFeedCategories: FeedCategory[] = canManage ? await listFeedCategories() : [];
   const feedPost: FeedPost = {
     id: post.id,
     slug: post.slug,
@@ -202,11 +205,11 @@ export default async function PostPage({ params }: PageProps) {
         <h1 className="sr-only">{articleHeadline}</h1>
         <PostCard
           post={feedPost}
-          categories={isAdmin ? allFeedCategories : []}
+          categories={allFeedCategories}
           plausibleDomain={plausible}
           yandexMetrikaId={yandexMetrikaId}
           siteUrl={siteUrl}
-          canManage={isAdmin}
+          canManage={canManage}
           prioritizeMedia
           standalone
           projectTags={projects}

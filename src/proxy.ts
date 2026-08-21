@@ -8,6 +8,7 @@ import {
 } from "@/utils/supabase/proxy";
 import { isSupabaseBrowserAuthConfigured } from "@/utils/supabase/env";
 import { shouldAttemptSupabaseSessionRefresh } from "@/lib/proxy-session-policy";
+import { getLegacyPublicRedirect } from "@/lib/legacy-public-redirects";
 
 function getSecret() {
   const s = process.env.SESSION_SECRET;
@@ -28,8 +29,26 @@ async function isAdmin(request: NextRequest) {
   }
 }
 
+/** Анонимные RSC/HTML-страницы можно безопасно отдать из общего CDN-кеша. */
+function isCacheablePublicDocument(request: NextRequest): boolean {
+  if (request.method !== "GET" && request.method !== "HEAD") return false;
+  const { pathname } = request.nextUrl;
+  return (
+    !request.cookies.has(SESSION_COOKIE_NAME) &&
+    !pathname.startsWith("/admin") &&
+    !pathname.startsWith("/api")
+  );
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  const legacyDestination = getLegacyPublicRedirect(pathname);
+  if (legacyDestination) {
+    const destination = request.nextUrl.clone();
+    destination.pathname = legacyDestination;
+    return NextResponse.redirect(destination, 301);
+  }
 
   const cookieNames = request.cookies.getAll().map((c) => c.name);
   const sessionResponse =
@@ -64,6 +83,22 @@ export async function proxy(request: NextRequest) {
       const redirect = NextResponse.redirect(login);
       return mergeResponseCookies(sessionResponse, redirect);
     }
+  }
+
+  // Amvera/CDN может хранить HTML, а Next параллельно обновляет данные через
+  // revalidateTag/revalidatePath после публикации. Не кэшируем ответ с cookie.
+  if (
+    isCacheablePublicDocument(request) &&
+    !sessionResponse.headers.has("set-cookie")
+  ) {
+    sessionResponse.headers.set(
+      "Cache-Control",
+      "public, max-age=0, s-maxage=120, stale-while-revalidate=600",
+    );
+  } else if (request.cookies.has(SESSION_COOKIE_NAME)) {
+    // Авторский экран может содержать кнопки управления — его нельзя отдать
+    // из общего CDN-кеша даже при случайно недействительном токене.
+    sessionResponse.headers.set("Cache-Control", "private, no-store");
   }
 
   return sessionResponse;

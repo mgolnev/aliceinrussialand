@@ -56,5 +56,5 @@ export function derivePostTitle(title: string | null | undefined, body: string) 
   const explicit = title?.trim();
   if (explicit) return explicit;
 
-  return extractFirstSentence(richTextToPlainText(body)) || "Новая публикация";
+  return extractFirstSentence(richTextToPlainText(body)) || "Без названия";
 }

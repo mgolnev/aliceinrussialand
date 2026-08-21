@@ -4,10 +4,11 @@ import { getFeedPage } from "@/lib/feed-server";
 import { absoluteUrl } from "@/lib/absolute-url";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { HomePageClient } from "@/components/feed/HomePageClient";
-import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
-import { cookies } from "next/headers";
 import { resolveSiteOrigin } from "@/lib/site-origin";
 import { getSeoCategoryBySlug } from "@/lib/seo-content";
+import { buildSeoDocumentTitle } from "@/lib/seo-document-title";
+import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
+import { cookies } from "next/headers";
 
 type HomeProps = { searchParams: Promise<{ category?: string }> };
 
@@ -24,8 +25,10 @@ export async function generateMetadata({
   const defaultDescription =
     s.seoDescription?.trim() ||
     DEFAULT_HOME_DESCRIPTION;
-  const homeTitle =
-    s.seoTitle?.trim() || `${getAuthorName(s)} — иллюстрация и керамика`;
+  const homeTitle = buildSeoDocumentTitle(
+    s.seoTitle?.trim() || "Иллюстрация и керамика",
+    getAuthorName(s),
+  );
   const avatar = parseAvatarUrl(s.avatarMediaPath);
   const og = avatar ? absoluteUrl(siteUrl, avatar) : undefined;
   if (categoryParam) {
@@ -33,8 +36,8 @@ export async function generateMetadata({
     const category = await getSeoCategoryBySlug(categoryParam, siteContext);
     const canonicalPath = category ? `/category/${category.slug}` : "/";
     const title = category
-      ? `${category.name} — категория | ${s.displayName}`
-      : s.displayName;
+      ? buildSeoDocumentTitle(`${category.name} — категория`, getAuthorName(s))
+      : homeTitle;
     const description = category?.metaDescription || defaultDescription;
 
     return {
@@ -81,16 +84,13 @@ export async function generateMetadata({
 export default async function HomePage({ searchParams }: HomeProps) {
   const sp = await searchParams;
   const categoryParam = sp.category?.trim() || undefined;
-  const [settings, cookieStore] = await Promise.all([
-    getSiteSettings(),
-    cookies(),
-  ]);
-  const session = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const isAdmin = session ? await verifySessionToken(session) : false;
+  const [settings, cookieStore] = await Promise.all([getSiteSettings(), cookies()]);
+  const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const canManage = sessionToken ? await verifySessionToken(sessionToken) : false;
   const feed = await getFeedPage(
     undefined,
     categoryParam,
-    isAdmin ? "admin" : "public",
+    canManage ? "admin" : "public",
   );
   const { items, nextCursor, categories } = feed;
   const siteUrl = resolveSiteOrigin(settings.siteUrl);
@@ -141,7 +141,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
         plausibleDomain={plausible}
         yandexMetrikaId={yandexMetrikaId}
         siteUrl={siteUrl}
-        canManage={isAdmin}
+        canManage={canManage}
       />
       <SiteFooter />
     </>

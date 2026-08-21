@@ -10,6 +10,7 @@ import { downloadTelegramImage } from "@/lib/telegram-public";
 import { derivePostTitle } from "@/lib/post-text";
 import { normalizeTelegramPostUrl } from "@/lib/telegram-post-url";
 import { excerptForMetaDescription } from "@/lib/meta-excerpt";
+import { invalidatePublicFeedCache } from "@/lib/cache-tags";
 import {
   enqueuePublishedPostAiSeo,
   processAiSeoJobs,
@@ -164,6 +165,7 @@ export async function POST(req: Request) {
     }
 
     revalidatePath("/admin/posts");
+    if (published.length) invalidatePublicFeedCache();
 
     if (published.length) {
       const jobIds = (

@@ -33,6 +33,10 @@ describe("derivePostTitle", () => {
       "Стакан супер.",
     );
   });
+
+  it("не возвращает старый технический заголовок для пустого текста", () => {
+    expect(derivePostTitle("", "")).toBe("Без названия");
+  });
 });
 
 describe("plainPostPreview", () => {

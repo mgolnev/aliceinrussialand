@@ -3,7 +3,7 @@ import { prisma } from "./prisma";
 import { POST_STATUS } from "./constants";
 import { parseVariants } from "./posts-query";
 import type { FeedCategory, FeedPost } from "@/types/feed";
-import { CACHE_TAG_FEED_CATEGORIES } from "./cache-tags";
+import { CACHE_TAG_FEED_CATEGORIES, CACHE_TAG_PUBLIC_FEED } from "./cache-tags";
 import { isNextProductionBuild } from "./site-settings-db";
 import {
   applyPublicFeedListLimits,
@@ -61,7 +61,7 @@ export async function listFeedCategories(): Promise<FeedCategory[]> {
   )();
 }
 
-export async function getFeedPage(
+async function getFeedPageUncached(
   cursor?: string,
   categorySlug?: string | null,
   feedProfile: FeedRequestProfile = "public",
@@ -202,4 +202,30 @@ export async function getFeedPage(
   });
 
   return { items, nextCursor, categories };
+}
+
+/**
+ * Лента — самая тяжёлая публичная выборка. Кешируем только анонимный вариант:
+ * в нём нет сессионных кнопок и он одинаков для всех посетителей.
+ */
+const getCachedPublicFeedPage = unstable_cache(
+  async (cursor?: string, categorySlug?: string | null) =>
+    getFeedPageUncached(cursor, categorySlug, "public"),
+  ["public-feed-page-v1"],
+  { tags: [CACHE_TAG_PUBLIC_FEED], revalidate: 120 },
+);
+
+export async function getFeedPage(
+  cursor?: string,
+  categorySlug?: string | null,
+  feedProfile: FeedRequestProfile = "public",
+): Promise<{
+  items: FeedPost[];
+  nextCursor: string | null;
+  categories: FeedCategory[];
+}> {
+  if (feedProfile === "public") {
+    return getCachedPublicFeedPage(cursor, categorySlug);
+  }
+  return getFeedPageUncached(cursor, categorySlug, feedProfile);
 }

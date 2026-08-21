@@ -8,6 +8,7 @@ import {
   enqueuePublishedPostAiSeo,
   processAiSeoJobs,
 } from "@/lib/ai-seo-jobs";
+import { invalidatePublicFeedCache } from "@/lib/cache-tags";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -42,6 +43,7 @@ export async function POST(req: Request) {
       downloadImage: downloadSocialImage,
     });
     revalidatePath("/admin/posts");
+    if (body.publish && result.createdIds.length) invalidatePublicFeedCache();
     if (body.publish && result.createdIds.length) {
       const jobIds = (
         await Promise.all(

@@ -11,13 +11,21 @@ import { PROJECT_STATUS } from "@/lib/projects";
 // служебные URL.
 export const dynamic = "force-dynamic";
 
+function latestDate(dates: Array<Date | null | undefined>, fallback: Date): Date {
+  return dates.reduce<Date>(
+    (latest, date) => (date && date > latest ? date : latest),
+    fallback,
+  );
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const settings = await getSiteSettings();
   const origin = resolveSiteOrigin(settings.siteUrl);
-  const staticEntries: MetadataRoute.Sitemap = [
-    { url: `${origin}/`, lastModified: new Date() },
-    { url: `${origin}/about`, lastModified: new Date() },
-    { url: `${origin}/archive`, lastModified: new Date() },
+  const settingsLastModified = settings.updatedAt;
+  const fallbackEntries: MetadataRoute.Sitemap = [
+    { url: `${origin}/`, lastModified: settingsLastModified },
+    { url: `${origin}/about`, lastModified: settingsLastModified },
+    { url: `${origin}/archive`, lastModified: settingsLastModified },
   ];
 
   try {
@@ -43,12 +51,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }),
       prisma.post.count({ where: { status: POST_STATUS.PUBLISHED } }),
     ]);
+    const contentLastModified = latestDate(
+      [
+        settingsLastModified,
+        ...posts.map((post) => post.updatedAt ?? post.publishedAt),
+        ...categories.map((category) => category.updatedAt),
+        ...projects.map((project) => project.updatedAt),
+      ],
+      settingsLastModified,
+    );
+    const staticEntries: MetadataRoute.Sitemap = [
+      { url: `${origin}/`, lastModified: contentLastModified },
+      { url: `${origin}/about`, lastModified: settingsLastModified },
+      { url: `${origin}/archive`, lastModified: contentLastModified },
+    ];
     const archivePages = Math.ceil(postsCount / SEO_PAGE_SIZE);
     const archiveEntries: MetadataRoute.Sitemap = Array.from(
       { length: Math.max(0, archivePages - 1) },
       (_, idx) => ({
         url: `${origin}/archive?page=${idx + 2}`,
-        lastModified: new Date(),
+        lastModified: contentLastModified,
       }),
     );
     return [
@@ -66,10 +88,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         })),
       ...posts.map((p) => ({
         url: `${origin}/p/${p.slug}`,
-        lastModified: p.updatedAt ?? p.publishedAt ?? new Date(),
+        lastModified: p.updatedAt ?? p.publishedAt ?? contentLastModified,
       })),
     ];
   } catch {
-    return staticEntries;
+    return fallbackEntries;
   }
 }

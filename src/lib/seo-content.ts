@@ -124,19 +124,35 @@ export async function getSeoCategoryBySlug(
       },
     },
   });
-  if (!row) return null;
+  const legacyRow = row
+    ? row
+    : await prisma.postCategory.findFirst({
+        where: { oldSlugs: { has: slug } },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          description: true,
+          updatedAt: true,
+          posts: {
+            where: { status: POST_STATUS.PUBLISHED },
+            select: { id: true },
+          },
+        },
+      });
+  if (!legacyRow) return null;
 
   const resolved = buildCategoryDescriptions(
-    row.name,
-    row.description,
+    legacyRow.name,
+    legacyRow.description,
     siteContext,
   );
   return {
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
-    updatedAt: row.updatedAt,
-    postCount: row.posts.length,
+    id: legacyRow.id,
+    slug: legacyRow.slug,
+    name: legacyRow.name,
+    updatedAt: legacyRow.updatedAt,
+    postCount: legacyRow.posts.length,
     description: resolved.description,
     metaDescription: resolved.metaDescription,
   };
@@ -225,4 +241,3 @@ export function parsePageNumber(raw: string | undefined): number {
   if (!Number.isFinite(n) || n < 1) return 1;
   return Math.floor(n);
 }
-

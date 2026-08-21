@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const importSocialItems = vi.fn();
 const revalidatePath = vi.fn();
+const revalidateTag = vi.fn();
 const enqueuePublishedPostAiSeo = vi.fn();
 
 vi.mock("@/lib/social-import/import-core", () => ({
@@ -10,6 +11,7 @@ vi.mock("@/lib/social-import/import-core", () => ({
 
 vi.mock("next/cache", () => ({
   revalidatePath,
+  revalidateTag,
 }));
 
 vi.mock("@/lib/ai-seo-jobs", () => ({

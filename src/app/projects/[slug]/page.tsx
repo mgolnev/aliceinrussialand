@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { cookies } from "next/headers";
 import { getAuthorName, getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { absoluteUrl } from "@/lib/absolute-url";
 import { resolveSiteOrigin } from "@/lib/site-origin";
@@ -9,11 +8,13 @@ import { getPublishedProjectBySlugCached } from "@/lib/projects";
 import { parseVariants } from "@/lib/posts-query";
 import { listFeedCategories } from "@/lib/feed-server";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
+import { cookies } from "next/headers";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { PostBackTray } from "@/components/feed/PostBackTray";
 import { PostCard } from "@/components/feed/PostCard";
-import type { FeedPost } from "@/types/feed";
+import type { FeedCategory, FeedPost } from "@/types/feed";
+import { buildSeoDocumentTitle } from "@/lib/seo-document-title";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
@@ -48,9 +49,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     180,
   );
   const authorName = getAuthorName(settings);
-  const title =
-    project.metaTitle.trim() ||
-    `${project.title} — подборка работ ${authorName}`;
+  const title = buildSeoDocumentTitle(
+    project.metaTitle.trim() || `${project.title} — подборка работ`,
+    authorName,
+  );
   const siteUrl = resolveSiteOrigin(settings.siteUrl);
   const path = `/projects/${project.slug}`;
 
@@ -70,16 +72,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ProjectPage({ params }: PageProps) {
   const { slug } = await params;
-  const [project, settings, cookieStore, categories] = await Promise.all([
+  const [project, settings, cookieStore] = await Promise.all([
     getPublishedProjectBySlugCached(slug),
     getSiteSettings(),
     cookies(),
-    listFeedCategories(),
   ]);
   if (!project) notFound();
-
-  const session = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const isAdmin = session ? await verifySessionToken(session) : false;
+  const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const canManage = sessionToken ? await verifySessionToken(sessionToken) : false;
+  const categories: FeedCategory[] = canManage ? await listFeedCategories() : [];
   const siteUrl = resolveSiteOrigin(settings.siteUrl);
   const plausible =
     settings.plausibleDomain || process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || "";
@@ -154,7 +155,7 @@ export default async function ProjectPage({ params }: PageProps) {
               plausibleDomain={plausible}
               yandexMetrikaId={yandexMetrikaId}
               siteUrl={siteUrl}
-              canManage={isAdmin}
+              canManage={canManage}
               prioritizeMedia={index === 0}
             />
           ))}

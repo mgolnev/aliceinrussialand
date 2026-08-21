@@ -47,7 +47,8 @@ export async function GET(req: Request) {
 export async function POST() {
   const post = await prisma.post.create({
     data: {
-      title: "Новая публикация",
+      // Не создаём больше публично бессмысленный заголовок «Новая публикация».
+      title: "Черновик",
       slug: draftSlug(),
       displayMode: "GRID",
       status: POST_STATUS.DRAFT,

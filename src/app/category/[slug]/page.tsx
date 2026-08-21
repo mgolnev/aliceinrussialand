@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { getAuthorName, getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { absoluteUrl } from "@/lib/absolute-url";
 import { resolveSiteOrigin } from "@/lib/site-origin";
@@ -15,6 +15,7 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { SeoPostList } from "@/components/seo/SeoPostList";
 import { SeoPager } from "@/components/seo/SeoPager";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
+import { buildSeoDocumentTitle } from "@/lib/seo-document-title";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -74,8 +75,10 @@ export async function generateMetadata({
   }
 
   const categoryName = readableCategoryName(category.name);
-  const titleBase = `${categoryName} — ${getAuthorName(settings)}`;
-  const title = page > 1 ? `${titleBase}, стр. ${page}` : titleBase;
+  const title = buildSeoDocumentTitle(
+    page > 1 ? `${categoryName}, страница ${page}` : categoryName,
+    getAuthorName(settings),
+  );
   const canonicalPath = pagePath(category.slug, page);
   const siteUrl = resolveSiteOrigin(settings.siteUrl);
 
@@ -107,8 +110,10 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   const siteContext = [settings.tagline, settings.bio].filter(Boolean).join(" ");
   const category = await getSeoCategoryBySlug(slug, siteContext);
   if (!category || category.postCount === 0) notFound();
+  if (category.slug !== slug) permanentRedirect(`/category/${category.slug}`);
 
   const postsPage = await getSeoCategoryPostsPage(category.id, page);
+  if (page > 1 && !postsPage.items.length) notFound();
   const siteUrl = resolveSiteOrigin(settings.siteUrl);
   const categoryUrl = absoluteUrl(siteUrl, pagePath(category.slug, postsPage.page));
   const jsonLd = {

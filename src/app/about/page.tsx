@@ -14,6 +14,7 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { SocialLinksSection } from "@/components/site/SocialLinksSection";
 import { resolveSiteOrigin } from "@/lib/site-origin";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
+import { buildSeoDocumentTitle } from "@/lib/seo-document-title";
 
 export const dynamic = "force-dynamic";
 
@@ -45,10 +46,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const avatar = parseAvatarUrl(s.avatarMediaPath);
   const ogPath = aboutImg || avatar;
   const og = ogPath ? absoluteUrl(siteUrl, ogPath) : undefined;
-  const title = `${getAuthorName(s)} — обо мне`;
+  const title = buildSeoDocumentTitle("Обо мне", getAuthorName(s));
 
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: { canonical: "/about" },
     openGraph: {

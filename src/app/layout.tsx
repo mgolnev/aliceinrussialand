@@ -39,7 +39,7 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(base),
     title: {
       default: seoTitle,
-      template: `%s · ${s.displayName}`,
+      template: "%s",
     },
     description: seoDescription,
     ...(s.yandexVerification?.trim()

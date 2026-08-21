@@ -10,6 +10,7 @@ import { parseVariants } from "@/lib/posts-query";
 import { derivePostTitle } from "@/lib/post-text";
 import { excerptForMetaDescription } from "@/lib/meta-excerpt";
 import { normalizeProjectPostIds } from "@/lib/project-post-ids";
+import { invalidatePublicFeedCache } from "@/lib/cache-tags";
 import {
   enqueuePublishedPostAiSeo,
   processAiSeoJobs,
@@ -174,6 +175,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     sourceExternalId?: string | null;
     locale?: string;
     categoryId?: string | null;
+    oldSlugs?: string[];
   } = {};
 
   const nextBody =
@@ -188,6 +190,10 @@ export async function PATCH(req: Request, ctx: Ctx) {
   if (typeof body.title === "string") data.title = nextTitle;
   if (typeof body.body === "string") data.body = nextBody;
   if (slug) data.slug = slug;
+  if (slug && slug !== existing.slug) {
+    // Старый адрес остаётся доступен только как 301 на новый канонический URL.
+    data.oldSlugs = [...new Set([...existing.oldSlugs, existing.slug])];
+  }
   if (body.displayMode === "GRID" || body.displayMode === "STACK") {
     data.displayMode = body.displayMode;
   }
@@ -351,6 +357,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     });
 
     revalidatePath("/admin/posts");
+    invalidatePublicFeedCache();
     revalidatePublicPostPages([existing.slug, fresh?.slug]);
     revalidateProjectPages([
       ...existing.projects.map((row) => row.project.slug),
@@ -416,6 +423,7 @@ export async function DELETE(_req: Request, ctx: Ctx) {
 
   await prisma.post.delete({ where: { id } });
   revalidatePath("/admin/posts");
+  invalidatePublicFeedCache();
   revalidatePublicPostPages([post.slug]);
   return NextResponse.json({ ok: true });
 }
