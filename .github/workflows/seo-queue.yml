@@ -1,0 +1,31 @@
+name: Process SEO queue
+
+on:
+  # Не на старте часа: GitHub предупреждает, что расписания тогда чаще задерживаются.
+  schedule:
+    - cron: "2/5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: seo-queue
+  cancel-in-progress: false
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    env:
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      SEO_CRON_URL: https://aliceinrussialand.ru/api/cron/seo
+    steps:
+      # Пока секрет не добавлен, запуск проходит без ошибки и ничего не делает.
+      - name: Process queued SEO jobs
+        if: ${{ env.CRON_SECRET != '' }}
+        run: |
+          for attempt in 1 2; do
+            curl --fail --silent --show-error \
+              --retry 2 --retry-all-errors --max-time 55 \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              "${SEO_CRON_URL}"
+          done

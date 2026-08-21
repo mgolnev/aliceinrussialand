@@ -1,7 +1,7 @@
 "use client";
 
 import { Sparkles } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export type AiSeoBackfillSnapshot = {
   postsNeedingSeo: number;
@@ -12,10 +12,9 @@ export type AiSeoBackfillSnapshot = {
   failed: number;
 };
 
-type ProcessResponse = {
+type BackfillResponse = {
   error?: string;
   status?: AiSeoBackfillSnapshot;
-  processed?: { claimed: number };
 };
 
 function remainingText(status: AiSeoBackfillSnapshot) {
@@ -38,26 +37,19 @@ export function AiSeoBackfillControl({
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const drain = useCallback(async (snapshot: AiSeoBackfillSnapshot) => {
-    let current = snapshot;
-    // Обрабатываем порциями: UI не зависает, а очередь можно безопасно продолжить после паузы.
-    for (let round = 0; round < 120; round += 1) {
-      if (current.postsNeedingSeo === 0 && current.imagesNeedingAlt === 0) {
-        return current;
-      }
-      const res = await fetch("/api/admin/seo/backfill?mode=process", {
-        method: "POST",
-      });
-      const data = (await res.json().catch(() => null)) as ProcessResponse | null;
-      if (!res.ok || !data?.status) {
-        throw new Error(data?.error ?? "Не удалось продолжить подготовку SEO");
-      }
-      current = data.status;
-      setStatus(current);
-      if (data.processed?.claimed === 0 && current.running === 0) return current;
-    }
-    return current;
+  const refreshStatus = useCallback(async () => {
+    const res = await fetch("/api/admin/seo/backfill", { cache: "no-store" });
+    const next = (await res.json().catch(() => null)) as AiSeoBackfillSnapshot | null;
+    if (res.ok && next) setStatus(next);
   }, []);
+
+  const isProcessing = status.pending > 0 || status.running > 0;
+  useEffect(() => {
+    if (!isProcessing) return;
+    void refreshStatus();
+    const timer = window.setInterval(() => void refreshStatus(), 10_000);
+    return () => window.clearInterval(timer);
+  }, [isProcessing, refreshStatus]);
 
   const start = useCallback(async () => {
     const count = status.postsNeedingSeo + status.imagesNeedingAlt;
@@ -74,25 +66,20 @@ export function AiSeoBackfillControl({
     setMessage(null);
     try {
       const res = await fetch("/api/admin/seo/backfill", { method: "POST" });
-      const data = (await res.json().catch(() => null)) as ProcessResponse | null;
+      const data = (await res.json().catch(() => null)) as BackfillResponse | null;
       if (!res.ok || !data?.status) {
         throw new Error(data?.error ?? "Не удалось поставить материалы в очередь");
       }
       setStatus(data.status);
-      const finished = await drain(data.status);
-      if (finished.postsNeedingSeo === 0 && finished.imagesNeedingAlt === 0) {
-        setMessage("Готово: SEO и alt подготовлены для опубликованных материалов.");
-      } else if (finished.review || finished.failed) {
-        setMessage("Часть материалов требует повторного запуска — очередь сохранена.");
-      } else {
-        setMessage("Очередь сохранена. Нажмите кнопку ещё раз, чтобы продолжить.");
-      }
+      setMessage(
+        "Задачи сохранены. Обработка продолжится на сервере — вкладку можно закрыть.",
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Не удалось запустить подготовку SEO");
     } finally {
       setWorking(false);
     }
-  }, [drain, status.imagesNeedingAlt, status.postsNeedingSeo]);
+  }, [status.imagesNeedingAlt, status.postsNeedingSeo]);
 
   const remaining = remainingText(status);
   const isComplete = !status.postsNeedingSeo && !status.imagesNeedingAlt;
@@ -108,6 +95,8 @@ export function AiSeoBackfillControl({
           <p className="mt-1.5 max-w-2xl text-sm leading-6 text-stone-600">
             {isComplete
               ? "У опубликованных материалов уже есть SEO и alt, подготовленные автоматически или вручную."
+              : isProcessing
+                ? `В очереди: ${remaining}. Обработка продолжается на сервере, вкладку можно закрыть.`
               : `Нужно подготовить: ${remaining}. Ручные title, description и alt останутся без изменений.`}
           </p>
           {message ? (
@@ -116,7 +105,7 @@ export function AiSeoBackfillControl({
             </p>
           ) : null}
         </div>
-        {!isComplete ? (
+        {!isComplete && !isProcessing ? (
           <button
             type="button"
             disabled={working}
