@@ -34,7 +34,7 @@ git commit -m "краткое описание изменений"
 git push origin main
 ```
 
-Если в [Vercel](https://vercel.com) проект привязан к этому репозиторию, после `push` запускается **сборка и деплой** без ручных шагов. Переменные окружения на Vercel и порядок первичной настройки Supabase — в [docs/VERCEL_SUPABASE.md](docs/VERCEL_SUPABASE.md); краткий чеклист — [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Логика рекомендаций после поста и в конце ленты категории — в [docs/RECOMMENDATIONS.md](docs/RECOMMENDATIONS.md).
+Основной хостинг — **Amvera**: после `push` в подключённую ветку она собирает Docker-образ из [`Dockerfile`](Dockerfile) и запускает его по [`amvera.yaml`](amvera.yaml). Переменные, миграции и очередь AI SEO описаны в [docs/AMVERA_DEPLOYMENT.md](docs/AMVERA_DEPLOYMENT.md). Логика рекомендаций после поста и в конце ленты категории — в [docs/RECOMMENDATIONS.md](docs/RECOMMENDATIONS.md).
 
 ### Хэш пароля админа (для `.env`)
 
@@ -80,12 +80,12 @@ public/media/            — оптимизированные файлы (не �
 
 | Переменная | Назначение |
 |------------|------------|
-| `DATABASE_URL` | PostgreSQL (на Vercel — pooler Supabase, порт 6543) |
+| `DATABASE_URL` | PostgreSQL (для Supabase рекомендуем transaction pooler, порт 6543) |
 | `DIRECT_URL` | Прямое подключение к Postgres (Supabase порт 5432) для миграций |
 | `SESSION_SECRET` | Секрет JWT сессии (≥16 символов) |
 | `ADMIN_PASSWORD_HASH` | bcrypt-хэш пароля админа |
 | `NEXT_PUBLIC_SITE_URL` | Публичный URL (canonical, шаринг, sitemap) |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` | Медиа на Vercel (без них локально используются `public/media`) |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` | Внешнее хранилище медиа (без них локально используются `public/media`) |
 | `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | Опционально: домен в Plausible |
 | `NEXT_PUBLIC_YANDEX_METRIKA_ID` | Опционально: номер счётчика Яндекс.Метрики (цифры); дублирует поле в админке |
 | `MEDIA_ROOT` | Локально: корень для `storage/originals` |
@@ -98,7 +98,7 @@ public/media/            — оптимизированные файлы (не �
 ## Изображения
 
 - **Локально (без Supabase):** оригинал в `storage/originals/`, варианты WebP в `public/media/{postId}/{imageId}/`.
-- **Продакшен (Vercel):** задайте `SUPABASE_*` — варианты загружаются в **Supabase Storage**, в БД хранятся полные публичные URL.
+- **Продакшен (Amvera):** можно использовать постоянный том `/app/public/media`; при заданных `SUPABASE_*` варианты вместо этого загружаются в **Supabase Storage**, а в БД хранятся публичные URL.
 - На фронте: `<picture>` + `loading="lazy"`.
 
 ## Telegram (MVP)

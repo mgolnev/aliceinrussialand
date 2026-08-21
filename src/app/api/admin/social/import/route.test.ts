@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const importSocialItems = vi.fn();
 const revalidatePath = vi.fn();
+const enqueuePublishedPostAiSeo = vi.fn();
 
 vi.mock("@/lib/social-import/import-core", () => ({
   importSocialItems,
@@ -11,9 +12,15 @@ vi.mock("next/cache", () => ({
   revalidatePath,
 }));
 
+vi.mock("@/lib/ai-seo-jobs", () => ({
+  enqueuePublishedPostAiSeo,
+  processAiSeoJobs: vi.fn(),
+}));
+
 describe("POST /api/admin/social/import", () => {
   beforeEach(() => {
     importSocialItems.mockResolvedValue({ createdIds: ["p1", "p2"] });
+    enqueuePublishedPostAiSeo.mockResolvedValue({ jobIds: [] });
   });
 
   it("валидация platform", async () => {

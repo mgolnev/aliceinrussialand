@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { POST_STATUS } from "@/lib/constants";
@@ -9,6 +10,10 @@ import { parseVariants } from "@/lib/posts-query";
 import { derivePostTitle } from "@/lib/post-text";
 import { excerptForMetaDescription } from "@/lib/meta-excerpt";
 import { normalizeProjectPostIds } from "@/lib/project-post-ids";
+import {
+  enqueuePublishedPostAiSeo,
+  processAiSeoJobs,
+} from "@/lib/ai-seo-jobs";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -80,7 +85,10 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const { id } = await ctx.params;
   const existing = await prisma.post.findUnique({
     where: { id },
-    include: { projects: { include: { project: { select: { slug: true } } } } },
+    include: {
+      projects: { include: { project: { select: { slug: true } } } },
+      images: { select: { id: true, alt: true, altSource: true } },
+    },
   });
   if (!existing) {
     return NextResponse.json({ error: "Не найдено" }, { status: 404 });
@@ -157,7 +165,9 @@ export async function PATCH(req: Request, ctx: Ctx) {
     pinned?: boolean;
     showInAll?: boolean;
     metaTitle?: string;
+    metaTitleSource?: string;
     metaDescription?: string;
+    metaDescriptionSource?: string;
     telegramSourceUrl?: string | null;
     sourcePlatform?: "TELEGRAM" | "INSTAGRAM" | "BEHANCE" | null;
     sourceUrl?: string | null;
@@ -186,10 +196,18 @@ export async function PATCH(req: Request, ctx: Ctx) {
   if (typeof body.pinned === "boolean") data.pinned = body.pinned;
   if (typeof body.metaTitle === "string") {
     data.metaTitle = rawMetaTitle || nextTitle;
+    if (body.metaTitleSource === "MANUAL") data.metaTitleSource = "MANUAL";
+    if (body.metaTitleSource === "AUTO") data.metaTitleSource = "AUTO";
   }
   if (typeof body.metaDescription === "string") {
     data.metaDescription =
       rawMetaDescription || excerptForMetaDescription(nextBody);
+    if (body.metaDescriptionSource === "MANUAL") {
+      data.metaDescriptionSource = "MANUAL";
+    }
+    if (body.metaDescriptionSource === "AUTO") {
+      data.metaDescriptionSource = "AUTO";
+    }
   }
   if (typeof body.telegramSourceUrl === "string") {
     data.telegramSourceUrl = body.telegramSourceUrl || null;
@@ -247,22 +265,37 @@ export async function PATCH(req: Request, ctx: Ctx) {
           sortOrder: number;
           caption?: string;
           alt?: string;
+          altSource?: "AUTO" | "MANUAL";
         }>
       | undefined;
 
     if (Array.isArray(imagesPayload) && imagesPayload.length > 0) {
+      const existingImages = new Map(
+        existing.images.map((image) => [image.id, image]),
+      );
       await prisma.$transaction(
-        imagesPayload.map((row) =>
-          prisma.postImage.update({
+        imagesPayload.map((row) => {
+          const previous = existingImages.get(row.id);
+          const submittedAlt = typeof row.alt === "string" ? row.alt : undefined;
+          const altSource =
+            row.altSource === "AUTO" || row.altSource === "MANUAL"
+              ? row.altSource
+              : submittedAlt !== undefined && submittedAlt !== previous?.alt
+                ? submittedAlt.trim()
+                  ? "MANUAL"
+                  : "AUTO"
+                : undefined;
+          return prisma.postImage.update({
             where: { id: row.id, postId: id },
             data: {
               sortOrder: row.sortOrder,
               caption:
                 typeof row.caption === "string" ? row.caption : undefined,
-              alt: typeof row.alt === "string" ? row.alt : undefined,
+              alt: submittedAlt,
+              altSource,
             },
-          }),
-        ),
+          });
+        }),
       );
     }
 
@@ -323,6 +356,29 @@ export async function PATCH(req: Request, ctx: Ctx) {
       ...existing.projects.map((row) => row.project.slug),
       ...requestedProjects.map((project) => project.slug),
     ]);
+
+    const hasContentChange =
+      typeof body.title === "string" ||
+      typeof body.body === "string" ||
+      "categoryId" in body ||
+      requestedProjectIds !== undefined;
+    const wasPublishedNow =
+      status === POST_STATUS.PUBLISHED && existing.status !== POST_STATUS.PUBLISHED;
+    const shouldPrepareAiSeo =
+      fresh?.status === POST_STATUS.PUBLISHED &&
+      (wasPublishedNow || hasContentChange || Boolean(imagesPayload?.length));
+    if (shouldPrepareAiSeo && fresh) {
+      // Очередь пишем до ответа, а тяжелый вызов модели переносим в `after`.
+      // Cron подхватит задачу, если серверless-вызов оборвётся.
+      const queued = await enqueuePublishedPostAiSeo(fresh.id, {
+        metadata: wasPublishedNow || hasContentChange,
+      });
+      if (queued.jobIds.length) {
+        after(async () => {
+          await processAiSeoJobs({ jobIds: queued.jobIds, limit: 2 });
+        });
+      }
+    }
 
     return NextResponse.json({
       ...fresh,

@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { downloadSocialImage } from "@/lib/social-import/fetch";
 import { importSocialItems } from "@/lib/social-import/import-core";
 import type { SocialImportItem, SocialPlatform } from "@/lib/social-import/types";
+import {
+  enqueuePublishedPostAiSeo,
+  processAiSeoJobs,
+} from "@/lib/ai-seo-jobs";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -37,6 +42,18 @@ export async function POST(req: Request) {
       downloadImage: downloadSocialImage,
     });
     revalidatePath("/admin/posts");
+    if (body.publish && result.createdIds.length) {
+      const jobIds = (
+        await Promise.all(
+          result.createdIds.map((postId) => enqueuePublishedPostAiSeo(postId)),
+        )
+      ).flatMap((queued) => queued.jobIds);
+      if (jobIds.length) {
+        after(async () => {
+          await processAiSeoJobs({ jobIds, limit: 2 });
+        });
+      }
+    }
     return NextResponse.json(result);
   } catch (error) {
     const message = "Не удалось импортировать посты соцсети.";

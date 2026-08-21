@@ -16,6 +16,7 @@ export type PostMetaInitial = {
   metaTitle: string;
   metaDescription: string;
   status: string;
+  aiStatus: "IDLE" | "PENDING" | "RUNNING" | "DONE" | "REVIEW" | "FAILED";
 };
 
 type Props = {
@@ -27,6 +28,7 @@ export function PostMetaEditor({ initial, siteUrl }: Props) {
   const router = useRouter();
   const [post, setPost] = useState(initial);
   const [saving, setSaving] = useState(false);
+  const [preparingAi, setPreparingAi] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const publicUrl = `${siteUrl.replace(/\/$/, "")}/p/${post.slug}`;
@@ -43,6 +45,12 @@ export function PostMetaEditor({ initial, siteUrl }: Props) {
           slug: post.slug,
           metaTitle: post.metaTitle,
           metaDescription: post.metaDescription,
+          ...(post.metaTitle !== initial.metaTitle
+            ? { metaTitleSource: "MANUAL" }
+            : {}),
+          ...(post.metaDescription !== initial.metaDescription
+            ? { metaDescriptionSource: "MANUAL" }
+            : {}),
         }),
       });
       const data = (await res.json().catch(() => null)) as {
@@ -76,7 +84,29 @@ export function PostMetaEditor({ initial, siteUrl }: Props) {
     } finally {
       setSaving(false);
     }
-  }, [post.id, post.slug, post.metaTitle, post.metaDescription, router]);
+  }, [initial.metaDescription, initial.metaTitle, post.id, post.slug, post.metaTitle, post.metaDescription, router]);
+
+  const prepareAi = useCallback(async () => {
+    setPreparingAi(true);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/admin/posts/${post.id}/ai`, { method: "POST" });
+      const data = (await res.json().catch(() => null)) as { error?: string; queued?: number } | null;
+      if (!res.ok) {
+        setMessage(data?.error ?? "Не удалось запустить автоматическое SEO");
+        return;
+      }
+      setPost((current) => ({ ...current, aiStatus: "PENDING" }));
+      setMessage(
+        data?.queued
+          ? "Готовим SEO и описания изображений в фоне"
+          : "Все SEO-поля и alt уже заданы вручную",
+      );
+      router.refresh();
+    } finally {
+      setPreparingAi(false);
+    }
+  }, [post.id, router]);
 
   const setStatus = useCallback(
     async (status: string, successMsg: string) => {
@@ -129,6 +159,17 @@ export function PostMetaEditor({ initial, siteUrl }: Props) {
         <p className="mt-1 text-[14px] leading-snug text-stone-600">
           Текст и фото правьте в ленте на сайте. Здесь — только адрес страницы и
           сниппет для поиска и соцсетей.
+        </p>
+        <p className="mt-3 text-[13px] leading-snug text-stone-500">
+          {post.aiStatus === "PENDING" || post.aiStatus === "RUNNING"
+            ? "SEO и alt для изображений готовятся в фоне."
+            : post.aiStatus === "DONE"
+              ? "SEO и alt для изображений подготовлены автоматически."
+              : post.aiStatus === "REVIEW"
+                ? "Автоматике нужна ещё одна попытка — можно запустить её ниже."
+                : post.aiStatus === "FAILED"
+                  ? "Автоматическая подготовка сейчас недоступна — можно попробовать ещё раз."
+                  : "После публикации SEO и alt для изображений подготовятся сами."}
         </p>
       </div>
 
@@ -194,6 +235,16 @@ export function PostMetaEditor({ initial, siteUrl }: Props) {
           >
             Сохранить
           </button>
+          {published ? (
+            <button
+              type="button"
+              disabled={saving || preparingAi}
+              className="rounded-full border border-stone-300 bg-white px-4 py-2.5 text-[14px] font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-50"
+              onClick={() => void prepareAi()}
+            >
+              {preparingAi ? "Готовим…" : "Обновить автоматически"}
+            </button>
+          ) : null}
           {published ? (
             <button
               type="button"

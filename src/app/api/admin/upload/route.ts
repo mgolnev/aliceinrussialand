@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
+import { after } from "next/server";
 import { nanoid } from "nanoid";
 import { prisma } from "@/lib/prisma";
 import { processUpload } from "@/lib/image-pipeline";
 import { POST_IMAGE_MAX_BYTES } from "@/lib/upload-limits";
+import {
+  enqueuePublishedPostAiSeo,
+  processAiSeoJobs,
+} from "@/lib/ai-seo-jobs";
 
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -78,6 +83,15 @@ export async function POST(req: Request) {
       variantsJson: JSON.stringify(variants),
     },
   });
+
+  if (post.status === "PUBLISHED") {
+    const queued = await enqueuePublishedPostAiSeo(postId, { metadata: false });
+    if (queued.jobIds.length) {
+      after(async () => {
+        await processAiSeoJobs({ jobIds: queued.jobIds, limit: 1 });
+      });
+    }
+  }
 
   return NextResponse.json({
     id: row.id,

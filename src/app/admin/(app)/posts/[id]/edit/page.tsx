@@ -7,7 +7,8 @@ type PageProps = { params: Promise<{ id: string }> };
 
 export default async function EditPostPage({ params }: PageProps) {
   const { id } = await params;
-  const post = await prisma.post.findUnique({
+  const [post, aiJobs] = await Promise.all([
+    prisma.post.findUnique({
     where: { id },
     select: {
       id: true,
@@ -16,8 +17,26 @@ export default async function EditPostPage({ params }: PageProps) {
       metaDescription: true,
       status: true,
     },
-  });
+    }),
+    prisma.aiSeoJob.findMany({
+      where: { postId: id },
+      orderBy: { updatedAt: "desc" },
+      select: { status: true },
+    }),
+  ]);
   if (!post) notFound();
+
+  const aiStatus = aiJobs.some((job) => job.status === "RUNNING")
+    ? "RUNNING"
+    : aiJobs.some((job) => job.status === "PENDING")
+      ? "PENDING"
+      : aiJobs.some((job) => job.status === "REVIEW")
+        ? "REVIEW"
+        : aiJobs.some((job) => job.status === "FAILED")
+          ? "FAILED"
+          : aiJobs.some((job) => job.status === "DONE")
+            ? "DONE"
+            : "IDLE";
 
   const settings = await getSiteSettings();
   const siteUrl =
@@ -33,6 +52,7 @@ export default async function EditPostPage({ params }: PageProps) {
         metaTitle: post.metaTitle,
         metaDescription: post.metaDescription,
         status: post.status,
+        aiStatus,
       }}
       siteUrl={siteUrl}
     />

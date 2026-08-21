@@ -544,6 +544,8 @@ export function AdminPostRow({
       slug: editSlug.trim(),
       metaTitle: editMetaTitle.trim(),
       metaDescription: editMetaDescription.trim(),
+      metaTitleSource: "MANUAL",
+      metaDescriptionSource: "MANUAL",
     };
     if (editImages.length > 0) {
       payload.images = editImages.map((image, index) => ({

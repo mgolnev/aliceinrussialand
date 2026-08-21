@@ -64,7 +64,10 @@ model Post {
   pinned             Boolean        @default(false)
   showInAll          Boolean        @default(true)
   metaTitle          String         @default("")
+  /// AUTO — системная заготовка, AI — результат фоновой генерации, MANUAL — правка автора.
+  metaTitleSource    String         @default("AUTO")
   metaDescription    String         @default("")
+  metaDescriptionSource String       @default("AUTO")
   telegramSourceUrl  String?
   sourcePlatform     SocialSourcePlatform?
   sourceUrl          String?
@@ -77,6 +80,7 @@ model Post {
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   images             PostImage[]
+  aiSeoJobs          AiSeoJob[]
 
   @@index([status, publishedAt])
   @@index([categoryId])
@@ -126,6 +130,8 @@ model PostImage {
   sortOrder   Int      @default(0)
   caption     String   @default("")
   alt         String   @default("")
+  /// AI не изменяет alt, который автор правил сам.
+  altSource   String   @default("AUTO")
   originalExt String   @default("jpg")
   width       Int?
   height      Int?
@@ -133,4 +139,32 @@ model PostImage {
   createdAt   DateTime @default(now())
 
   @@index([postId, sortOrder])
+}
+
+/// Устойчивая очередь фоновой SEO-обработки; `after` лишь ускоряет первый запуск.
+model AiSeoJob {
+  id          String   @id @default(cuid())
+  postId      String
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  /// POST_SEO или IMAGE_ALT. Строка оставлена для будущих автоматизаций без миграции enum.
+  type        String
+  /// POST для метаданных или id конкретной картинки для alt.
+  subjectKey  String
+  /// PENDING, RUNNING, DONE, REVIEW, FAILED.
+  status      String   @default("PENDING")
+  /// Меняется при каждой постановке в очередь: старый ответ никогда не перезапишет новый текст.
+  revision    Int      @default(0)
+  inputHash   String   @default("")
+  outputJson  String   @default("{}")
+  attempts    Int      @default(0)
+  runAfter    DateTime @default(now())
+  lockedAt    DateTime?
+  completedAt DateTime?
+  lastError   String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([postId, type, subjectKey])
+  @@index([status, runAfter])
+  @@index([postId, updatedAt])
 }

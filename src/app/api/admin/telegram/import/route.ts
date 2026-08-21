@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { nanoid } from "nanoid";
 import { prisma } from "@/lib/prisma";
 import { POST_STATUS } from "@/lib/constants";
@@ -9,6 +10,10 @@ import { downloadTelegramImage } from "@/lib/telegram-public";
 import { derivePostTitle } from "@/lib/post-text";
 import { normalizeTelegramPostUrl } from "@/lib/telegram-post-url";
 import { excerptForMetaDescription } from "@/lib/meta-excerpt";
+import {
+  enqueuePublishedPostAiSeo,
+  processAiSeoJobs,
+} from "@/lib/ai-seo-jobs";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -43,6 +48,7 @@ export async function POST(req: Request) {
     }
 
     const created: string[] = [];
+    const published: string[] = [];
     const requestedCategoryIds = [
       ...new Set(
         body.items
@@ -154,9 +160,23 @@ export async function POST(req: Request) {
       }
 
       created.push(post.id);
+      if (publish) published.push(post.id);
     }
 
     revalidatePath("/admin/posts");
+
+    if (published.length) {
+      const jobIds = (
+        await Promise.all(
+          published.map((postId) => enqueuePublishedPostAiSeo(postId)),
+        )
+      ).flatMap((queued) => queued.jobIds);
+      if (jobIds.length) {
+        after(async () => {
+          await processAiSeoJobs({ jobIds, limit: 2 });
+        });
+      }
+    }
 
     return NextResponse.json({ createdIds: created });
   } catch (error) {
