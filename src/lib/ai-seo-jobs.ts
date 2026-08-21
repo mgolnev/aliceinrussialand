@@ -22,6 +22,11 @@ type QueueOptions = {
   metadata?: boolean;
   /** Ручная кнопка может обновить уже сгенерированные alt; ручные никогда не трогаем. */
   forceImages?: boolean;
+  /**
+   * Первичный проход по старым публикациям: берём только незаполненные поля.
+   * Уже созданный AI-текст не расходует лимит повторно.
+   */
+  onlyMissing?: boolean;
 };
 
 type QueueResult = { jobIds: string[] };
@@ -31,6 +36,15 @@ export type AiSeoProcessSummary = {
   done: number;
   review: number;
   retrying: number;
+  failed: number;
+};
+
+export type AiSeoBackfillStatus = {
+  postsNeedingSeo: number;
+  imagesNeedingAlt: number;
+  pending: number;
+  running: number;
+  review: number;
   failed: number;
 };
 
@@ -95,7 +109,9 @@ export async function enqueuePublishedPostAiSeo(
   const jobIds: string[] = [];
   if (
     options.metadata !== false &&
-    (post.metaTitleSource !== "MANUAL" || post.metaDescriptionSource !== "MANUAL")
+    (options.onlyMissing
+      ? post.metaTitleSource === "AUTO" || post.metaDescriptionSource === "AUTO"
+      : post.metaTitleSource !== "MANUAL" || post.metaDescriptionSource !== "MANUAL")
   ) {
     jobIds.push((await putJob(postId, JOB_TYPE.POST_SEO, "POST")).id);
   }
@@ -103,12 +119,89 @@ export async function enqueuePublishedPostAiSeo(
   const images = post.images.filter(
     (image) =>
       image.altSource !== "MANUAL" &&
-      (Boolean(options.forceImages) || !image.alt.trim()),
+      (Boolean(options.forceImages) ||
+        (options.onlyMissing
+          ? image.altSource === "AUTO" && !image.alt.trim()
+          : !image.alt.trim())),
   );
   for (const image of images) {
     jobIds.push((await putJob(postId, JOB_TYPE.IMAGE_ALT, image.id)).id);
   }
   return { jobIds };
+}
+
+/**
+ * Одноразово ставит в очередь старые публикации. Значения автора и уже готовый
+ * результат AI не затрагиваются: нужны только пустые SEO-поля и alt.
+ */
+export async function enqueuePublishedPostsAiSeoBackfill(): Promise<{
+  posts: number;
+  jobs: number;
+}> {
+  const posts = await prisma.post.findMany({
+    where: {
+      status: POST_STATUS.PUBLISHED,
+      OR: [
+        { metaTitleSource: "AUTO" },
+        { metaDescriptionSource: "AUTO" },
+        {
+          images: {
+            some: {
+              altSource: "AUTO",
+              alt: "",
+            },
+          },
+        },
+      ],
+    },
+    select: { id: true },
+  });
+
+  let jobs = 0;
+  const batchSize = 8;
+  for (let index = 0; index < posts.length; index += batchSize) {
+    const queued = await Promise.all(
+      posts
+        .slice(index, index + batchSize)
+        .map((post) => enqueuePublishedPostAiSeo(post.id, { onlyMissing: true })),
+    );
+    jobs += queued.reduce((total, row) => total + row.jobIds.length, 0);
+  }
+  return { posts: posts.length, jobs };
+}
+
+/** Статус показываем автору коротко: сколько ещё реально ждёт подготовки. */
+export async function getAiSeoBackfillStatus(): Promise<AiSeoBackfillStatus> {
+  const [postsNeedingSeo, imagesNeedingAlt, groupedJobs] = await Promise.all([
+    prisma.post.count({
+      where: {
+        status: POST_STATUS.PUBLISHED,
+        OR: [{ metaTitleSource: "AUTO" }, { metaDescriptionSource: "AUTO" }],
+      },
+    }),
+    prisma.postImage.count({
+      where: {
+        post: { status: POST_STATUS.PUBLISHED },
+        altSource: "AUTO",
+        alt: "",
+      },
+    }),
+    prisma.aiSeoJob.groupBy({
+      by: ["status"],
+      _count: { _all: true },
+    }),
+  ]);
+  const countByStatus = new Map(
+    groupedJobs.map((row) => [row.status, row._count._all]),
+  );
+  return {
+    postsNeedingSeo,
+    imagesNeedingAlt,
+    pending: countByStatus.get(JOB_STATUS.PENDING) ?? 0,
+    running: countByStatus.get(JOB_STATUS.RUNNING) ?? 0,
+    review: countByStatus.get(JOB_STATUS.REVIEW) ?? 0,
+    failed: countByStatus.get(JOB_STATUS.FAILED) ?? 0,
+  };
 }
 
 /** Фоновый исполнитель: `after` вызывает его сразу, а внешний cron подхватывает невыполненные задачи. */

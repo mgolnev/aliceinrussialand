@@ -9,6 +9,8 @@ import {
   AdminPostsList,
   type AdminPostListRow,
 } from "@/components/admin/AdminPostsList";
+import { AiSeoBackfillControl } from "@/components/admin/AiSeoBackfillControl";
+import { getAiSeoBackfillStatus } from "@/lib/ai-seo-jobs";
 
 function thumbUrlFromVariantsJson(variantsJson: string): string | null {
   const v = parseVariants(variantsJson);
@@ -23,7 +25,7 @@ function thumbUrlFromVariantsJson(variantsJson: string): string | null {
 }
 
 export default async function AdminPostsPage() {
-  const [posts, settings, categories, projects] = await Promise.all([
+  const [posts, settings, categories, projects, aiSeoBackfill] = await Promise.all([
     prisma.post.findMany({
       orderBy: { updatedAt: "desc" },
       take: 100,
@@ -56,6 +58,7 @@ export default async function AdminPostsPage() {
       orderBy: [{ title: "asc" }],
       select: { id: true, title: true },
     }),
+    getAiSeoBackfillStatus(),
   ]);
 
   const siteUrl =
@@ -94,6 +97,7 @@ export default async function AdminPostsPage() {
           отредактировать здесь или в ленте на главной — текст, фото, slug и SEO.
         </p>
       </div>
+      <AiSeoBackfillControl initial={aiSeoBackfill} />
       {rows.length === 0 ? (
         <div className="rounded-xl border border-dashed border-stone-300 bg-white/75 px-4 py-8 text-center text-[14px] leading-relaxed text-stone-500">
           Пока нет постов. Новую запись можно начать в ленте на главной.
