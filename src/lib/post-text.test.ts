@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   derivePostTitle,
   extractFirstSentence,
+  isSystemPostTitle,
   plainPostPreview,
 } from "./post-text";
 
@@ -36,6 +37,12 @@ describe("derivePostTitle", () => {
 
   it("не возвращает старый технический заголовок для пустого текста", () => {
     expect(derivePostTitle("", "")).toBe("Без названия");
+  });
+
+  it("распознаёт системные заготовки названия", () => {
+    expect(isSystemPostTitle("Черновик")).toBe(true);
+    expect(isSystemPostTitle("Новая публикация")).toBe(true);
+    expect(isSystemPostTitle("Портретный набросок")).toBe(false);
   });
 });
 

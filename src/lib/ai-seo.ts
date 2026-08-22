@@ -32,6 +32,14 @@ export type AiSeoPostInput = {
   imageAlts?: string[];
 };
 
+/**
+ * Осмысленное публичное имя нового поста. В отличие от SEO title здесь нет
+ * имени автора: layout добавляет его сам, а H1 и slug остаются естественными.
+ */
+export type AiSeoPostIdentityInput = AiSeoPostInput & {
+  variantsJson?: string | null;
+};
+
 export type AiSeoImageInput = AiSeoPostInput & {
   caption: string;
   variantsJson: string;
@@ -190,6 +198,29 @@ export async function generatePostSeo(input: AiSeoPostInput) {
     ],
     320,
   );
+  return parseGeneratedPostSeo(raw);
+}
+
+/**
+ * Автор может публиковать одну картинку или один текст без подписи. Тогда
+ * модель создаёт одновременно короткое имя работы, основу URL и description.
+ */
+export async function generatePostIdentity(input: AiSeoPostIdentityInput) {
+  const imageUrl = input.variantsJson
+    ? await imageForVision(input.variantsJson)
+    : null;
+  const content: Array<Record<string, unknown>> = [
+    {
+      type: "text",
+      text:
+        "Придумай короткое естественное название для новой публикации художника и SEO description. Название станет H1 и основой URL: 8–70 символов, на русском, без имени автора, без слов «новая публикация», «без названия», «черновик», без кавычек и SEO-спама. Для поста только с изображением опирайся только на видимый главный мотив и не выдумывай технику или смысл. Для поста только с текстом опирайся на его тему и первую содержательную мысль. Description: 45–180 символов, спокойно описывает работу или заметку; не перечисляй ключевые слова. Верни JSON: {\"title\": string, \"description\": string, \"confidence\": number}.\n\n" +
+        postContext(input),
+    },
+  ];
+  if (imageUrl) {
+    content.push({ type: "image_url", image_url: { url: imageUrl } });
+  }
+  const raw = await askOpenRouter(content, 320);
   return parseGeneratedPostSeo(raw);
 }
 

@@ -1,9 +1,18 @@
 import { createHash } from "node:crypto";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { POST_STATUS } from "@/lib/constants";
-import { generateImageAlt, generatePostSeo } from "@/lib/ai-seo";
+import {
+  generateImageAlt,
+  generatePostIdentity,
+  generatePostSeo,
+} from "@/lib/ai-seo";
 import { processAiSeoReviews } from "@/lib/ai-seo-reviews";
 import { SEO_REVIEW_PRIORITY } from "@/lib/seo-review";
+import { toSlug } from "@/lib/slug";
+import { isSystemPostTitle } from "@/lib/post-text";
+import { excerptForMetaDescription } from "@/lib/meta-excerpt";
+import { invalidatePublicFeedCache } from "@/lib/cache-tags";
 
 const JOB_TYPE = {
   POST_SEO: "POST_SEO",
@@ -19,6 +28,12 @@ const JOB_STATUS = {
 } as const;
 
 type JobType = (typeof JOB_TYPE)[keyof typeof JOB_TYPE];
+
+type GeneratedPostSeo = {
+  title: string;
+  description: string;
+  confidence: number;
+};
 
 type QueueOptions = {
   metadata?: boolean;
@@ -62,6 +77,47 @@ function retryDate(attempt: number): Date {
 function safeError(error: unknown): string {
   const message = error instanceof Error ? error.message : "Неизвестная ошибка AI";
   return message.replace(/[\r\n]+/g, " ").slice(0, 280);
+}
+
+function isAutomaticSlug(slug: string): boolean {
+  return (
+    slug.startsWith("draft-") ||
+    slug.startsWith("post-") ||
+    /^bez-nazvaniya(?:-\d+)?$/u.test(slug) ||
+    slug === "novaya-publikaciya" ||
+    slug === "chernovik"
+  );
+}
+
+async function uniquePostSlug(
+  tx: Pick<typeof prisma, "post">,
+  rawTitle: string,
+  postId: string,
+): Promise<string> {
+  const base = toSlug(rawTitle) || `post-${postId.slice(0, 6)}`;
+  let slug = base;
+  let suffix = 2;
+  while (
+    await tx.post.findFirst({
+      where: { slug, NOT: { id: postId } },
+      select: { id: true },
+    })
+  ) {
+    slug = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  return slug;
+}
+
+function revalidateAiUpdatedPost(slugs: Array<string | null | undefined>) {
+  for (const slug of new Set(slugs.filter(Boolean))) {
+    revalidatePath(`/p/${slug}`);
+  }
+  revalidatePath("/");
+  revalidatePath("/archive");
+  revalidatePath("/category/[slug]", "page");
+  revalidatePath("/sitemap.xml");
+  invalidatePublicFeedCache();
 }
 
 async function putJob(postId: string, type: JobType, subjectKey: string) {
@@ -297,8 +353,14 @@ export async function processAiSeoJobs(options?: {
         },
       });
       if (updated.count) {
-        if (permanent) result.failed += 1;
-        else result.retrying += 1;
+        if (permanent) {
+          // Публикация без подписи не должна застрять из-за недоступной модели.
+          // После трёх сетевых попыток даём ей уникальный нейтральный fallback.
+          if (job.type === JOB_TYPE.POST_SEO) {
+            await applyAutomaticIdentityFallback(job, { jobAlreadySettled: true });
+          }
+          result.failed += 1;
+        } else result.retrying += 1;
       }
     }
   }
@@ -337,6 +399,11 @@ async function executePostSeoJob(job: NonNullable<Job>): Promise<"DONE" | "REVIE
       metaDescriptionSource: true,
       category: { select: { name: true } },
       projects: { select: { project: { select: { title: true } } } },
+      images: {
+        orderBy: { sortOrder: "asc" },
+        take: 1,
+        select: { variantsJson: true },
+      },
     },
   });
   if (!post || post.status !== POST_STATUS.PUBLISHED) {
@@ -352,18 +419,32 @@ async function executePostSeoJob(job: NonNullable<Job>): Promise<"DONE" | "REVIE
     categoryName: post.category?.name ?? null,
     projectTitles: post.projects.map((row) => row.project.title),
   };
-  const inputHash = hash(input);
+  const needsIdentity = isSystemPostTitle(post.title);
+  const inputHash = hash({
+    ...input,
+    variantsJson: post.images[0]?.variantsJson ?? null,
+    needsIdentity,
+  });
   const settings = await prisma.siteSettings.findUnique({
     where: { id: 1 },
     select: { authorName: true, displayName: true },
   });
-  const generated = await generatePostSeo({
-    authorName: settings?.authorName.trim() || settings?.displayName.trim() || "Алиса Гольнева",
-    ...input,
-  });
-  if (!generated) return markReview(job, "AI вернул непригодный SEO-текст", inputHash);
+  const authorName =
+    settings?.authorName.trim() || settings?.displayName.trim() || "Алиса Гольнева";
+  const generated = needsIdentity
+    ? await generatePostIdentity({
+        authorName,
+        ...input,
+        variantsJson: post.images[0]?.variantsJson ?? null,
+      })
+    : await generatePostSeo({ authorName, ...input });
+  if (!generated) {
+    return needsIdentity
+      ? applyAutomaticIdentityFallback(job, { inputHash })
+      : markReview(job, "AI вернул непригодный SEO-текст", inputHash);
+  }
 
-  return applyPostSeo(job, generated, inputHash);
+  return applyPostSeo(job, generated, inputHash, { applyIdentity: needsIdentity });
 }
 
 async function executeImageAltJob(job: NonNullable<Job>): Promise<"DONE" | "REVIEW"> {
@@ -448,9 +529,11 @@ async function markReview(
 
 async function applyPostSeo(
   job: NonNullable<Job>,
-  generated: { title: string; description: string; confidence: number },
+  generated: GeneratedPostSeo,
   inputHash: string,
+  options: { applyIdentity?: boolean } = {},
 ): Promise<"DONE"> {
+  let changedSlugs: string[] = [];
   await prisma.$transaction(async (tx) => {
     // При постановке новой версии в очередь revision увеличивается. Поэтому старый ответ
     // не сможет попасть в базу даже если модель ответила позже.
@@ -468,10 +551,36 @@ async function applyPostSeo(
     if (!claimed.count) return;
     const current = await tx.post.findUnique({
       where: { id: job.postId },
-      select: { status: true, metaTitleSource: true, metaDescriptionSource: true },
+      select: {
+        id: true,
+        status: true,
+        title: true,
+        slug: true,
+        oldSlugs: true,
+        metaTitleSource: true,
+        metaDescriptionSource: true,
+      },
     });
     if (!current || current.status !== POST_STATUS.PUBLISHED) return;
-    const data: { metaTitle?: string; metaTitleSource?: string; metaDescription?: string; metaDescriptionSource?: string } = {};
+    const data: {
+      title?: string;
+      slug?: string;
+      oldSlugs?: string[];
+      metaTitle?: string;
+      metaTitleSource?: string;
+      metaDescription?: string;
+      metaDescriptionSource?: string;
+    } = {};
+    if (options.applyIdentity && isSystemPostTitle(current.title)) {
+      data.title = generated.title;
+      if (isAutomaticSlug(current.slug)) {
+        const nextSlug = await uniquePostSlug(tx, generated.title, current.id);
+        data.slug = nextSlug;
+        // У опубликованного draft-URL мог уже появиться внешний переход:
+        // сохраняем его для постоянного перенаправления после AI-подготовки.
+        data.oldSlugs = [...new Set([...current.oldSlugs, current.slug])];
+      }
+    }
     if (current.metaTitleSource !== "MANUAL") {
       data.metaTitle = generated.title;
       data.metaTitleSource = "AI";
@@ -482,8 +591,97 @@ async function applyPostSeo(
     }
     if (Object.keys(data).length) {
       await tx.post.update({ where: { id: job.postId }, data });
+      changedSlugs = [current.slug, data.slug ?? current.slug];
     }
   });
+  if (changedSlugs.length) revalidateAiUpdatedPost(changedSlugs);
+  return JOB_STATUS.DONE;
+}
+
+/**
+ * Никаких вопросов автору при недоступном AI: только в этом редком случае
+ * создаём уникальную нейтральную пару «Без названия — N» / `bez-nazvaniya-N`.
+ */
+async function applyAutomaticIdentityFallback(
+  job: NonNullable<Job>,
+  options: { inputHash?: string; jobAlreadySettled?: boolean } = {},
+): Promise<"DONE"> {
+  let changedSlugs: string[] = [];
+  await prisma.$transaction(async (tx) => {
+    if (!options.jobAlreadySettled) {
+      const claimed = await tx.aiSeoJob.updateMany({
+        where: { id: job.id, revision: job.revision, status: JOB_STATUS.RUNNING },
+        data: {
+          status: JOB_STATUS.DONE,
+          inputHash: options.inputHash ?? hash({ fallback: job.id }),
+          outputJson: JSON.stringify({ fallback: "untitled" }),
+          lockedAt: null,
+          completedAt: new Date(),
+          lastError: "",
+        },
+      });
+      if (!claimed.count) return;
+    }
+
+    const current = await tx.post.findUnique({
+      where: { id: job.postId },
+      select: {
+        id: true,
+        status: true,
+        title: true,
+        slug: true,
+        oldSlugs: true,
+        body: true,
+        metaTitleSource: true,
+        metaDescriptionSource: true,
+      },
+    });
+    if (
+      !current ||
+      current.status !== POST_STATUS.PUBLISHED ||
+      !isSystemPostTitle(current.title)
+    ) {
+      return;
+    }
+
+    let suffix = 1;
+    let slug = "bez-nazvaniya-1";
+    while (
+      await tx.post.findFirst({
+        where: { slug, NOT: { id: current.id } },
+        select: { id: true },
+      })
+    ) {
+      suffix += 1;
+      slug = `bez-nazvaniya-${suffix}`;
+    }
+    const title = `Без названия — ${suffix}`;
+    const data: {
+      title: string;
+      slug: string;
+      oldSlugs: string[];
+      metaTitle?: string;
+      metaTitleSource?: string;
+      metaDescription?: string;
+      metaDescriptionSource?: string;
+    } = {
+      title,
+      slug,
+      oldSlugs: [...new Set([...current.oldSlugs, current.slug])],
+    };
+    if (current.metaTitleSource !== "MANUAL") {
+      data.metaTitle = title;
+      data.metaTitleSource = "AUTO";
+    }
+    if (current.metaDescriptionSource !== "MANUAL") {
+      data.metaDescription =
+        excerptForMetaDescription(current.body) || "Авторская работа из портфолио.";
+      data.metaDescriptionSource = "AUTO";
+    }
+    await tx.post.update({ where: { id: current.id }, data });
+    changedSlugs = [current.slug, slug];
+  });
+  if (changedSlugs.length) revalidateAiUpdatedPost(changedSlugs);
   return JOB_STATUS.DONE;
 }
 

@@ -241,6 +241,9 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: "",
+          // Автор не обязан придумывать название: после публикации ИИ создаст
+          // его по тексту или первой работе и одновременно выберет slug.
+          autoIdentity: true,
           body,
           displayMode: "GRID",
           status,

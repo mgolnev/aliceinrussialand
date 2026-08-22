@@ -1,5 +1,18 @@
 import { richTextToPlainText } from "@/lib/rich-text";
 
+/** Внутренние заготовки не должны становиться названием опубликованной работы. */
+const SYSTEM_POST_TITLES = new Set([
+  "черновик",
+  "без названия",
+  "новая публикация",
+]);
+
+export function isSystemPostTitle(value: string | null | undefined): boolean {
+  return SYSTEM_POST_TITLES.has(
+    (value ?? "").replace(/\s+/g, " ").trim().toLocaleLowerCase("ru-RU"),
+  );
+}
+
 /** Перед точкой ≥4 букв — не режем «т.к.» и однобуквенные сокращения. */
 const WORD_BEFORE_DOT = "(\\p{L}{4,})";
 /** Перед !? ≥3 букв — хватает на «Ого!ужас», однобуквенные сокращения не с ! */

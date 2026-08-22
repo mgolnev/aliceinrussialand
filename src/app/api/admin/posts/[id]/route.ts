@@ -121,17 +121,22 @@ export async function PATCH(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Одна из подборок больше не существует" }, { status: 400 });
   }
 
+  const autoIdentity = body.autoIdentity === true;
+  const requestedTitle = typeof body.title === "string" ? body.title.trim() : undefined;
   const nextTitle =
-    typeof body.title === "string"
-      ? derivePostTitle(body.title, typeof body.body === "string" ? body.body : existing.body)
-      : existing.title;
+    autoIdentity && requestedTitle === ""
+      ? existing.title
+      : typeof body.title === "string"
+        ? derivePostTitle(body.title, typeof body.body === "string" ? body.body : existing.body)
+        : existing.title;
   const rawSlug = typeof body.slug === "string" ? body.slug.trim() : undefined;
   const shouldRegenerateSlug =
     rawSlug === "" ||
     (rawSlug === undefined &&
       (existing.slug.startsWith("draft-") || existing.slug.startsWith("post-")) &&
       typeof body.title === "string" &&
-      body.title.trim() !== existing.title);
+      body.title.trim() !== existing.title &&
+      !autoIdentity);
   const slug =
     rawSlug !== undefined && rawSlug !== ""
       ? await ensureUniqueSlug(rawSlug, id)
