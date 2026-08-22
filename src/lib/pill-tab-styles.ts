@@ -11,9 +11,9 @@ export function chromePlaqueButtonClass(): string {
 /** Общий вид «папок» (админка, лента, выбор категории в редакторе). */
 export function pillTabClass(active: boolean): string {
   return [
-    "shrink-0 rounded-xl px-3 py-2 text-[13px] font-semibold transition-all sm:text-sm",
+    "shrink-0 rounded-xl border px-3 py-2 text-[13px] font-semibold transition-all sm:text-sm",
     active
-      ? "bg-white text-stone-900 ring-1 ring-stone-200/80"
-      : "text-stone-500 hover:bg-white/70 hover:text-stone-800",
+      ? "border-stone-200 bg-white text-stone-900"
+      : "border-transparent text-stone-500 hover:bg-white/70 hover:text-stone-800",
   ].join(" ");
 }
