@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { createSessionToken, SESSION_COOKIE_NAME } from "@/lib/session";
+import { resolveSiteOrigin } from "@/lib/site-origin";
 
 function isFormSubmission(req: Request) {
   return req.headers
@@ -17,6 +18,13 @@ function safeReturnPath(value: string | null) {
 }
 
 function requestUrl(req: Request, pathname: string) {
+  // Reverse proxies may expose the container's internal :3000 port through
+  // Request.url/x-forwarded-host. Production redirects must use the configured
+  // public origin, otherwise the browser is sent to an unreachable port.
+  if (process.env.NODE_ENV === "production") {
+    return new URL(pathname, `${resolveSiteOrigin()}/`);
+  }
+
   const url = new URL(req.url);
   const forwardedHost = req.headers.get("x-forwarded-host");
   const host = (forwardedHost ?? req.headers.get("host"))
@@ -49,13 +57,14 @@ export async function POST(req: Request) {
   const body = submittedAsForm
     ? await req.formData().catch(() => null)
     : ((await req.json().catch(() => null)) as { password?: string } | null);
-  const password =
-    body instanceof FormData
-      ? String(body.get("password") ?? "")
-      : body?.password ?? "";
-  const from = safeReturnPath(
-    body instanceof FormData ? String(body.get("from") ?? "") : null,
-  );
+  const form = submittedAsForm ? (body as FormData | null) : null;
+  const json = submittedAsForm
+    ? null
+    : (body as { password?: string } | null);
+  const password = form
+    ? String(form.get("password") ?? "")
+    : json?.password ?? "";
+  const from = safeReturnPath(form ? String(form.get("from") ?? "") : null);
   const hash = process.env.ADMIN_PASSWORD_HASH;
 
   if (!hash) {
