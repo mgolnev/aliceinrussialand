@@ -35,10 +35,21 @@ export function getPublishedPostsQuery(take = 12, cursor?: string) {
 }
 
 export async function getPublishedPostBySlug(slug: string) {
+  const current = await prisma.post.findUnique({
+    where: { slug },
+    include: {
+      images: { orderBy: { sortOrder: "asc" }, select: imageSelect },
+      category: { select: { id: true, name: true, slug: true } },
+    },
+  });
+  if (current?.status === POST_STATUS.PUBLISHED) return current;
+
+  // `slug` уникален и индексирован. Поиск в неиндексированном массиве oldSlugs
+  // нужен только для редких переходов по старому URL, а не для каждого поста.
   return prisma.post.findFirst({
     where: {
       status: POST_STATUS.PUBLISHED,
-      OR: [{ slug }, { oldSlugs: { has: slug } }],
+      oldSlugs: { has: slug },
     },
     include: {
       images: { orderBy: { sortOrder: "asc" }, select: imageSelect },
@@ -149,7 +160,8 @@ export async function getPostCarouselPeers(
   type CarouselRow = Prisma.PostGetPayload<{ include: typeof carouselInclude }>;
 
   const requestedPriorityIds = [...new Set(opts?.priorityPostIds ?? [])]
-    .filter((id) => id !== currentPostId);
+    .filter((id) => id !== currentPostId)
+    .slice(0, totalLimit);
   const priorityPool = requestedPriorityIds.length
     ? await prisma.post.findMany({
         where: {
@@ -164,7 +176,11 @@ export async function getPostCarouselPeers(
     .map((id) => priorityById.get(id))
     .filter((post): post is CarouselRow => Boolean(post));
   const SAME_CATEGORY_POOL_CAP = 24;
-  const sameCategoryPool = categoryId
+  const sameCategoryLimit = Math.min(
+    categoryFirst,
+    Math.max(0, totalLimit - priorityPosts.length),
+  );
+  const sameCategoryPool = categoryId && sameCategoryLimit > 0
     ? await prisma.post.findMany({
         where: {
           status: POST_STATUS.PUBLISHED,
@@ -179,7 +195,7 @@ export async function getPostCarouselPeers(
 
   let sameCategory: CarouselRow[] = [];
   if (categoryId && sameCategoryPool.length > 0) {
-    const takeN = Math.min(categoryFirst, sameCategoryPool.length);
+    const takeN = Math.min(sameCategoryLimit, sameCategoryPool.length);
     const maxOffset = Math.max(0, sameCategoryPool.length - takeN);
     const offset =
       maxOffset === 0
@@ -193,8 +209,10 @@ export async function getPostCarouselPeers(
     ...priorityPosts.map((post) => post.id),
     ...sameCategory.map((p) => p.id),
   ];
-  // Ручные связи добавляются сверх обычной подборки, а не занимают её слоты.
-  const remaining = Math.max(0, totalLimit - sameCategory.length);
+  const remaining = Math.max(
+    0,
+    totalLimit - priorityPosts.length - sameCategory.length,
+  );
 
   let tail: CarouselRow[] = [];
   if (remaining > 0) {

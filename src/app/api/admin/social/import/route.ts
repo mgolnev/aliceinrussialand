@@ -57,7 +57,7 @@ export async function POST(req: Request) {
       }
     }
     return NextResponse.json(result);
-  } catch (error) {
+  } catch {
     const message = "Не удалось импортировать посты соцсети.";
     return NextResponse.json({ error: message }, { status: 500 });
   }

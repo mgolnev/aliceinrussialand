@@ -26,7 +26,19 @@ describe("GET /api/admin/posts", () => {
             { body: { contains: "Коломна", mode: "insensitive" } },
           ],
         },
+        take: 20,
+        select: expect.objectContaining({
+          _count: { select: { images: true } },
+        }),
       }),
     );
+  });
+
+  it("не запускает широкий поиск по одному символу", async () => {
+    const { GET } = await import("./route");
+    const response = await GET(new Request("http://localhost/api/admin/posts?q=%D0%9A"));
+
+    expect(findMany).not.toHaveBeenCalled();
+    await expect(response.json()).resolves.toEqual({ items: [] });
   });
 });

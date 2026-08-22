@@ -16,4 +16,19 @@ describe("миграция поиска публикаций", () => {
     expect(sql).toContain('ALTER COLUMN "slug" TYPE TEXT COLLATE "und-x-icu"');
     expect(sql).toContain('ALTER COLUMN "body" TYPE TEXT COLLATE "und-x-icu"');
   });
+
+  it("добавляет trigram-индексы для поиска подстрок", () => {
+    const sql = readFileSync(
+      path.join(
+        process.cwd(),
+        "prisma/migrations/20260822113000_post_admin_search_trigrams/migration.sql",
+      ),
+      "utf8",
+    );
+
+    expect(sql).toContain("CREATE EXTENSION IF NOT EXISTS pg_trgm");
+    expect(sql).toContain('"Post_title_trgm_idx"');
+    expect(sql).toContain('"Post_slug_trgm_idx"');
+    expect(sql).toContain('"Post_body_trgm_idx"');
+  });
 });

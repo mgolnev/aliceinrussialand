@@ -267,7 +267,10 @@ async function imageForVision(variantsJson: string): Promise<string | null> {
   if (/^https:\/\//i.test(variant)) return variant;
   if (!variant.startsWith("/media/")) return null;
 
-  const publicRoot = path.resolve(process.cwd(), "public");
+  const publicRoot = path.resolve(
+    /*turbopackIgnore: true*/ process.cwd(),
+    "public",
+  );
   const filePath = path.resolve(publicRoot, `.${variant}`);
   const relative = path.relative(publicRoot, filePath);
   if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) return null;

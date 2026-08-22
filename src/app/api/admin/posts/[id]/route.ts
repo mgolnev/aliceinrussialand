@@ -18,6 +18,8 @@ import {
 
 type Ctx = { params: Promise<{ id: string }> };
 
+export const maxDuration = 60;
+
 async function ensureUniqueSlug(base: string, id: string) {
   const safeBase = toSlug(base) || `post-${id.slice(0, 6)}`;
   let slug = safeBase;
@@ -387,7 +389,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
       });
       if (queued.jobIds.length) {
         after(async () => {
-          await processAiSeoJobs({ jobIds: queued.jobIds, limit: 2 });
+          await processAiSeoJobs({ jobIds: queued.jobIds, limit: 1 });
         });
       }
     }

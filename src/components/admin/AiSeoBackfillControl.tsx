@@ -82,7 +82,7 @@ export function AiSeoBackfillControl({
   }, [status.imagesNeedingAlt, status.postsNeedingSeo]);
 
   const processNow = useCallback(async () => {
-    if (!window.confirm("Обработать до 4 SEO-задач сейчас? Ручные поля не будут изменены.")) {
+    if (!window.confirm("Обработать следующую SEO-задачу сейчас? Ручные поля не будут изменены.")) {
       return;
     }
     setWorking(true);
@@ -142,7 +142,7 @@ export function AiSeoBackfillControl({
             onClick={() => void processNow()}
             className="shrink-0 rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-800 transition hover:bg-stone-50 disabled:cursor-wait disabled:opacity-55"
           >
-            {working ? "Обрабатываем…" : "Обработать 4 сейчас"}
+            {working ? "Обрабатываем…" : "Обработать следующую"}
           </button>
         ) : null}
       </div>

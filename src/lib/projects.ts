@@ -54,6 +54,21 @@ export type PublishedProject = {
 
 export type PublishedProjectLink = Pick<PublishedProject, "id" | "slug" | "title">;
 
+export type PublishedProjectSummary = Omit<PublishedProject, "posts">;
+
+export type PublishedPostProject = PublishedProjectSummary & {
+  posts: Array<{ id: string; slug: string }>;
+};
+
+export type PublishedProjectPostsPage = {
+  items: PublishedProjectPost[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+export const PROJECT_PAGE_SIZE = 8;
+
 const publishedPostsSelect = {
   where: { post: { status: POST_STATUS.PUBLISHED } },
   orderBy: [{ sortOrder: "asc" as const }, { createdAt: "asc" as const }],
@@ -89,66 +104,50 @@ const publishedPostsSelect = {
   },
 } satisfies Prisma.Project$postsArgs;
 
-function projectWithPublishedPosts(row: {
-  id: string;
-  slug: string;
-  title: string;
-  description: string;
-  metaTitle: string;
-  metaDescription: string;
-  orderMode: string;
-  updatedAt: Date;
-  posts: Array<{
-    sortOrder: number;
-    createdAt: Date;
-    post: PublishedProjectPost;
-  }>;
-}): PublishedProject {
-  const orderMode = projectOrderMode(row.orderMode);
-  const orderedRelations = [...row.posts].sort((a, b) => {
-    if (orderMode === PROJECT_ORDER_MODE.MANUAL) {
-      return a.sortOrder - b.sortOrder || a.createdAt.getTime() - b.createdAt.getTime();
-    }
-    return (
-      comparePostsNewestFirst(a.post, b.post) ||
-      a.sortOrder - b.sortOrder ||
-      a.createdAt.getTime() - b.createdAt.getTime()
-    );
-  });
+const projectSummarySelect = {
+  id: true,
+  slug: true,
+  title: true,
+  description: true,
+  metaTitle: true,
+  metaDescription: true,
+  orderMode: true,
+  updatedAt: true,
+  posts: {
+    where: { post: { status: POST_STATUS.PUBLISHED } },
+    take: 2,
+    select: { id: true },
+  },
+} as const;
 
+/** Публичный цикл: метаданные без тяжёлых body/images, минимум две публикации. */
+export async function getPublishedProjectBySlug(
+  slug: string,
+): Promise<PublishedProjectSummary | null> {
+  const row = await prisma.project.findFirst({
+    where: { slug, status: PROJECT_STATUS.PUBLISHED },
+    select: projectSummarySelect,
+  });
+  if (!row || row.posts.length < 2) return null;
   return {
-    ...row,
-    orderMode,
-    posts: orderedRelations.map((relation) => relation.post),
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    description: row.description,
+    metaTitle: row.metaTitle,
+    metaDescription: row.metaDescription,
+    orderMode: projectOrderMode(row.orderMode),
+    updatedAt: row.updatedAt,
   };
 }
 
-/** Публичный цикл: только опубликованный цикл, в котором есть минимум две публикации. */
-export async function getPublishedProjectBySlug(
-  slug: string,
-): Promise<PublishedProject | null> {
-  const row = await prisma.project.findFirst({
-    where: { slug, status: PROJECT_STATUS.PUBLISHED },
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      description: true,
-      metaTitle: true,
-      metaDescription: true,
-      orderMode: true,
-      updatedAt: true,
-      posts: publishedPostsSelect,
-    },
-  });
-  if (!row || row.posts.length < 2) return null;
-  return projectWithPublishedPosts(row);
-}
-
-/** Циклы, которые можно показать внизу опубликованного поста. */
+/**
+ * Циклы и ссылки для рекомендаций под одним постом. Не читаем body и изображения
+ * всех связанных записей: они будут выбраны каруселью только для видимых карточек.
+ */
 export async function getPublishedPostProjects(
   postId: string,
-): Promise<PublishedProject[]> {
+): Promise<PublishedPostProject[]> {
   const rows = await prisma.postProject.findMany({
     where: {
       postId,
@@ -157,28 +156,94 @@ export async function getPublishedPostProjects(
     orderBy: [{ project: { updatedAt: "desc" } }],
     select: {
       project: {
-        select: {
-          id: true,
-          slug: true,
-          title: true,
-          description: true,
-          metaTitle: true,
-          metaDescription: true,
-          orderMode: true,
-          updatedAt: true,
-          posts: publishedPostsSelect,
-        },
+          select: {
+            id: true,
+            slug: true,
+            title: true,
+            description: true,
+            metaTitle: true,
+            metaDescription: true,
+            orderMode: true,
+            updatedAt: true,
+            posts: {
+              where: { post: { status: POST_STATUS.PUBLISHED } },
+              orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+              take: 17,
+              select: {
+                post: { select: { id: true, slug: true, publishedAt: true } },
+              },
+            },
+          },
       },
     },
   });
 
   return rows
-    .map((row) => projectWithPublishedPosts(row.project))
+    .map(({ project }) => {
+      const orderMode = projectOrderMode(project.orderMode);
+      const posts = project.posts.map(({ post }) => post);
+      if (orderMode === PROJECT_ORDER_MODE.NEWEST_FIRST) {
+        posts.sort(comparePostsNewestFirst);
+      }
+      return {
+        id: project.id,
+        slug: project.slug,
+        title: project.title,
+        description: project.description,
+        metaTitle: project.metaTitle,
+        metaDescription: project.metaDescription,
+        orderMode,
+        updatedAt: project.updatedAt,
+        posts: posts.map(({ id, slug }) => ({ id, slug })),
+      };
+    })
     .filter((project) => project.posts.length >= 2);
 }
 
 export const getPublishedProjectBySlugCached = cache(getPublishedProjectBySlug);
 export const getPublishedPostProjectsCached = cache(getPublishedPostProjects);
+
+/** Ограниченная страница карточек проекта; порядок сохраняет режим проекта. */
+export async function getPublishedProjectPostsPage(
+  projectId: string,
+  orderMode: ProjectOrderMode,
+  page: number,
+  pageSize: number = PROJECT_PAGE_SIZE,
+): Promise<PublishedProjectPostsPage> {
+  const normalizedPage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+  const normalizedPageSize = Math.max(1, Math.min(Math.floor(pageSize), 24));
+  const skip = (normalizedPage - 1) * normalizedPageSize;
+  const where = {
+    projectId,
+    post: { status: POST_STATUS.PUBLISHED },
+  } satisfies Prisma.PostProjectWhereInput;
+  const orderBy: Prisma.PostProjectOrderByWithRelationInput[] =
+    orderMode === PROJECT_ORDER_MODE.MANUAL
+      ? [{ sortOrder: "asc" }, { createdAt: "asc" }]
+      : [{ post: { publishedAt: "desc" } }, { postId: "asc" }];
+
+  const [total, rows] = await Promise.all([
+    prisma.postProject.count({ where }),
+    prisma.postProject.findMany({
+      where,
+      orderBy,
+      skip,
+      take: normalizedPageSize,
+      select: publishedPostsSelect.select,
+    }),
+  ]);
+
+  return {
+    items: rows.map(({ post }) => post),
+    total,
+    page: normalizedPage,
+    pageSize: normalizedPageSize,
+  };
+}
+
+export const getPublishedProjectPostsPageCached = cache(
+  getPublishedProjectPostsPage,
+);
 
 /** Короткий список циклов для единственного статичного блока навигации в подвале. */
 export async function listPublishedProjectLinks(): Promise<PublishedProjectLink[]> {

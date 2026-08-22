@@ -5,8 +5,7 @@ import {
   applyAiSeoReview,
   dismissAiSeoReview,
   enqueueAiSeoReviews,
-  getAiSeoReviewStatus,
-  listAiSeoReviewItems,
+  getAiSeoReviewSnapshot,
 } from "@/lib/ai-seo-reviews";
 import { processAiSeoJobs } from "@/lib/ai-seo-jobs";
 import { SEO_REVIEW_PRIORITY } from "@/lib/seo-review";
@@ -15,11 +14,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 async function snapshot() {
-  const [status, items] = await Promise.all([
-    getAiSeoReviewStatus(),
-    listAiSeoReviewItems(),
-  ]);
-  return { status, items };
+  return getAiSeoReviewSnapshot();
 }
 
 export async function GET() {
@@ -57,7 +52,7 @@ export async function POST(request: Request) {
     const queued = await enqueueAiSeoReviews(priority);
     if (queued.queued) {
       after(async () => {
-        await processAiSeoJobs({ limit: 4 });
+        await processAiSeoJobs({ limit: 1 });
       });
     }
     return NextResponse.json({ ok: true, queued, ...(await snapshot()) });
@@ -67,7 +62,7 @@ export async function POST(request: Request) {
   // Он не применяет текст: создаёт лишь предложения, которые автор потом
   // отдельно подтверждает кнопкой «Применить».
   if (body.action === "process") {
-    const processed = await processAiSeoJobs({ limit: 4 });
+    const processed = await processAiSeoJobs({ limit: 1 });
     return NextResponse.json({ ok: true, processed, ...(await snapshot()) });
   }
 

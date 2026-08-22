@@ -22,8 +22,9 @@ export async function GET(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  // Один плановый вызов берёт небольшую безопасную порцию. GitHub Actions
-  // обращается дважды за запуск, чтобы не упираться в лимит 60 секунд маршрута.
-  const result = await processAiSeoJobs({ limit: 6 });
+  // Один запрос к модели может занять до 45 секунд, а маршрут ограничен 60
+  // секундами. Обрабатываем ровно одну задачу: workflow вызывает маршрут дважды,
+  // поэтому очередь продолжает двигаться без зависших RUNNING-задач.
+  const result = await processAiSeoJobs({ limit: 1 });
   return NextResponse.json({ ok: true, ...result });
 }

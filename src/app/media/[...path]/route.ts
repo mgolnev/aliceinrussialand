@@ -1,9 +1,15 @@
+import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { Readable } from "node:stream";
 
 export const runtime = "nodejs";
 
-const MEDIA_ROOT = path.join(process.cwd(), "public", "media");
+const MEDIA_ROOT = path.join(
+  /*turbopackIgnore: true*/ process.cwd(),
+  "public",
+  "media",
+);
 
 function isSafeSegment(segment: string): boolean {
   return /^[A-Za-z0-9_-]+(?:\.webp)?$/.test(segment);
@@ -37,11 +43,12 @@ export async function GET(
     const stat = await fs.stat(filePath);
     if (!stat.isFile()) return new Response(null, { status: 404 });
 
-    const data = await fs.readFile(filePath);
+    const stream = Readable.toWeb(createReadStream(filePath)) as ReadableStream;
     const isPostImage = segments.length === 3;
-    return new Response(data, {
+    return new Response(stream, {
       headers: {
         "Content-Type": "image/webp",
+        "Content-Length": String(stat.size),
         // У post-image URL есть уникальный imageId. avatar/about-photo
         // перезаписываются по прежнему адресу, поэтому их не кешируем надолго.
         "Cache-Control": isPostImage

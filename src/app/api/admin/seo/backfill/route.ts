@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   const mode = new URL(request.url).searchParams.get("mode") ?? "start";
 
   if (mode === "process") {
-    const processed = await processAiSeoJobs({ limit: 4 });
+    const processed = await processAiSeoJobs({ limit: 1 });
     return NextResponse.json({
       ok: true,
       processed,
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   const queued = await enqueuePublishedPostsAiSeoBackfill();
   if (queued.jobs) {
     after(async () => {
-      await processAiSeoJobs({ limit: 4 });
+      await processAiSeoJobs({ limit: 1 });
     });
   }
   return NextResponse.json({

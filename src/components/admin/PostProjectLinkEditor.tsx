@@ -121,7 +121,7 @@ export function PostProjectLinkEditor({
 
   useEffect(() => {
     const query = postQuery.trim();
-    if (!activeProjectId || !query) {
+    if (!activeProjectId || query.length < 2) {
       setPostResults([]);
       return;
     }

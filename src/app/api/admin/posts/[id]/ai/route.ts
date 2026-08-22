@@ -33,7 +33,7 @@ export async function POST(_req: Request, ctx: Ctx) {
   });
   if (queued.jobIds.length) {
     after(async () => {
-      await processAiSeoJobs({ jobIds: queued.jobIds, limit: 2 });
+      await processAiSeoJobs({ jobIds: queued.jobIds, limit: 1 });
     });
   }
   return NextResponse.json({ queued: queued.jobIds.length });

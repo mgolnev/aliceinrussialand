@@ -9,6 +9,12 @@ export async function GET(req: Request) {
   const status = searchParams.get("status") ?? "";
   const q = searchParams.get("q")?.trim() ?? "";
 
+  // По одному символу совпадений слишком много, а форма всё равно предназначена
+  // для точечного добавления публикации в подборку.
+  if (q && q.length < 2) {
+    return NextResponse.json({ items: [] });
+  }
+
   const posts = await prisma.post.findMany({
     where: {
       ...(status === "DRAFT" || status === "PUBLISHED"
@@ -25,8 +31,16 @@ export async function GET(req: Request) {
         : {}),
     },
     orderBy: [{ updatedAt: "desc" }],
-    include: {
-      images: { orderBy: { sortOrder: "asc" }, select: { id: true } },
+    take: q ? 20 : 100,
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      displayMode: true,
+      status: true,
+      publishedAt: true,
+      updatedAt: true,
+      _count: { select: { images: true } },
     },
   });
 
@@ -39,7 +53,7 @@ export async function GET(req: Request) {
       status: p.status,
       publishedAt: p.publishedAt?.toISOString() ?? null,
       updatedAt: p.updatedAt.toISOString(),
-      imageCount: p.images.length,
+      imageCount: p._count.images,
     })),
   });
 }

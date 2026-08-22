@@ -27,8 +27,8 @@ function priorityLabel(priority: SeoReviewPriority) {
   return priority === SEO_REVIEW_PRIORITY.CRITICAL ? "Срочно" : "Улучшить";
 }
 
-export function AiSeoReviewControl({ initial }: { initial: AiSeoReviewStatus }) {
-  const [snapshot, setSnapshot] = useState<Snapshot>({ status: initial, items: [] });
+export function AiSeoReviewControl({ initial }: { initial: Snapshot }) {
+  const [snapshot, setSnapshot] = useState<Snapshot>(initial);
   const [loading, setLoading] = useState<SeoReviewPriority | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -48,10 +48,6 @@ export function AiSeoReviewControl({ initial }: { initial: AiSeoReviewStatus }) 
     const timer = window.setInterval(() => void refresh(), 10_000);
     return () => window.clearInterval(timer);
   }, [pending, refresh, running]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
 
   const criticalQueueable = queueableCount(snapshot.status.critical);
   const improveQueueable = queueableCount(snapshot.status.improve);
@@ -99,7 +95,7 @@ export function AiSeoReviewControl({ initial }: { initial: AiSeoReviewStatus }) 
   const processNow = useCallback(async () => {
     if (
       !window.confirm(
-        "Подготовить до 4 вариантов SEO сейчас? Текущие title и description не изменятся.",
+        "Подготовить следующий вариант SEO сейчас? Текущие title и description не изменятся.",
       )
     ) {
       return;
@@ -205,7 +201,7 @@ export function AiSeoReviewControl({ initial }: { initial: AiSeoReviewStatus }) 
               onClick={() => void processNow()}
               className="rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-800 transition hover:bg-stone-50 disabled:cursor-wait disabled:opacity-55"
             >
-              {loading ? "Готовим…" : "Обработать 4 сейчас"}
+              {loading ? "Готовим…" : "Обработать следующий"}
             </button>
           ) : null}
         </div>

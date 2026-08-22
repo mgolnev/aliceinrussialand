@@ -102,7 +102,7 @@ export async function POST(req: Request) {
       ...result,
       importedHrefs,
     });
-  } catch (e) {
+  } catch {
     const msg = "Ошибка загрузки списка Telegram.";
     return NextResponse.json({ error: msg }, { status: 502 });
   }

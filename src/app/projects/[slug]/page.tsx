@@ -4,7 +4,10 @@ import { getAuthorName, getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { absoluteUrl } from "@/lib/absolute-url";
 import { resolveSiteOrigin } from "@/lib/site-origin";
 import { excerptForMetaDescription } from "@/lib/meta-excerpt";
-import { getPublishedProjectBySlugCached } from "@/lib/projects";
+import {
+  getPublishedProjectBySlugCached,
+  getPublishedProjectPostsPageCached,
+} from "@/lib/projects";
 import { parseVariants } from "@/lib/posts-query";
 import { listFeedCategories } from "@/lib/feed-server";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
@@ -15,8 +18,13 @@ import { PostBackTray } from "@/components/feed/PostBackTray";
 import { PostCard } from "@/components/feed/PostCard";
 import type { FeedCategory, FeedPost } from "@/types/feed";
 import { buildSeoDocumentTitle } from "@/lib/seo-document-title";
+import { parsePageNumber } from "@/lib/seo-content";
+import { SeoPager } from "@/components/seo/SeoPager";
 
-type PageProps = { params: Promise<{ slug: string }> };
+type PageProps = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string }>;
+};
 
 /** Контент зависит от БД и должен читаться в момент запроса. */
 export const dynamic = "force-dynamic";
@@ -31,8 +39,9 @@ function projectDescription(
   );
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+  const [{ slug }, sp] = await Promise.all([params, searchParams]);
+  const page = parsePageNumber(sp.page);
   const [project, settings] = await Promise.all([
     getPublishedProjectBySlugCached(slug),
     getSiteSettings(),
@@ -49,12 +58,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     180,
   );
   const authorName = getAuthorName(settings);
+  const baseTitle = project.metaTitle.trim() || `${project.title} — подборка работ`;
   const title = buildSeoDocumentTitle(
-    project.metaTitle.trim() || `${project.title} — подборка работ`,
+    page > 1 ? `${baseTitle}, страница ${page}` : baseTitle,
     authorName,
   );
   const siteUrl = resolveSiteOrigin(settings.siteUrl);
-  const path = `/projects/${project.slug}`;
+  const path = page > 1
+    ? `/projects/${project.slug}?page=${page}`
+    : `/projects/${project.slug}`;
 
   return {
     title: { absolute: title },
@@ -70,14 +82,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function ProjectPage({ params }: PageProps) {
-  const { slug } = await params;
+export default async function ProjectPage({ params, searchParams }: PageProps) {
+  const [{ slug }, sp] = await Promise.all([params, searchParams]);
+  const page = parsePageNumber(sp.page);
   const [project, settings, cookieStore] = await Promise.all([
     getPublishedProjectBySlugCached(slug),
     getSiteSettings(),
     cookies(),
   ]);
   if (!project) notFound();
+  const postsPage = await getPublishedProjectPostsPageCached(
+    project.id,
+    project.orderMode,
+    page,
+  );
+  if (page > 1 && !postsPage.items.length) notFound();
   const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   const canManage = sessionToken ? await verifySessionToken(sessionToken) : false;
   const categories: FeedCategory[] = canManage ? await listFeedCategories() : [];
@@ -88,11 +107,13 @@ export default async function ProjectPage({ params }: PageProps) {
     settings.yandexMetrikaId?.trim() ||
     process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID?.trim() ||
     "";
-  const path = `/projects/${project.slug}`;
+  const path = page > 1
+    ? `/projects/${project.slug}?page=${page}`
+    : `/projects/${project.slug}`;
   const url = absoluteUrl(siteUrl, path);
   const description = projectDescription(project.description, project.title);
   const authorName = getAuthorName(settings);
-  const feedPosts: FeedPost[] = project.posts.map((post) => ({
+  const feedPosts: FeedPost[] = postsPage.items.map((post) => ({
     id: post.id,
     slug: post.slug,
     title: post.title,
@@ -122,10 +143,10 @@ export default async function ProjectPage({ params }: PageProps) {
     description,
     mainEntity: {
       "@type": "ItemList",
-      numberOfItems: project.posts.length,
-      itemListElement: project.posts.map((post, index) => ({
+      numberOfItems: postsPage.total,
+      itemListElement: postsPage.items.map((post, index) => ({
         "@type": "ListItem",
-        position: index + 1,
+        position: (postsPage.page - 1) * postsPage.pageSize + index + 1,
         url: absoluteUrl(siteUrl, `/p/${post.slug}`),
         name: post.title,
       })),
@@ -160,6 +181,12 @@ export default async function ProjectPage({ params }: PageProps) {
             />
           ))}
         </section>
+        <SeoPager
+          basePath={`/projects/${project.slug}`}
+          page={postsPage.page}
+          total={postsPage.total}
+          pageSize={postsPage.pageSize}
+        />
       </main>
       <SiteFooter />
     </>

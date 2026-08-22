@@ -88,6 +88,9 @@ model Post {
   @@index([status, showInAll, pinned, publishedAt(sort: Desc)])
   @@index([sourcePlatform, sourceUrl])
   @@index([sourcePlatform, sourceExternalId])
+  @@index([title(ops: raw("gin_trgm_ops"))], map: "Post_title_trgm_idx", type: Gin)
+  @@index([slug(ops: raw("gin_trgm_ops"))], map: "Post_slug_trgm_idx", type: Gin)
+  @@index([body(ops: raw("gin_trgm_ops"))], map: "Post_body_trgm_idx", type: Gin)
 }
 
 // Авторский цикл работ, объединяющий публикации из разных категорий.

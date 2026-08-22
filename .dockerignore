@@ -6,4 +6,6 @@
 node_modules
 coverage
 storage
+backups
+outputs
 npm-debug.log*

@@ -12,7 +12,7 @@ import {
 import { AiSeoBackfillControl } from "@/components/admin/AiSeoBackfillControl";
 import { getAiSeoBackfillStatus } from "@/lib/ai-seo-jobs";
 import { AiSeoReviewControl } from "@/components/admin/AiSeoReviewControl";
-import { getAiSeoReviewStatus } from "@/lib/ai-seo-reviews";
+import { getAiSeoReviewSnapshot } from "@/lib/ai-seo-reviews";
 
 function thumbUrlFromVariantsJson(variantsJson: string): string | null {
   const v = parseVariants(variantsJson);
@@ -61,7 +61,7 @@ export default async function AdminPostsPage() {
       select: { id: true, title: true },
     }),
     getAiSeoBackfillStatus(),
-    getAiSeoReviewStatus(),
+    getAiSeoReviewSnapshot(),
   ]);
 
   const siteUrl =

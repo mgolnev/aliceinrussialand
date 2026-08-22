@@ -4,7 +4,6 @@ import path from "node:path";
 import {
   ensureDir,
   getOriginalsRoot,
-  getProjectRoot,
   getPublicMediaDir,
 } from "./paths";
 import { POST_IMAGE_MAX_BYTES } from "./upload-limits";
@@ -116,7 +115,7 @@ export async function processUpload(params: {
 
   await ensureDir(getOriginalsRoot());
   const origPath = path.join(
-    getOriginalsRoot(),
+    /*turbopackIgnore: true*/ getOriginalsRoot(),
     `${imageId}.${originalExt}`,
   );
   await fs.writeFile(origPath, finalBuf);
@@ -133,7 +132,7 @@ export async function processUpload(params: {
   await Promise.all(
     VARIANTS.map(async (w, i) => {
       const fname = `w${w}.webp`;
-      const fpath = path.join(outDir, fname);
+      const fpath = path.join(/*turbopackIgnore: true*/ outDir, fname);
       await fs.writeFile(fpath, webpBuffers[i]!);
       variants[`w${w}`] = `/media/${postId}/${imageId}/${fname}`;
     }),
@@ -200,7 +199,7 @@ export async function processAvatarUpload(params: {
   }
 
   const outDir = path.join(
-    getProjectRoot(),
+    /*turbopackIgnore: true*/ process.cwd(),
     "public",
     "media",
     AVATAR_PUBLIC_SUBDIR,
@@ -224,7 +223,7 @@ export async function processAvatarUpload(params: {
   await Promise.all(
     AVATAR_VARIANTS.map(async (side, i) => {
       const fname = `w${side}.webp`;
-      const fpath = path.join(outDir, fname);
+      const fpath = path.join(/*turbopackIgnore: true*/ outDir, fname);
       await fs.writeFile(fpath, webpBuffers[i]!);
       variants[`w${side}`] = `/media/${AVATAR_PUBLIC_SUBDIR}/${fname}`;
     }),
@@ -281,7 +280,12 @@ export async function processAboutPhotoUpload(params: {
     return { variants };
   }
 
-  const outDir = path.join(getProjectRoot(), "public", "media", ABOUT_PHOTO_SUBDIR);
+  const outDir = path.join(
+    /*turbopackIgnore: true*/ process.cwd(),
+    "public",
+    "media",
+    ABOUT_PHOTO_SUBDIR,
+  );
   await ensureDir(outDir);
 
   const webpBuffers = await Promise.all(
@@ -297,7 +301,7 @@ export async function processAboutPhotoUpload(params: {
   await Promise.all(
     ABOUT_PHOTO_VARIANTS.map(async (w, i) => {
       const fname = `w${w}.webp`;
-      const fpath = path.join(outDir, fname);
+      const fpath = path.join(/*turbopackIgnore: true*/ outDir, fname);
       await fs.writeFile(fpath, webpBuffers[i]!);
       variants[`w${w}`] = `/media/${ABOUT_PHOTO_SUBDIR}/${fname}`;
     }),
@@ -311,7 +315,12 @@ export async function deleteAboutPhotoFiles() {
     await deleteSupabaseAboutPhotoFiles();
     return;
   }
-  const dir = path.join(getProjectRoot(), "public", "media", ABOUT_PHOTO_SUBDIR);
+  const dir = path.join(
+    /*turbopackIgnore: true*/ process.cwd(),
+    "public",
+    "media",
+    ABOUT_PHOTO_SUBDIR,
+  );
   await fs.rm(dir, { recursive: true, force: true });
 }
 
@@ -321,7 +330,7 @@ export async function deleteAvatarMediaFiles() {
     return;
   }
   const dir = path.join(
-    getProjectRoot(),
+    /*turbopackIgnore: true*/ process.cwd(),
     "public",
     "media",
     AVATAR_PUBLIC_SUBDIR,
@@ -339,6 +348,8 @@ export async function deleteImageFiles(postId: string, imageId: string) {
   await fs.rm(dir, { recursive: true, force: true });
   const origDir = getOriginalsRoot();
   for (const ext of ["jpg", "jpeg", "png", "webp", "gif"]) {
-    await fs.unlink(path.join(origDir, `${imageId}.${ext}`)).catch(() => {});
+    await fs.unlink(
+      path.join(/*turbopackIgnore: true*/ origDir, `${imageId}.${ext}`),
+    ).catch(() => {});
   }
 }

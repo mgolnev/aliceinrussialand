@@ -314,8 +314,9 @@ function recordsByCandidateKey(records: ReviewRecord[]) {
   );
 }
 
-export async function getAiSeoReviewStatus(): Promise<AiSeoReviewStatus> {
-  const candidates = await listReviewCandidates();
+async function getAiSeoReviewStatusForCandidates(
+  candidates: ReviewCandidate[],
+): Promise<AiSeoReviewStatus> {
   const records = await listCurrentReviewRecords(candidates);
   const recordsByKey = recordsByCandidateKey(records);
   const status: AiSeoReviewStatus = {
@@ -349,6 +350,10 @@ export async function getAiSeoReviewStatus(): Promise<AiSeoReviewStatus> {
     if (currentReview.status === REVIEW_STATUS.FAILED) bucket.failed += 1;
   }
   return status;
+}
+
+export async function getAiSeoReviewStatus(): Promise<AiSeoReviewStatus> {
+  return getAiSeoReviewStatusForCandidates(await listReviewCandidates());
 }
 
 export async function enqueueAiSeoReviews(priority: SeoReviewPriority): Promise<{
@@ -554,8 +559,9 @@ export async function processAiSeoReviews(options?: {
   return result;
 }
 
-export async function listAiSeoReviewItems(): Promise<AiSeoReviewItem[]> {
-  const candidates = await listReviewCandidates();
+async function listAiSeoReviewItemsForCandidates(
+  candidates: ReviewCandidate[],
+): Promise<AiSeoReviewItem[]> {
   const candidatesByKey = new Map(candidates.map((candidate) => [candidate.key, candidate]));
   const records = await prisma.aiSeoReview.findMany({
     where: { status: { in: [REVIEW_STATUS.READY, REVIEW_STATUS.PENDING, REVIEW_STATUS.RUNNING, REVIEW_STATUS.FAILED] } },
@@ -597,6 +603,23 @@ export async function listAiSeoReviewItems(): Promise<AiSeoReviewItem[]> {
       error: review.lastError,
     };
   });
+}
+
+export async function listAiSeoReviewItems(): Promise<AiSeoReviewItem[]> {
+  return listAiSeoReviewItemsForCandidates(await listReviewCandidates());
+}
+
+/** Один снимок для polling API: тяжёлый список кандидатов строится один раз. */
+export async function getAiSeoReviewSnapshot(): Promise<{
+  status: AiSeoReviewStatus;
+  items: AiSeoReviewItem[];
+}> {
+  const candidates = await listReviewCandidates();
+  const [status, items] = await Promise.all([
+    getAiSeoReviewStatusForCandidates(candidates),
+    listAiSeoReviewItemsForCandidates(candidates),
+  ]);
+  return { status, items };
 }
 
 export async function applyAiSeoReview(id: string): Promise<
