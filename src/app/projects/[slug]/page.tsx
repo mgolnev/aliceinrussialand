@@ -15,6 +15,7 @@ import { cookies } from "next/headers";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { PostBackTray } from "@/components/feed/PostBackTray";
+import { siteContentClass } from "@/lib/site-layout-styles";
 import { PostCard } from "@/components/feed/PostCard";
 import type { FeedCategory, FeedPost } from "@/types/feed";
 import { buildSeoDocumentTitle } from "@/lib/seo-document-title";
@@ -163,7 +164,7 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
         contactsLabel={settings.contactsLabel}
         stickyTray={<PostBackTray title={project.title} />}
       />
-      <main className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-10">
+      <main className={siteContentClass()}>
         <h1 className="sr-only">
           {project.title} — подборка работ {authorName}
         </h1>

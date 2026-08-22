@@ -853,7 +853,7 @@ export function ImageLightbox({
 
                 {carouselSlide.slide.caption ? (
                   <div className="shrink-0 px-2 pb-2 pt-1">
-                    <p className="mx-auto max-w-2xl rounded-2xl bg-black/40 p-3 text-center text-[15px] leading-relaxed text-white/90 backdrop-blur-md">
+                    <p className="mx-auto max-w-2xl rounded-site-panel bg-black/40 p-3 text-center text-[15px] leading-relaxed text-white/90 backdrop-blur-md">
                       {carouselSlide.slide.caption}
                     </p>
                   </div>

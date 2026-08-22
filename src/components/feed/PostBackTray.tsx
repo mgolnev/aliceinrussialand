@@ -1,12 +1,13 @@
 "use client";
 
 import { BackToFeedButton } from "./BackToFeedButton";
+import { headerTrayClass } from "@/lib/pill-tab-styles";
 
 /** Одна строка в липкой шапке страницы поста — как `FeedCategoryBar` variant="header". */
 export function PostBackTray({ title }: { title?: string }) {
   return (
     <nav
-      className="relative flex h-9 items-center gap-1 overflow-x-auto [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden"
+      className={headerTrayClass}
       aria-label="Навигация по посту"
     >
       <BackToFeedButton variant="pill" />

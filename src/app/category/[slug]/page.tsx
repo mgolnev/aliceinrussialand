@@ -11,6 +11,7 @@ import {
   parsePageNumber,
 } from "@/lib/seo-content";
 import { SiteChrome } from "@/components/site/SiteChrome";
+import { siteContentClass } from "@/lib/site-layout-styles";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SeoPostList } from "@/components/seo/SeoPostList";
 import { SeoPager } from "@/components/seo/SeoPager";
@@ -134,7 +135,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         avatarUrl={parseAvatarUrl(settings.avatarMediaPath)}
         contactsLabel={settings.contactsLabel}
       />
-      <main className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-8">
+      <main className={siteContentClass("compact")}>
         <Breadcrumbs
           siteUrl={siteUrl}
           className="mb-3"

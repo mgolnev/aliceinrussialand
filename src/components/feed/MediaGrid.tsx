@@ -377,8 +377,8 @@ export function MediaGrid({
 
   const frameClass =
     fullBleed && flushCardBottom
-      ? "overflow-hidden rounded-b-none rounded-t-[10px] ring-1 ring-black/[0.06] sm:rounded-t-xl"
-      : "overflow-hidden rounded-[10px] ring-1 ring-black/[0.06] sm:rounded-xl";
+      ? "overflow-hidden rounded-b-none rounded-t-site-media ring-1 ring-black/[0.06]"
+      : "overflow-hidden rounded-site-media ring-1 ring-black/[0.06]";
 
   const bleedOuter =
     "-mx-3 w-[calc(100%+1.5rem)] min-w-0 sm:-mx-5 sm:w-[calc(100%+2.5rem)]";

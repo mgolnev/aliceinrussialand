@@ -60,7 +60,7 @@ function SortableThumb({
     <div
       ref={setNodeRef}
       style={style}
-      className="group relative min-w-0 overflow-hidden rounded-xl border border-stone-200 bg-stone-50 "
+      className="group relative min-w-0 overflow-hidden rounded-site-control border border-stone-200 bg-stone-50 "
     >
       <button
         type="button"
@@ -184,7 +184,7 @@ export function FeedComposerPanel({
 
   const shellClass = isEmbedded
     ? `min-w-0 ${className}`
-    : `overflow-hidden rounded-[24px] border border-stone-200/80 bg-white sm:rounded-[30px] ${className}`;
+    : `overflow-hidden rounded-site-surface border border-stone-200/80 bg-white ${className}`;
 
   const innerClass = isEmbedded
     ? "min-w-0"
@@ -256,7 +256,7 @@ export function FeedComposerPanel({
           uploadQueue.isProcessing ||
           uploadQueue.doneCount > 0) ? (
           <div
-            className="mt-3 rounded-xl border border-stone-200 bg-stone-50/80 px-3 py-2.5 sm:px-3.5"
+            className="mt-3 rounded-site-control border border-stone-200 bg-stone-50/80 px-3 py-2.5 sm:px-3.5"
             role="region"
             aria-label="Фотографии"
           >
@@ -397,7 +397,7 @@ export function FeedComposerPanel({
                 >
                   <div
                     role="menu"
-                    className="w-full rounded-t-2xl border border-stone-200/80 bg-white px-4 pt-4 pb-[max(1.75rem,calc(env(safe-area-inset-bottom,0px)+1.25rem))] sm:max-w-sm sm:rounded-2xl sm:p-3 sm:pb-3"
+                    className="w-full rounded-t-site-panel border border-stone-200/80 bg-white px-4 pt-4 pb-[max(1.75rem,calc(env(safe-area-inset-bottom,0px)+1.25rem))] sm:max-w-sm sm:rounded-site-panel sm:p-3 sm:pb-3"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <p className="pb-3 text-xs font-semibold uppercase tracking-wide text-stone-400 sm:px-0 sm:pb-2">
@@ -408,7 +408,7 @@ export function FeedComposerPanel({
                         type="button"
                         role="menuitem"
                         disabled={uploadPhotoBusy}
-                        className="flex w-full items-center gap-3 rounded-xl px-3 py-4 text-left text-sm font-medium text-stone-800 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50 sm:py-3"
+                        className="flex w-full items-center gap-3 rounded-site-control px-3 py-4 text-left text-sm font-medium text-stone-800 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50 sm:py-3"
                         onClick={() => {
                           setQuickMenuOpen(false);
                           fileInputRef.current?.click();
@@ -429,7 +429,7 @@ export function FeedComposerPanel({
                           type="button"
                           role="menuitem"
                           disabled={uploadBlocksSubmit}
-                          className="flex w-full items-center gap-3 rounded-xl px-3 py-4 text-left text-sm font-medium text-stone-800 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50 sm:py-3"
+                          className="flex w-full items-center gap-3 rounded-site-control px-3 py-4 text-left text-sm font-medium text-stone-800 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50 sm:py-3"
                           onClick={() => {
                             setQuickMenuOpen(false);
                             onRequestTelegramImport();
@@ -504,7 +504,7 @@ export function FeedComposerPanel({
             ref={messageRef}
             role="alert"
             aria-live="assertive"
-            className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-stone-50 px-3 py-2 text-sm text-stone-600 sm:px-4"
+            className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-site-control bg-stone-50 px-3 py-2 text-sm text-stone-600 sm:px-4"
           >
             <span>{message}</span>
             {publishedUrl ? (
@@ -520,7 +520,7 @@ export function FeedComposerPanel({
 
         {images.length ? (
           <div className="mt-3 min-w-0 space-y-2.5">
-            <div className="min-w-0 rounded-2xl border border-stone-100 bg-stone-50/30 p-2">
+            <div className="min-w-0 rounded-site-panel border border-stone-100 bg-stone-50/30 p-2">
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -547,7 +547,7 @@ export function FeedComposerPanel({
                           : "Добавить ещё фото"
                       }
                       aria-busy={uploadPhotoBusy}
-                      className="flex aspect-square min-w-0 items-center justify-center rounded-xl border-2 border-dashed border-stone-200 text-stone-400 transition-colors hover:border-stone-300 hover:text-stone-500 active:scale-95"
+                      className="flex aspect-square min-w-0 items-center justify-center rounded-site-control border-2 border-dashed border-stone-200 text-stone-400 transition-colors hover:border-stone-300 hover:text-stone-500 active:scale-95"
                     >
                       {uploadPhotoBusy ? (
                         <Loader2

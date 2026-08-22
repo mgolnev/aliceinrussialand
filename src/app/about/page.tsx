@@ -10,6 +10,7 @@ import {
 import { absoluteUrl } from "@/lib/absolute-url";
 import { excerptForMetaDescription } from "@/lib/meta-excerpt";
 import { SiteChrome } from "@/components/site/SiteChrome";
+import { siteContentClass } from "@/lib/site-layout-styles";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SocialLinksSection } from "@/components/site/SocialLinksSection";
 import { resolveSiteOrigin } from "@/lib/site-origin";
@@ -139,7 +140,7 @@ export default async function AboutPage() {
         contactsLabel={s.contactsLabel}
         stickyTray={<PostBackTray />}
       />
-      <div className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-10">
+      <div className={siteContentClass()}>
         <article className="mx-auto max-w-2xl">
           <Breadcrumbs
             siteUrl={siteUrl}
@@ -158,7 +159,7 @@ export default async function AboutPage() {
             <img
               src={aboutPhotoUrl}
               alt={s.displayName}
-              className="mt-6 w-full rounded-2xl object-cover "
+              className="mt-6 w-full rounded-site-media object-cover "
             />
           ) : null}
           {s.bio ? (

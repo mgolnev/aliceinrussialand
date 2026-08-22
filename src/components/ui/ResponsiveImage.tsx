@@ -58,7 +58,7 @@ export function ResponsiveImage({
         width={iw}
         height={ih}
         sizes="(max-width: 640px) 100vw, (max-width: 1100px) 92vw, 720px"
-        className={`max-w-full min-w-0 h-auto w-full rounded-[22px] bg-[#f4efe8] object-contain ring-1 ring-stone-200/70 ${className}`}
+        className={`max-w-full min-w-0 h-auto w-full rounded-site-media bg-[#f4efe8] object-contain ring-1 ring-stone-200/70 ${className}`}
         priority={priority}
         fetchPriority={priority ? "high" : "auto"}
         decoding="async"

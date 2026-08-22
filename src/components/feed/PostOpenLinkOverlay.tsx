@@ -19,7 +19,7 @@ export function PostOpenLinkOverlay({
       href={href}
       prefetch
       aria-label={ariaLabel}
-      className="absolute inset-0 z-0 rounded-[24px] motion-safe:transition-colors motion-safe:duration-150 motion-safe:active:bg-stone-900/[0.06] sm:rounded-[30px]"
+      className="absolute inset-0 z-0 rounded-site-surface motion-safe:transition-colors motion-safe:duration-150 motion-safe:active:bg-stone-900/[0.06]"
     >
       <LinkPendingBackdrop />
     </Link>

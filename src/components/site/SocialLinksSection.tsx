@@ -47,7 +47,7 @@ export function SocialLinksSection({
                     ? "noopener noreferrer me"
                     : "noopener noreferrer"
                 }
-                className="flex items-center gap-4 rounded-2xl border border-stone-200/90 bg-white px-4 py-3.5 transition hover:border-stone-300 hover:bg-stone-50/80 active:scale-[0.99]"
+                className="flex items-center gap-4 rounded-site-panel border border-stone-200/90 bg-white px-4 py-3.5 transition hover:border-stone-300 hover:bg-stone-50/80 active:scale-[0.99]"
               >
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full ring-1 ring-stone-200/80">
                   <SocialBrandIcon kind={s.kind} size={36} />
@@ -65,7 +65,7 @@ export function SocialLinksSection({
           ))}
         </ul>
       ) : (
-        <p className="mt-6 rounded-2xl border border-dashed border-stone-200 bg-stone-50/50 px-4 py-6 text-center text-sm text-stone-500">
+        <p className="mt-6 rounded-site-panel border border-dashed border-stone-200 bg-stone-50/50 px-4 py-6 text-center text-sm text-stone-500">
           Ссылки на соцсети и почту можно добавить в админке → Настройки.
         </p>
       )}

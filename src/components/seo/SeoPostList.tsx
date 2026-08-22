@@ -17,12 +17,12 @@ function formatDate(iso: Date | null): string {
 }
 
 const cardClass =
-  "block min-w-0 rounded-[24px] border border-stone-200/80 bg-white/95 px-4 py-3 backdrop-blur-sm transition-[border-color,background-color] hover:border-stone-300/90 hover:bg-white sm:rounded-[28px] sm:px-5 sm:py-4";
+  "block min-w-0 rounded-site-surface border border-stone-200/80 bg-white/95 px-4 py-3 backdrop-blur-sm transition-[border-color,background-color] hover:border-stone-300/90 hover:bg-white sm:px-5 sm:py-4";
 
 export function SeoPostList({ items, emptyText }: Props) {
   if (items.length === 0) {
     return (
-      <p className="rounded-2xl border border-stone-200/80 bg-white/90 px-4 py-6 text-sm text-stone-600 ">
+      <p className="rounded-site-panel border border-stone-200/80 bg-white/90 px-4 py-6 text-sm text-stone-600 ">
         {emptyText}
       </p>
     );

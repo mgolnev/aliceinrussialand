@@ -139,7 +139,7 @@ export function RichTextEditor({ value, onChange, placeholder, disabled }: Props
 
       {linkOpen ? (
         <form
-          className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-2.5 py-2"
+          className="mt-2 flex flex-wrap items-center gap-2 rounded-site-control border border-stone-200 bg-stone-50 px-2.5 py-2"
           onSubmit={(event) => { event.preventDefault(); createLink(); }}
           aria-label="Адрес ссылки"
         >

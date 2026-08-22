@@ -3,12 +3,33 @@
 :root {
   --background: #f8f5f0;
   --foreground: #25201a;
+  /*
+    Общая геометрия публичного интерфейса. Значения меняются здесь, а компоненты
+    используют семантические `rounded-site-*` вместо локальных px-радиусов.
+  */
+  --site-radius-control: 0.75rem;
+  --site-radius-panel: 1rem;
+  --site-radius-dialog: 1.375rem;
+  --site-radius-media: 0.75rem;
+  --site-radius-surface: 1.5rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-body);
+  --radius-site-control: var(--site-radius-control);
+  --radius-site-panel: var(--site-radius-panel);
+  --radius-site-dialog: var(--site-radius-dialog);
+  --radius-site-media: var(--site-radius-media);
+  --radius-site-surface: var(--site-radius-surface);
+}
+
+@media (min-width: 640px) {
+  :root {
+    --site-radius-media: 0.875rem;
+    --site-radius-surface: 1.875rem;
+  }
 }
 
 body {

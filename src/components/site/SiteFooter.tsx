@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { siteFrameClass } from "@/lib/site-layout-styles";
 import { getAuthorName, getSiteSettings } from "@/lib/site";
 import { listSeoCategories } from "@/lib/seo-content";
 import { listPublishedProjectLinks } from "@/lib/projects";
@@ -14,7 +15,7 @@ export async function SiteFooter() {
 
   return (
     <footer className="mt-14 border-t border-stone-200/70 bg-white/65 py-10 backdrop-blur-sm">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-3 sm:px-5">
+      <div className={`${siteFrameClass} flex flex-col gap-4`}>
         {footerCategories.length > 0 ? (
           <nav aria-label="Разделы сайта" className="text-sm text-stone-600">
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-stone-500">

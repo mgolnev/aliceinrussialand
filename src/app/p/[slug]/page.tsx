@@ -15,6 +15,7 @@ import { stripEmojiForSeo } from "@/lib/seo-sanitize";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { PostBackTray } from "@/components/feed/PostBackTray";
+import { siteContentClass } from "@/lib/site-layout-styles";
 import { PostCard } from "@/components/feed/PostCard";
 import { PostReadNextCarousel } from "@/components/feed/PostReadNextCarousel";
 import type { FeedCategory, FeedPost } from "@/types/feed";
@@ -201,7 +202,7 @@ export default async function PostPage({ params }: PageProps) {
         contactsLabel={settings.contactsLabel}
         stickyTray={<PostBackTray />}
       />
-      <div className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-10">
+      <div className={siteContentClass()}>
         <h1 className="sr-only">{articleHeadline}</h1>
         <PostCard
           post={feedPost}

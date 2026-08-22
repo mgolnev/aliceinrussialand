@@ -1,7 +1,7 @@
 "use client";
 
 import type { FeedCategory } from "@/types/feed";
-import { pillTabClass } from "@/lib/pill-tab-styles";
+import { headerTrayClass, pillTabClass } from "@/lib/pill-tab-styles";
 
 type Props = {
   categories: FeedCategory[];
@@ -14,8 +14,7 @@ type Props = {
 const navClass = {
   default:
     "mb-4 flex gap-1 overflow-x-auto pb-1 pt-0.5 [scrollbar-width:none] sm:mb-5 sm:gap-1.5 [&::-webkit-scrollbar]:hidden",
-  header:
-    "flex gap-1 overflow-x-auto pb-0.5 pt-0.5 [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden",
+  header: headerTrayClass,
 } as const;
 
 export function FeedCategoryBar({

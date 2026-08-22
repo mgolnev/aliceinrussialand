@@ -7,6 +7,7 @@ import { FeedCategoryBar } from "./FeedCategoryBar";
 import { FeedPostsBody } from "./FeedPostsBody";
 import { useFeedPage } from "./use-feed-page";
 import type { FeedCategory, FeedPost } from "@/types/feed";
+import { siteContentClass } from "@/lib/site-layout-styles";
 
 type Props = {
   displayName: string;
@@ -62,26 +63,24 @@ export function HomePageClient({
           ) : undefined
         }
       />
-      <div className="mx-auto min-w-0 max-w-3xl px-3 py-4 sm:px-5 sm:py-10">
+      <div className={siteContentClass()}>
         {canManage ? <QuickComposer categories={categories} /> : null}
-        <div className="mt-4 sm:mt-0">
-          <FeedPostsBody
-            items={feed.items}
-            next={feed.next}
-            loading={feed.loading}
-            feedRestorePhase={feed.feedRestorePhase}
-            categoryLoading={feed.categoryLoading}
-            loadMore={feed.loadMore}
-            categorySlug={feed.categorySlug}
-            categories={categories}
-            plausibleDomain={plausibleDomain}
-            yandexMetrikaId={yandexMetrikaId}
-            siteUrl={siteUrl}
-            canManage={canManage}
-            empty={feed.empty}
-            sentinelRef={feed.sentinelRef}
-          />
-        </div>
+        <FeedPostsBody
+          items={feed.items}
+          next={feed.next}
+          loading={feed.loading}
+          feedRestorePhase={feed.feedRestorePhase}
+          categoryLoading={feed.categoryLoading}
+          loadMore={feed.loadMore}
+          categorySlug={feed.categorySlug}
+          categories={categories}
+          plausibleDomain={plausibleDomain}
+          yandexMetrikaId={yandexMetrikaId}
+          siteUrl={siteUrl}
+          canManage={canManage}
+          empty={feed.empty}
+          sentinelRef={feed.sentinelRef}
+        />
       </div>
     </>
   );

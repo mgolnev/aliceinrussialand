@@ -88,7 +88,7 @@ export function WatchNextContinuation({
           Смотреть дальше
         </h2>
         <section
-          className="overflow-hidden rounded-2xl border border-stone-200/70 bg-white/50"
+          className="overflow-hidden rounded-site-panel border border-stone-200/70 bg-white/50"
           aria-busy="true"
           aria-labelledby={sectionHeadingId}
         >
@@ -129,14 +129,14 @@ export function WatchNextContinuation({
         Смотреть дальше
       </h2>
       <section
-        className="overflow-hidden rounded-2xl border border-stone-200/80 bg-[#fffdf9]/90 "
+        className="overflow-hidden rounded-site-panel border border-stone-200/80 bg-[#fffdf9]/90 "
         aria-labelledby={sectionHeadingId}
       >
         {featured ? (
           <Link
             href={`/p/${featured.slug}`}
             aria-label={`Продолжить смотреть: ${featured.preview.slice(0, 120)}`}
-            className="group relative flex h-40 min-h-0 w-full shrink-0 overflow-hidden rounded-t-2xl border-b border-stone-200/80 bg-white outline-none ring-stone-400/30 transition-[background-color,border-color,transform] duration-200 hover:border-stone-300/90 hover:bg-[#fffdfb] focus-visible:ring-2 focus-visible:ring-inset motion-safe:active:scale-[0.99] motion-safe:active:bg-stone-50/95 sm:h-44"
+            className="group relative flex h-40 min-h-0 w-full shrink-0 overflow-hidden rounded-t-site-panel border-b border-stone-200/80 bg-white outline-none ring-stone-400/30 transition-[background-color,border-color,transform] duration-200 hover:border-stone-300/90 hover:bg-[#fffdfb] focus-visible:ring-2 focus-visible:ring-inset motion-safe:active:scale-[0.99] motion-safe:active:bg-stone-50/95 sm:h-44"
           >
             <LinkPendingBackdrop />
             <div className="relative z-[1] h-full w-[60%] max-w-[60%] shrink-0 overflow-hidden bg-[#ede8e0]">

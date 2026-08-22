@@ -102,7 +102,7 @@ function EditorialWideBandCard({
   return (
     <Link
       href={`/p/${item.slug}`}
-      className="group relative block overflow-hidden rounded-3xl bg-[#fffdf9]/90 ring-1 ring-stone-200/60"
+      className="group relative block overflow-hidden rounded-site-surface bg-[#fffdf9]/90 ring-1 ring-stone-200/60"
       aria-label={`Открыть: ${item.title}`}
     >
       <LinkPendingBackdrop />
@@ -171,7 +171,7 @@ function HeroStory({
   return (
     <Link
       href={`/p/${item.slug}`}
-      className="group relative block overflow-hidden rounded-3xl bg-[#fffdf9]/90 ring-1 ring-stone-200/60"
+      className="group relative block overflow-hidden rounded-site-surface bg-[#fffdf9]/90 ring-1 ring-stone-200/60"
       aria-label={`Следующая история: ${item.title}`}
     >
       <LinkPendingBackdrop />
@@ -268,7 +268,7 @@ function StoryCard({
     return (
       <Link
         href={`/p/${item.slug}`}
-        className="group relative block rounded-3xl bg-stone-50/70 px-4 py-4 ring-1 ring-stone-200/70"
+        className="group relative block rounded-site-surface bg-stone-50/70 px-4 py-4 ring-1 ring-stone-200/70"
         aria-label={`Открыть пост: ${item.title}`}
       >
         <LinkPendingBackdrop />
@@ -293,7 +293,7 @@ function StoryCard({
     return (
       <Link
         href={`/p/${item.slug}`}
-        className={`group relative block overflow-hidden rounded-3xl bg-white/70 ring-1 ring-stone-200/70 ${
+        className={`group relative block overflow-hidden rounded-site-surface bg-white/70 ring-1 ring-stone-200/70 ${
           altSize ? "p-[1px]" : "p-[1px]"
         }`}
         aria-label={`Открыть визуал: ${item.title}`}
@@ -331,7 +331,7 @@ function StoryCard({
     return (
       <Link
         href={`/p/${item.slug}`}
-        className="group relative block rounded-3xl bg-[#fffdf9]/85 px-4 py-4 ring-1 ring-stone-200/70"
+        className="group relative block rounded-site-surface bg-[#fffdf9]/85 px-4 py-4 ring-1 ring-stone-200/70"
         aria-label={`Открыть заметку: ${item.title}`}
       >
         <LinkPendingBackdrop />
@@ -357,7 +357,7 @@ function StoryCard({
     return (
       <Link
         href={`/p/${item.slug}`}
-        className="group block overflow-hidden rounded-3xl bg-white/60 ring-1 ring-stone-200/70"
+        className="group block overflow-hidden rounded-site-surface bg-white/60 ring-1 ring-stone-200/70"
         aria-label={`Открыть пост: ${item.title}`}
       >
         <LinkPendingBackdrop />
@@ -393,7 +393,7 @@ function StoryCard({
   return altSize ? (
     <Link
       href={`/p/${item.slug}`}
-      className="group block overflow-hidden rounded-3xl bg-white/60 ring-1 ring-stone-200/70"
+      className="group block overflow-hidden rounded-site-surface bg-white/60 ring-1 ring-stone-200/70"
       aria-label={`Открыть пост: ${item.title}`}
     >
       <LinkPendingBackdrop />
@@ -427,7 +427,7 @@ function StoryCard({
   ) : (
     <Link
       href={`/p/${item.slug}`}
-      className="group block overflow-hidden rounded-3xl bg-white/60 ring-1 ring-stone-200/70"
+      className="group block overflow-hidden rounded-site-surface bg-white/60 ring-1 ring-stone-200/70"
       aria-label={`Открыть пост: ${item.title}`}
     >
       <LinkPendingBackdrop />

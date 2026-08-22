@@ -3,7 +3,10 @@
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import { chromePlaqueButtonClass } from "@/lib/pill-tab-styles";
+import {
+  chromePlaqueButtonClass,
+  pillTabClass,
+} from "@/lib/pill-tab-styles";
 
 type Variant = "pill" | "plaque";
 
@@ -28,7 +31,7 @@ export function BackToFeedButton({ variant }: { variant: Variant }) {
       <button
         type="button"
         onClick={goBack}
-        className="relative inline-flex h-9 shrink-0 items-center gap-0.5 rounded-xl border border-stone-200 bg-white px-3 py-0 text-[13px] font-semibold text-stone-900 transition-colors hover:border-stone-300 hover:bg-stone-50 active:scale-[0.97] sm:text-sm"
+        className={`relative inline-flex items-center gap-0.5 hover:border-stone-300 hover:bg-stone-50 active:scale-[0.97] ${pillTabClass(true)}`}
         aria-label="Назад"
       >
         <ChevronLeft

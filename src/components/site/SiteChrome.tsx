@@ -10,6 +10,7 @@ import {
   removeRestoreInFlightFromStorage,
 } from "@/lib/feed-scroll";
 import { clearNavigationState } from "@/lib/navigation-state";
+import { siteFrameClass } from "@/lib/site-layout-styles";
 
 type Props = {
   displayName: string;
@@ -48,7 +49,7 @@ export function SiteChrome({
       id="site-chrome-root"
       className="sticky top-0 z-20 w-full min-w-0 border-b border-stone-200/70 bg-[#fbfaf7]/90 backdrop-blur-xl"
     >
-      <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-3 sm:gap-4 sm:px-5">
+      <div className={`${siteFrameClass} flex items-center gap-3 py-3 sm:gap-4`}>
         <Link
           href="/"
           prefetch
@@ -107,7 +108,7 @@ export function SiteChrome({
         )}
       </div>
       {stickyTray != null ? (
-        <div className="mx-auto max-w-3xl px-3 pb-2.5 pt-0 sm:px-5">
+        <div className={`${siteFrameClass} pb-2.5 pt-0`}>
           {stickyTray}
         </div>
       ) : null}

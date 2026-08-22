@@ -64,7 +64,7 @@ const FeedComposerPanelLazy = dynamic(
     ssr: false,
     loading: () => (
       <div
-        className="mx-3 mb-3 h-40 animate-pulse rounded-2xl bg-stone-100 sm:mx-5"
+        className="mx-3 mb-3 h-40 animate-pulse rounded-site-panel bg-stone-100 sm:mx-5"
         aria-hidden
       />
     ),
@@ -693,12 +693,13 @@ export function PostCard({
     standaloneTitle ||
     post.body.trim().slice(0, 80) ||
     "Открыть пост";
+  /* Дата, категория и меню сохраняют одну точку привязки в ленте и standalone. */
   const articlePad =
     canManage && editMode
       ? "p-0"
-      : feedMediaGrid
-        ? "px-3 sm:px-5 pt-3 pb-0 sm:pt-4"
-        : "px-3 sm:px-5 py-3 sm:py-5";
+      : `px-3 pt-3 sm:px-5 sm:pt-4 ${
+          feedMediaGrid ? "pb-0" : "pb-3 sm:pb-5"
+        }`;
 
   /** В режиме редактирования `overflow-hidden` на iOS ломает scrollIntoView и клавиатуру. */
   const articleClip =
@@ -711,7 +712,7 @@ export function PostCard({
   return (
     <>
       <article
-        className={`relative min-w-0 scroll-mt-24 ${articleClip} rounded-[24px] border border-stone-200/80 bg-white/95 backdrop-blur-sm sm:rounded-[30px] ${articlePad}`}
+        className={`relative min-w-0 scroll-mt-24 ${articleClip} rounded-site-surface border border-stone-200/80 bg-white/95 backdrop-blur-sm ${articlePad}`}
       >
         {showPostLinkOverlay ? (
           <PostOpenLinkOverlay href={postUrl} ariaLabel={openPostAria} />
@@ -819,7 +820,7 @@ export function PostCard({
                   ? createPortal(
                       <div
                         ref={menuPanelRef}
-                        className="fixed z-[100] w-56 overflow-hidden rounded-2xl border border-stone-200 bg-white p-1.5 animate-in fade-in zoom-in-95 duration-100"
+                        className="fixed z-[100] w-56 overflow-hidden rounded-site-panel border border-stone-200 bg-white p-1.5 animate-in fade-in zoom-in-95 duration-100"
                         style={{
                           top: menuPos.top,
                           right: menuPos.right,
@@ -828,7 +829,7 @@ export function PostCard({
                       >
                         <button
                           type="button"
-                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100"
+                          className="flex w-full items-center gap-2.5 rounded-site-control px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100"
                           role="menuitem"
                           onClick={() => {
                             setEditMessage(null);
@@ -842,7 +843,7 @@ export function PostCard({
                         </button>
                         <button
                           type="button"
-                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
+                          className="flex w-full items-center gap-2.5 rounded-site-control px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
                           role="menuitem"
                           disabled={working || projectLinkLoading}
                           onClick={() => void startProjectLinking()}
@@ -853,7 +854,7 @@ export function PostCard({
                         <button
                           type="button"
                           disabled={working}
-                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
+                          className="flex w-full items-center gap-2.5 rounded-site-control px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
                           role="menuitem"
                           onClick={() => void setDraft()}
                         >
@@ -863,7 +864,7 @@ export function PostCard({
                         <button
                           type="button"
                           disabled={working}
-                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
+                          className="flex w-full items-center gap-2.5 rounded-site-control px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
                           role="menuitem"
                           onClick={() => void togglePin()}
                         >
@@ -878,7 +879,7 @@ export function PostCard({
                           <button
                             type="button"
                             disabled={working}
-                            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
+                            className="flex w-full items-center gap-2.5 rounded-site-control px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100 disabled:opacity-50"
                             role="menuitem"
                             onClick={() => void toggleShowInAll()}
                           >
@@ -895,7 +896,7 @@ export function PostCard({
                         <button
                           type="button"
                           disabled={working}
-                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-red-600 hover:bg-red-50 active:bg-red-100 disabled:opacity-50"
+                          className="flex w-full items-center gap-2.5 rounded-site-control px-3 py-2 text-left text-red-600 hover:bg-red-50 active:bg-red-100 disabled:opacity-50"
                           role="menuitem"
                           onClick={() => void deletePost()}
                         >
@@ -906,7 +907,7 @@ export function PostCard({
                         {!standalone ? (
                           <Link
                             href={postUrl}
-                            className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-stone-700 hover:bg-stone-50 active:bg-stone-100"
+                            className="flex items-center gap-2.5 rounded-site-control px-3 py-2 text-stone-700 hover:bg-stone-50 active:bg-stone-100"
                             onClick={() => setMenuOpen(false)}
                             role="menuitem"
                           >
@@ -916,7 +917,7 @@ export function PostCard({
                         ) : null}
                         <button
                           type="button"
-                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100"
+                          className="flex w-full items-center gap-2.5 rounded-site-control px-3 py-2 text-left text-stone-700 hover:bg-stone-50 active:bg-stone-100"
                           role="menuitem"
                           onClick={() => {
                             sharePost();
@@ -1000,7 +1001,7 @@ export function PostCard({
             {canManage && projectLinkMode ? (
               <div className="mb-3 sm:mb-4">
                 {projectLinkLoading ? (
-                  <div className="h-28 animate-pulse rounded-2xl bg-stone-100" />
+                  <div className="h-28 animate-pulse rounded-site-panel bg-stone-100" />
                 ) : (
                   <PostProjectLinkEditor
                     post={{ id: post.id, title: post.title, slug: post.slug }}
@@ -1067,7 +1068,7 @@ export function PostCard({
                   <button
                     key={im.id}
                     type="button"
-                    className="block w-full min-w-0 overflow-hidden rounded-2xl text-left transition active:scale-[0.98]"
+                    className="block w-full min-w-0 overflow-hidden rounded-site-media text-left transition active:scale-[0.98]"
                     onClick={() => setViewerIndex(i)}
                   >
                     <ResponsiveImage
@@ -1077,7 +1078,7 @@ export function PostCard({
                       width={im.width}
                       height={im.height}
                       priority={prioritizeMedia && i === 0}
-                      className="rounded-xl sm:rounded-[14px]"
+                      className="rounded-site-media"
                     />
                   </button>
                 ))}

@@ -51,7 +51,7 @@ export function FeedPostsBody({
   if (empty) {
     return (
       <div className="min-w-0 space-y-6">
-        <p className="rounded-2xl border border-dashed border-stone-300 bg-white/60 px-6 py-12 text-center text-stone-600">
+        <p className="rounded-site-panel border border-dashed border-stone-300 bg-white/60 px-6 py-12 text-center text-stone-600">
           {categorySlug
             ? "В этой категории пока нет постов."
             : "Пока нет опубликованных постов. Зайдите в админку и создайте первый."}

@@ -373,7 +373,7 @@ export function QuickComposer({ categories }: { categories: FeedCategory[] }) {
           }}
         >
           <div
-            className="w-full max-w-md rounded-t-2xl border border-stone-200 bg-white p-5 sm:rounded-2xl"
+            className="w-full max-w-md rounded-t-site-panel border border-stone-200 bg-white p-5 sm:rounded-site-panel"
             onClick={(e) => e.stopPropagation()}
           >
             <h3
