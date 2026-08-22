@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/favicon.ico",
+        destination: "/icon",
+        permanent: true,
+      },
+    ];
+  },
   // Нужен self-hosted (Docker) деплой: Vercel по-прежнему поддерживается.
   output: "standalone",
   // Медиа копируются отдельным Docker-слоем. Эти локальные каталоги не должны
