@@ -13,6 +13,7 @@ import { toSlug } from "@/lib/slug";
 import { isSystemPostTitle } from "@/lib/post-text";
 import { excerptForMetaDescription } from "@/lib/meta-excerpt";
 import { invalidatePublicFeedCache } from "@/lib/cache-tags";
+import { touchPostAfterImageChange } from "@/lib/post-image-change";
 
 const JOB_TYPE = {
   POST_SEO: "POST_SEO",
@@ -712,6 +713,7 @@ async function applyImageAlt(
       where: { id: current.id },
       data: { alt: generated.alt, altSource: "AI" },
     });
+    await touchPostAfterImageChange(tx, current.postId);
   });
   return JOB_STATUS.DONE;
 }

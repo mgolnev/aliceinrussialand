@@ -15,6 +15,7 @@ import {
   enqueuePublishedPostAiSeo,
   processAiSeoJobs,
 } from "@/lib/ai-seo-jobs";
+import { touchPostAfterImageChange } from "@/lib/post-image-change";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -159,6 +160,7 @@ export async function POST(req: Request) {
           /* пропускаем битые изображения */
         }
       }
+      if (order > 0) await touchPostAfterImageChange(prisma, post.id);
 
       created.push(post.id);
       if (publish) published.push(post.id);

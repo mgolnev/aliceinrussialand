@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { deleteImageFiles } from "@/lib/image-pipeline";
+import { touchPostAfterImageChange } from "@/lib/post-image-change";
 
 type Ctx = { params: Promise<{ imageId: string }> };
 
@@ -12,6 +13,9 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   }
 
   await deleteImageFiles(img.postId, img.id);
-  await prisma.postImage.delete({ where: { id: imageId } });
+  await prisma.$transaction(async (tx) => {
+    await tx.postImage.delete({ where: { id: imageId } });
+    await touchPostAfterImageChange(tx, img.postId);
+  });
   return NextResponse.json({ ok: true });
 }

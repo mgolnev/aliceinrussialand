@@ -6,6 +6,7 @@ import { toSlug } from "@/lib/slug";
 import { derivePostTitle } from "@/lib/post-text";
 import { excerptForMetaDescription } from "@/lib/meta-excerpt";
 import { normalizeSourceUrl } from "@/lib/social-import/normalize";
+import { touchPostAfterImageChange } from "@/lib/post-image-change";
 import type {
   SocialImportItem,
   SocialPlatform,
@@ -195,6 +196,7 @@ export async function importSocialItems(args: ImportItemsArgs): Promise<{
         // Не прерываем импорт поста из-за битого отдельного изображения.
       }
     }
+    if (order > 0) await touchPostAfterImageChange(prisma, post.id);
 
     createdIds.push(post.id);
   }

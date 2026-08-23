@@ -8,6 +8,7 @@ import {
   enqueuePublishedPostAiSeo,
   processAiSeoJobs,
 } from "@/lib/ai-seo-jobs";
+import { touchPostAfterImageChange } from "@/lib/post-image-change";
 
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -66,22 +67,25 @@ export async function POST(req: Request) {
   }
   const { originalExt, width, height, variants } = processed;
 
-  const maxOrder = await prisma.postImage.aggregate({
-    where: { postId },
-    _max: { sortOrder: true },
-  });
-  const sortOrder = (maxOrder._max.sortOrder ?? -1) + 1;
-
-  const row = await prisma.postImage.create({
-    data: {
-      id: imageId,
-      postId,
-      sortOrder,
-      originalExt,
-      width,
-      height,
-      variantsJson: JSON.stringify(variants),
-    },
+  const row = await prisma.$transaction(async (tx) => {
+    const maxOrder = await tx.postImage.aggregate({
+      where: { postId },
+      _max: { sortOrder: true },
+    });
+    const sortOrder = (maxOrder._max.sortOrder ?? -1) + 1;
+    const created = await tx.postImage.create({
+      data: {
+        id: imageId,
+        postId,
+        sortOrder,
+        originalExt,
+        width,
+        height,
+        variantsJson: JSON.stringify(variants),
+      },
+    });
+    await touchPostAfterImageChange(tx, postId);
+    return created;
   });
 
   if (post.status === "PUBLISHED") {

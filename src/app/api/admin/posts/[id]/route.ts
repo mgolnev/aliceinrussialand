@@ -15,6 +15,7 @@ import {
   enqueuePublishedPostAiSeo,
   processAiSeoJobs,
 } from "@/lib/ai-seo-jobs";
+import { touchPostAfterImageChange } from "@/lib/post-image-change";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -286,8 +287,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
       const existingImages = new Map(
         existing.images.map((image) => [image.id, image]),
       );
-      await prisma.$transaction(
-        imagesPayload.map((row) => {
+      await prisma.$transaction(async (tx) => {
+        for (const row of imagesPayload) {
           const previous = existingImages.get(row.id);
           const submittedAlt = typeof row.alt === "string" ? row.alt : undefined;
           const altSource =
@@ -298,7 +299,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
                   ? "MANUAL"
                   : "AUTO"
                 : undefined;
-          return prisma.postImage.update({
+          await tx.postImage.update({
             where: { id: row.id, postId: id },
             data: {
               sortOrder: row.sortOrder,
@@ -308,8 +309,9 @@ export async function PATCH(req: Request, ctx: Ctx) {
               altSource,
             },
           });
-        }),
-      );
+        }
+        await touchPostAfterImageChange(tx, id);
+      });
     }
 
     if (requestedProjectIds !== undefined) {

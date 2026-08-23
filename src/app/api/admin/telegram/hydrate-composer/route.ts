@@ -9,6 +9,7 @@ import { downloadTelegramImage } from "@/lib/telegram-public";
 import { derivePostTitle } from "@/lib/post-text";
 import { normalizeTelegramPostUrl } from "@/lib/telegram-post-url";
 import { parseVariants } from "@/lib/posts-query";
+import { touchPostAfterImageChange } from "@/lib/post-image-change";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -175,6 +176,7 @@ export async function POST(req: Request) {
         /* пропускаем битые изображения */
       }
     }
+    if (order > 0) await touchPostAfterImageChange(prisma, postId);
 
     const images = await prisma.postImage.findMany({
       where: { postId },

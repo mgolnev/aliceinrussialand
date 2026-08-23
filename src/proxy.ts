@@ -109,6 +109,6 @@ export const config = {
     /*
      * Как раньше: весь документный трафик; дорогой вызов Supabase делаем только по policy внутри proxy.
      */
-      "/((?!_next/static|_next/image|_next/webpack-hmr|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+      "/((?!_next/static|_next/image|_next/webpack-hmr|favicon.ico|robots.txt|sitemap.xml|sitemaps/.*\\.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
