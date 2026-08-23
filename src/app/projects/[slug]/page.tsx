@@ -7,8 +7,8 @@ import { excerptForMetaDescription } from "@/lib/meta-excerpt";
 import {
   getPublishedProjectBySlugCached,
   getPublishedProjectPostsPageCached,
+  projectPostToFeedPost,
 } from "@/lib/projects";
-import { parseVariants } from "@/lib/posts-query";
 import { listFeedCategories } from "@/lib/feed-server";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/session";
 import { cookies } from "next/headers";
@@ -16,11 +16,10 @@ import { SiteChrome } from "@/components/site/SiteChrome";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { PostBackTray } from "@/components/feed/PostBackTray";
 import { siteContentClass } from "@/lib/site-layout-styles";
-import { PostCard } from "@/components/feed/PostCard";
 import type { FeedCategory, FeedPost } from "@/types/feed";
 import { buildSeoDocumentTitle } from "@/lib/seo-document-title";
 import { parsePageNumber } from "@/lib/seo-content";
-import { SeoPager } from "@/components/seo/SeoPager";
+import { ProjectPostsFeed } from "@/components/feed/ProjectPostsFeed";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -114,27 +113,11 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
   const url = absoluteUrl(siteUrl, path);
   const description = projectDescription(project.description, project.title);
   const authorName = getAuthorName(settings);
-  const feedPosts: FeedPost[] = postsPage.items.map((post) => ({
-    id: post.id,
-    slug: post.slug,
-    title: post.title,
-    body: post.body,
-    displayMode: post.displayMode === "STACK" ? "STACK" : "GRID",
-    publishedAt: post.publishedAt?.toISOString() ?? null,
-    pinned: post.pinned,
-    showInAll: post.showInAll,
-    categoryId: post.categoryId,
-    category: post.category,
-    projects: [],
-    images: post.images.map((image) => ({
-      id: image.id,
-      caption: image.caption,
-      alt: image.alt,
-      variants: parseVariants(image.variantsJson),
-      width: image.width,
-      height: image.height,
-    })),
-  }));
+  const feedPosts: FeedPost[] = postsPage.items.map(projectPostToFeedPost);
+  const nextPage =
+    postsPage.page * postsPage.pageSize < postsPage.total
+      ? postsPage.page + 1
+      : null;
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -168,25 +151,16 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
         <h1 className="sr-only">
           {project.title} — подборка работ {authorName}
         </h1>
-        <section className="space-y-4 sm:space-y-7" aria-label="Публикации подборки">
-          {feedPosts.map((post, index) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              categories={categories}
-              plausibleDomain={plausible}
-              yandexMetrikaId={yandexMetrikaId}
-              siteUrl={siteUrl}
-              canManage={canManage}
-              prioritizeMedia={index === 0}
-            />
-          ))}
-        </section>
-        <SeoPager
-          basePath={`/projects/${project.slug}`}
-          page={postsPage.page}
-          total={postsPage.total}
-          pageSize={postsPage.pageSize}
+        <ProjectPostsFeed
+          key={`${project.slug}-${postsPage.page}`}
+          projectSlug={project.slug}
+          initialItems={feedPosts}
+          initialNextPage={nextPage}
+          categories={categories}
+          plausibleDomain={plausible}
+          yandexMetrikaId={yandexMetrikaId}
+          siteUrl={siteUrl}
+          canManage={canManage}
         />
       </main>
       <SiteFooter />

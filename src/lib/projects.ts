@@ -8,6 +8,8 @@ import {
   PROJECT_ORDER_MODE,
   type ProjectOrderMode,
 } from "@/lib/project-order";
+import { parseVariants } from "@/lib/posts-query";
+import type { FeedPost } from "@/types/feed";
 
 export const PROJECT_STATUS = {
   DRAFT: "DRAFT",
@@ -68,6 +70,32 @@ export type PublishedProjectPostsPage = {
 };
 
 export const PROJECT_PAGE_SIZE = 8;
+
+/** Единый JSON-вид карточки для SSR подборки и её клиентского продолжения. */
+export function projectPostToFeedPost(post: PublishedProjectPost): FeedPost {
+  return {
+    id: post.id,
+    slug: post.slug,
+    title: post.title,
+    body: post.body,
+    displayMode: post.displayMode === "STACK" ? "STACK" : "GRID",
+    publishedAt: post.publishedAt?.toISOString() ?? null,
+    pinned: post.pinned,
+    showInAll: post.showInAll,
+    categoryId: post.categoryId,
+    category: post.category,
+    // Страница уже находится внутри этой подборки — повторять её тег под карточкой не нужно.
+    projects: [],
+    images: post.images.map((image) => ({
+      id: image.id,
+      caption: image.caption,
+      alt: image.alt,
+      variants: parseVariants(image.variantsJson),
+      width: image.width,
+      height: image.height,
+    })),
+  };
+}
 
 const publishedPostsSelect = {
   where: { post: { status: POST_STATUS.PUBLISHED } },
