@@ -98,8 +98,10 @@ export async function listAlreadyImportedSourceUrls(
 
 export async function importSocialItems(args: ImportItemsArgs): Promise<{
   createdIds: string[];
+  createdSlugs: string[];
 }> {
   const createdIds: string[] = [];
+  const createdSlugs: string[] = [];
   const status = args.publish ? POST_STATUS.PUBLISHED : POST_STATUS.DRAFT;
 
   for (const item of args.items) {
@@ -118,7 +120,7 @@ export async function importSocialItems(args: ImportItemsArgs): Promise<{
               sourceExternalId?: string;
             }[],
           },
-          select: { id: true },
+          select: { id: true, slug: true },
         });
       } catch (e) {
         if (!isSourceFieldsCompatError(e)) throw e;
@@ -148,7 +150,7 @@ export async function importSocialItems(args: ImportItemsArgs): Promise<{
             metaTitle: title,
             metaDescription: excerptForMetaDescription(item.text),
           },
-          select: { id: true },
+          select: { id: true, slug: true },
         });
       } catch (e) {
         if (!isSourceFieldsCompatError(e)) throw e;
@@ -164,7 +166,7 @@ export async function importSocialItems(args: ImportItemsArgs): Promise<{
             metaTitle: title,
             metaDescription: excerptForMetaDescription(item.text),
           },
-          select: { id: true },
+          select: { id: true, slug: true },
         });
       }
     })();
@@ -199,7 +201,8 @@ export async function importSocialItems(args: ImportItemsArgs): Promise<{
     if (order > 0) await touchPostAfterImageChange(prisma, post.id);
 
     createdIds.push(post.id);
+    createdSlugs.push(post.slug);
   }
 
-  return { createdIds };
+  return { createdIds, createdSlugs };
 }

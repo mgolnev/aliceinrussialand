@@ -9,6 +9,7 @@ import {
   processAiSeoJobs,
 } from "@/lib/ai-seo-jobs";
 import { touchPostAfterImageChange } from "@/lib/post-image-change";
+import { notifyIndexNowPaths } from "@/lib/indexnow";
 
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -95,6 +96,7 @@ export async function POST(req: Request) {
         await processAiSeoJobs({ jobIds: queued.jobIds, limit: 1 });
       });
     }
+    after(() => notifyIndexNowPaths([`/p/${post.slug}`, "/"]));
   }
 
   return NextResponse.json({

@@ -14,6 +14,7 @@ import { isSystemPostTitle } from "@/lib/post-text";
 import { excerptForMetaDescription } from "@/lib/meta-excerpt";
 import { invalidatePublicFeedCache } from "@/lib/cache-tags";
 import { touchPostAfterImageChange } from "@/lib/post-image-change";
+import { notifyIndexNowPaths } from "@/lib/indexnow";
 
 const JOB_TYPE = {
   POST_SEO: "POST_SEO",
@@ -595,7 +596,14 @@ async function applyPostSeo(
       changedSlugs = [current.slug, data.slug ?? current.slug];
     }
   });
-  if (changedSlugs.length) revalidateAiUpdatedPost(changedSlugs);
+  if (changedSlugs.length) {
+    revalidateAiUpdatedPost(changedSlugs);
+    await notifyIndexNowPaths([
+      ...changedSlugs.map((slug) => `/p/${slug}`),
+      "/",
+      "/archive",
+    ]);
+  }
   return JOB_STATUS.DONE;
 }
 
@@ -682,7 +690,14 @@ async function applyAutomaticIdentityFallback(
     await tx.post.update({ where: { id: current.id }, data });
     changedSlugs = [current.slug, slug];
   });
-  if (changedSlugs.length) revalidateAiUpdatedPost(changedSlugs);
+  if (changedSlugs.length) {
+    revalidateAiUpdatedPost(changedSlugs);
+    await notifyIndexNowPaths([
+      ...changedSlugs.map((slug) => `/p/${slug}`),
+      "/",
+      "/archive",
+    ]);
+  }
   return JOB_STATUS.DONE;
 }
 
@@ -691,6 +706,7 @@ async function applyImageAlt(
   generated: { alt: string; confidence: number },
   inputHash: string,
 ): Promise<"DONE"> {
+  let changedSlug: string | null = null;
   await prisma.$transaction(async (tx) => {
     const claimed = await tx.aiSeoJob.updateMany({
       where: { id: job.id, revision: job.revision, status: JOB_STATUS.RUNNING },
@@ -706,7 +722,12 @@ async function applyImageAlt(
     if (!claimed.count) return;
     const current = await tx.postImage.findUnique({
       where: { id: job.subjectKey },
-      select: { id: true, postId: true, altSource: true },
+      select: {
+        id: true,
+        postId: true,
+        altSource: true,
+        post: { select: { slug: true, status: true } },
+      },
     });
     if (!current || current.postId !== job.postId || current.altSource === "MANUAL") return;
     await tx.postImage.update({
@@ -714,7 +735,13 @@ async function applyImageAlt(
       data: { alt: generated.alt, altSource: "AI" },
     });
     await touchPostAfterImageChange(tx, current.postId);
+    if (current.post.status === POST_STATUS.PUBLISHED) {
+      changedSlug = current.post.slug;
+    }
   });
+  if (changedSlug) {
+    await notifyIndexNowPaths([`/p/${changedSlug}`, "/"]);
+  }
   return JOB_STATUS.DONE;
 }
 

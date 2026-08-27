@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { ensureSiteSettings, getSiteSettings } from "@/lib/site";
 import { prisma } from "@/lib/prisma";
+import { notifyIndexNowPaths } from "@/lib/indexnow";
 
 export async function GET() {
   const s = await getSiteSettings();
@@ -69,5 +70,6 @@ export async function PATCH(req: Request) {
     where: { id: 1 },
     data: data as Parameters<typeof prisma.siteSettings.update>[0]["data"],
   });
+  after(() => notifyIndexNowPaths(["/", "/about"]));
   return NextResponse.json(updated);
 }

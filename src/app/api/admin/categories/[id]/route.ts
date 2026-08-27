@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import slugify from "slugify";
 import { prisma } from "@/lib/prisma";
 import { invalidateFeedCategoriesCache } from "@/lib/cache-tags";
+import { notifyIndexNowPaths } from "@/lib/indexnow";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -22,7 +23,15 @@ function isUnknownDescriptionArg(error: unknown): boolean {
 export async function PATCH(req: Request, ctx: Ctx) {
   try {
     const { id } = await ctx.params;
-    const existing = await prisma.postCategory.findUnique({ where: { id } });
+    const existing = await prisma.postCategory.findUnique({
+      where: { id },
+      include: {
+        posts: {
+          where: { status: "PUBLISHED" },
+          select: { slug: true },
+        },
+      },
+    });
     if (!existing) {
       return NextResponse.json({ error: "Не найдено" }, { status: 404 });
     }
@@ -114,6 +123,14 @@ export async function PATCH(req: Request, ctx: Ctx) {
     revalidatePath("/");
     revalidatePath("/category/[slug]", "page");
     revalidatePath("/sitemap.xml");
+    after(() =>
+      notifyIndexNowPaths([
+        `/category/${existing.slug}`,
+        `/category/${row.slug}`,
+        ...existing.posts.map((post) => `/p/${post.slug}`),
+        "/",
+      ]),
+    );
     return NextResponse.json({ ...row, description });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Ошибка сохранения";
@@ -123,6 +140,16 @@ export async function PATCH(req: Request, ctx: Ctx) {
 
 export async function DELETE(_req: Request, ctx: Ctx) {
   const { id } = await ctx.params;
+  const category = await prisma.postCategory.findUnique({
+    where: { id },
+    select: {
+      slug: true,
+      posts: {
+        where: { status: "PUBLISHED" },
+        select: { slug: true },
+      },
+    },
+  });
   try {
     await prisma.postCategory.delete({ where: { id } });
   } catch {
@@ -132,5 +159,14 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   revalidatePath("/");
   revalidatePath("/category/[slug]", "page");
   revalidatePath("/sitemap.xml");
+  if (category) {
+    after(() =>
+      notifyIndexNowPaths([
+        `/category/${category.slug}`,
+        ...category.posts.map((post) => `/p/${post.slug}`),
+        "/",
+      ]),
+    );
+  }
   return NextResponse.json({ ok: true });
 }

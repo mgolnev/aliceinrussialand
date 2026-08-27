@@ -11,6 +11,7 @@ import { derivePostTitle } from "@/lib/post-text";
 import { normalizeTelegramPostUrl } from "@/lib/telegram-post-url";
 import { excerptForMetaDescription } from "@/lib/meta-excerpt";
 import { invalidatePublicFeedCache } from "@/lib/cache-tags";
+import { notifyIndexNowPaths } from "@/lib/indexnow";
 import {
   enqueuePublishedPostAiSeo,
   processAiSeoJobs,
@@ -51,6 +52,7 @@ export async function POST(req: Request) {
 
     const created: string[] = [];
     const published: string[] = [];
+    const publishedSlugs: string[] = [];
     const requestedCategoryIds = [
       ...new Set(
         body.items
@@ -163,7 +165,10 @@ export async function POST(req: Request) {
       if (order > 0) await touchPostAfterImageChange(prisma, post.id);
 
       created.push(post.id);
-      if (publish) published.push(post.id);
+      if (publish) {
+        published.push(post.id);
+        publishedSlugs.push(post.slug);
+      }
     }
 
     revalidatePath("/admin/posts");
@@ -180,6 +185,13 @@ export async function POST(req: Request) {
           await processAiSeoJobs({ jobIds, limit: 2 });
         });
       }
+      after(() =>
+        notifyIndexNowPaths([
+          ...publishedSlugs.map((slug) => `/p/${slug}`),
+          "/",
+          "/archive",
+        ]),
+      );
     }
 
     return NextResponse.json({ createdIds: created });

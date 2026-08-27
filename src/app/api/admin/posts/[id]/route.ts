@@ -16,6 +16,7 @@ import {
   processAiSeoJobs,
 } from "@/lib/ai-seo-jobs";
 import { touchPostAfterImageChange } from "@/lib/post-image-change";
+import { notifyIndexNowPaths } from "@/lib/indexnow";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -396,6 +397,29 @@ export async function PATCH(req: Request, ctx: Ctx) {
       }
     }
 
+    const hasPublicChange =
+      Object.keys(data).length > 0 ||
+      Boolean(imagesPayload?.length) ||
+      requestedProjectIds !== undefined;
+    if (
+      hasPublicChange &&
+      (existing.status === POST_STATUS.PUBLISHED ||
+        fresh?.status === POST_STATUS.PUBLISHED)
+    ) {
+      after(() =>
+        notifyIndexNowPaths([
+          ...(existing.status === POST_STATUS.PUBLISHED
+            ? [`/p/${existing.slug}`]
+            : []),
+          ...(fresh?.status === POST_STATUS.PUBLISHED
+            ? [`/p/${fresh.slug}`]
+            : []),
+          "/",
+          "/archive",
+        ]),
+      );
+    }
+
     return NextResponse.json({
       ...fresh,
       publishedAt: fresh?.publishedAt?.toISOString() ?? null,
@@ -434,5 +458,8 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   revalidatePath("/admin/posts");
   invalidatePublicFeedCache();
   revalidatePublicPostPages([post.slug]);
+  if (post.status === POST_STATUS.PUBLISHED) {
+    after(() => notifyIndexNowPaths([`/p/${post.slug}`, "/", "/archive"]));
+  }
   return NextResponse.json({ ok: true });
 }

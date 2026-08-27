@@ -59,6 +59,8 @@ git push -u origin main
    | `SUPABASE_SERVICE_ROLE_KEY` | Supabase (service_role) |
    | `SUPABASE_STORAGE_BUCKET` | Имя bucket, например `media` |
    | Опционально | `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`, `NEXT_PUBLIC_YANDEX_METRIKA_ID` |
+   | `YANDEX_WEBMASTER_TOKEN` | OAuth-токен аккаунта с подтверждённым сайтом; используется только сервером |
+   | `INDEXNOW_KEY` | Случайная строка 8–128 символов `a-zA-Z0-9-` |
 
 6. После первого деплоя выполните **seed** один раз (с машины с доступом к БД):
 

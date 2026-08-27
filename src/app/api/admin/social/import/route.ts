@@ -9,6 +9,7 @@ import {
   processAiSeoJobs,
 } from "@/lib/ai-seo-jobs";
 import { invalidatePublicFeedCache } from "@/lib/cache-tags";
+import { notifyIndexNowPaths } from "@/lib/indexnow";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -54,6 +55,15 @@ export async function POST(req: Request) {
         after(async () => {
           await processAiSeoJobs({ jobIds, limit: 2 });
         });
+      }
+      if (result.createdSlugs?.length) {
+        after(() =>
+          notifyIndexNowPaths([
+            ...result.createdSlugs.map((slug) => `/p/${slug}`),
+            "/",
+            "/archive",
+          ]),
+        );
       }
     }
     return NextResponse.json(result);

@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ensureSiteSettings } from "@/lib/site";
 import {
   deleteAboutPhotoFiles,
   processAboutPhotoUpload,
 } from "@/lib/image-pipeline";
+import { notifyIndexNowPaths } from "@/lib/indexnow";
 
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -45,6 +46,7 @@ export async function POST(req: Request) {
     where: { id: 1 },
     data: { aboutPhotoPath: json },
   });
+  after(() => notifyIndexNowPaths(["/about", "/"]));
 
   return NextResponse.json({
     aboutPhotoPath: json,
@@ -59,5 +61,6 @@ export async function DELETE() {
     where: { id: 1 },
     data: { aboutPhotoPath: null },
   });
+  after(() => notifyIndexNowPaths(["/about", "/"]));
   return NextResponse.json({ ok: true });
 }

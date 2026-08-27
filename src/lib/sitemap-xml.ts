@@ -38,6 +38,18 @@ function validLoc(value: string): boolean {
   }
 }
 
+function validEntriesWithinLimit<T extends { url: string }>(entries: T[]): T[] {
+  const validEntries: T[] = [];
+  for (const entry of entries) {
+    if (!validLoc(entry.url)) continue;
+    validEntries.push(entry);
+    if (validEntries.length > MAX_SITEMAP_ENTRIES) {
+      throw new Error("Sitemap exceeds the 50,000 entry limit");
+    }
+  }
+  return validEntries;
+}
+
 function finishXml(lines: string[], entryCount: number): string {
   if (entryCount > MAX_SITEMAP_ENTRIES) {
     throw new Error("Sitemap exceeds the 50,000 entry limit");
@@ -50,7 +62,10 @@ function finishXml(lines: string[], entryCount: number): string {
 }
 
 export function serializeUrlSet(entries: SitemapUrlEntry[]): string {
-  const validEntries = entries.filter((entry) => validLoc(entry.url));
+  if (entries.length > MAX_SITEMAP_ENTRIES) {
+    throw new Error("Sitemap exceeds the 50,000 entry limit");
+  }
+  const validEntries = validEntriesWithinLimit(entries);
   const hasImages = validEntries.some((entry) =>
     entry.images?.some(validLoc),
   );
@@ -84,7 +99,10 @@ export function serializeUrlSet(entries: SitemapUrlEntry[]): string {
 }
 
 export function serializeSitemapIndex(entries: SitemapIndexEntry[]): string {
-  const validEntries = entries.filter((entry) => validLoc(entry.url));
+  if (entries.length > MAX_SITEMAP_ENTRIES) {
+    throw new Error("Sitemap exceeds the 50,000 entry limit");
+  }
+  const validEntries = validEntriesWithinLimit(entries);
   const lines = [
     XML_DECLARATION,
     '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',

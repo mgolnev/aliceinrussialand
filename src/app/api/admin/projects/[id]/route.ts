@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { toSlug } from "@/lib/slug";
@@ -9,6 +9,7 @@ import {
   projectOrderMode,
 } from "@/lib/projects";
 import { invalidatePublicFeedCache } from "@/lib/cache-tags";
+import { notifyIndexNowPaths } from "@/lib/indexnow";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -144,6 +145,22 @@ export async function PATCH(req: Request, ctx: Ctx) {
     [...existing.posts.map((row) => row.post.slug), ...selectedPosts.map((post) => post.slug)],
   );
   invalidatePublicFeedCache();
+  if (
+    existing.status === PROJECT_STATUS.PUBLISHED ||
+    project.status === PROJECT_STATUS.PUBLISHED
+  ) {
+    const affectedPostSlugs = [
+      ...existing.posts.map((row) => row.post.slug),
+      ...selectedPosts.map((post) => post.slug),
+    ];
+    after(() =>
+      notifyIndexNowPaths([
+        `/projects/${existing.slug}`,
+        `/projects/${project.slug}`,
+        ...affectedPostSlugs.map((postSlug) => `/p/${postSlug}`),
+      ]),
+    );
+  }
   return NextResponse.json(project);
 }
 
@@ -158,5 +175,13 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   await prisma.project.delete({ where: { id } });
   invalidatePublicFeedCache();
   revalidateProjectPages([project.slug], project.posts.map((row) => row.post.slug));
+  if (project.status === PROJECT_STATUS.PUBLISHED) {
+    after(() =>
+      notifyIndexNowPaths([
+        `/projects/${project.slug}`,
+        ...project.posts.map((row) => `/p/${row.post.slug}`),
+      ]),
+    );
+  }
   return NextResponse.json({ ok: true });
 }
