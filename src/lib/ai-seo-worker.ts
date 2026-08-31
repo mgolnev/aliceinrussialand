@@ -1,9 +1,12 @@
 import type { AiSeoProcessSummary } from "@/lib/ai-seo-jobs";
 
-const IDLE_DELAY_MS = 30_000;
+const IDLE_DELAY_MS = 12 * 60 * 60_000;
+const ERROR_RETRY_MS = 30_000;
 const JOB_DELAY_MS = 250;
 const REQUEST_TIMEOUT_MS = 120_000;
 const LOCK_RECOVERY_MS = 10 * 60_000;
+
+export type AiSeoWorkerResult = AiSeoProcessSummary & { nextRunAt?: string | null };
 
 export type AiSeoWorkerStatus = {
   enabled: boolean;
@@ -19,6 +22,7 @@ export class AiSeoWorker {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private stopped = false;
   private blockedUntil = 0;
+  private wakePending = false;
   private state: AiSeoWorkerStatus = {
     enabled: true,
     processing: false,
@@ -28,7 +32,7 @@ export class AiSeoWorker {
     error: null,
   };
 
-  constructor(private readonly runOne: () => Promise<AiSeoProcessSummary>) {}
+  constructor(private readonly runOne: () => Promise<AiSeoWorkerResult>) {}
 
   status(): AiSeoWorkerStatus {
     return { ...this.state };
@@ -40,7 +44,12 @@ export class AiSeoWorker {
 
   /** Повторное нажатие не создаёт второй цикл и не сбрасывает попытки задач. */
   wake() {
-    if (this.stopped || this.state.processing) return;
+    if (this.stopped) return;
+    if (this.state.processing) {
+      // Новая задача могла появиться уже после чтения пустой очереди текущим запросом.
+      this.wakePending = true;
+      return;
+    }
     this.schedule(Math.max(0, this.blockedUntil - Date.now()));
   }
 
@@ -64,6 +73,7 @@ export class AiSeoWorker {
     this.state.nextCheckAt = null;
     if (this.stopped || this.state.processing) return;
     this.state.processing = true;
+    this.wakePending = false;
     let delay = IDLE_DELAY_MS;
     try {
       const result = await this.runOne();
@@ -72,13 +82,18 @@ export class AiSeoWorker {
       this.blockedUntil = 0;
       if (result.done || result.review) this.state.lastCompletedAt = this.state.lastCheckedAt;
       // Не ждём следующего тика расписания между задачами накопленной пачки.
-      if (result.claimed > 0) delay = JOB_DELAY_MS;
+      if (result.claimed > 0 || this.wakePending) delay = JOB_DELAY_MS;
+      else if (result.nextRunAt) {
+        // Ставим один таймер на известный retry/истечение lease, без частого опроса БД.
+        const nextRun = Date.parse(result.nextRunAt);
+        if (Number.isFinite(nextRun)) delay = Math.min(IDLE_DELAY_MS, Math.max(1_000, nextRun - Date.now()));
+      }
     } catch (error) {
       const timedOut = error instanceof Error &&
         (error.name === "TimeoutError" || error.name === "AbortError");
       // HTTP-таймаут не гарантирует остановку запроса к модели на сервере.
       // До истечения lease не запускаем новую цепочку даже по ручной кнопке.
-      if (timedOut) delay = LOCK_RECOVERY_MS;
+      delay = timedOut ? LOCK_RECOVERY_MS : ERROR_RETRY_MS;
       this.blockedUntil = Date.now() + delay;
       this.state.error = timedOut
         ? "Обработчик не ответил вовремя. Повтор после восстановления блокировки задачи."
@@ -105,7 +120,7 @@ function disabledReason(): string | null {
   return null;
 }
 
-async function runOneLocally(): Promise<AiSeoProcessSummary> {
+async function runOneLocally(): Promise<AiSeoWorkerResult> {
   const port = Number(process.env.PORT || 3000);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invalid server port");
   // Loopback, без CDN. Отдельный HTTP-запрос сохраняет Next request context,
@@ -122,6 +137,8 @@ async function runOneLocally(): Promise<AiSeoProcessSummary> {
   if (result?.ok !== true || !["claimed", "done", "review", "retrying", "failed"].every(
     (key) => Number.isInteger(result[key]) && result[key] >= 0,
   )) throw new Error("Invalid SEO worker response");
+  if (result.nextRunAt != null && (typeof result.nextRunAt !== "string" ||
+      !Number.isFinite(Date.parse(result.nextRunAt)))) throw new Error("Invalid SEO worker schedule");
   return result;
 }
 

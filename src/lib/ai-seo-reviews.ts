@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { POST_STATUS } from "@/lib/constants";
+import { wakeAiSeoWorker } from "@/lib/ai-seo-worker";
 import {
   generatePostSeo,
   generateProjectSeo,
@@ -413,6 +414,7 @@ export async function enqueueAiSeoReviews(priority: SeoReviewPriority): Promise<
       });
     }
     queued += 1;
+    wakeAiSeoWorker();
   }
   return { queued, skipped };
 }
@@ -515,6 +517,7 @@ export async function processAiSeoReviews(options?: {
         },
       });
       result.retrying += 1;
+      wakeAiSeoWorker();
       continue;
     }
 
@@ -552,7 +555,10 @@ export async function processAiSeoReviews(options?: {
       });
       if (saved.count) {
         if (permanent) result.failed += 1;
-        else result.retrying += 1;
+        else {
+          result.retrying += 1;
+          wakeAiSeoWorker();
+        }
       }
     }
   }

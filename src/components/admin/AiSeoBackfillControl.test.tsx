@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AiSeoBackfillControl, type AiSeoBackfillSnapshot } from "./AiSeoBackfillControl";
 
@@ -22,9 +22,17 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("ручная кнопка всей пачки", () => {
+  it("не опрашивает сервер каждые 10 секунд при пустой очереди", async () => {
+    vi.useFakeTimers();
+    render(<AiSeoBackfillControl initial={{ ...initial, pending: 0, imagesNeedingAlt: 0 }} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByText(/Резервная проверка — 2 раза в сутки/)).toBeInTheDocument();
+  });
   it("отправляет один запуск всей очереди; опрос статуса не обрабатывает задачи", async () => {
     render(<AiSeoBackfillControl initial={initial} />);
     fireEvent.click(screen.getByRole("button", { name: "Обработать всю очередь" }));

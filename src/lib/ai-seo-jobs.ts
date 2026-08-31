@@ -15,7 +15,7 @@ import { excerptForMetaDescription } from "@/lib/meta-excerpt";
 import { invalidatePublicFeedCache } from "@/lib/cache-tags";
 import { touchPostAfterImageChange } from "@/lib/post-image-change";
 import { notifyIndexNowPaths } from "@/lib/indexnow";
-import { getAiSeoWorkerStatus, type AiSeoWorkerStatus } from "@/lib/ai-seo-worker";
+import { getAiSeoWorkerStatus, wakeAiSeoWorker, type AiSeoWorkerStatus } from "@/lib/ai-seo-worker";
 
 const JOB_TYPE = {
   POST_SEO: "POST_SEO",
@@ -125,7 +125,7 @@ function revalidateAiUpdatedPost(slugs: Array<string | null | undefined>) {
 }
 
 async function putJob(postId: string, type: JobType, subjectKey: string) {
-  return prisma.aiSeoJob.upsert({
+  const job = await prisma.aiSeoJob.upsert({
     where: { postId_type_subjectKey: { postId, type, subjectKey } },
     create: {
       postId,
@@ -147,6 +147,9 @@ async function putJob(postId: string, type: JobType, subjectKey: string) {
     },
     select: { id: true },
   });
+  // После фиксации каждой задачи, включая частично завершившийся импорт/пачку.
+  wakeAiSeoWorker();
+  return job;
 }
 
 /**
@@ -365,7 +368,10 @@ export async function processAiSeoJobs(options?: {
             await applyAutomaticIdentityFallback(job, { jobAlreadySettled: true });
           }
           result.failed += 1;
-        } else result.retrying += 1;
+        } else {
+          result.retrying += 1;
+          wakeAiSeoWorker();
+        }
       }
     }
   }

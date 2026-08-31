@@ -53,12 +53,13 @@ export function AiSeoBackfillControl({
   }, []);
 
   const isProcessing = status.pending > 0 || status.running > 0;
+  const shouldPoll = isProcessing || status.worker.processing;
   useEffect(() => {
-    if (!isProcessing && !status.worker.enabled) return;
+    if (!shouldPoll) return;
     void refreshStatus();
     const timer = window.setInterval(() => void refreshStatus(), 10_000);
     return () => window.clearInterval(timer);
-  }, [isProcessing, status.worker.enabled, refreshStatus]);
+  }, [shouldPoll, refreshStatus]);
 
   const start = useCallback(async () => {
     const count = status.postsNeedingSeo + status.imagesNeedingAlt;
@@ -138,7 +139,7 @@ export function AiSeoBackfillControl({
             {status.worker.enabled
               ? status.worker.processing
                 ? "Сервер проверяет и обрабатывает очередь. Вкладку можно закрыть."
-                : "Автообработка включена: проверка каждые 30 секунд, задачи выполняются по очереди."
+                : "Автообработка запускается при появлении задач. Резервная проверка — 2 раза в сутки (раз в 12 часов)."
               : "Постоянный серверный обработчик не включён."}
             {status.worker.lastCheckedAt ? ` Последняя успешная проверка: ${new Date(status.worker.lastCheckedAt).toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })} МСК.` : ""}
           </p>

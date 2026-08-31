@@ -34,7 +34,9 @@ describe("последовательный серверный worker", () => {
     expect(run).toHaveBeenCalledTimes(4);
     expect(worker.status()).toMatchObject({ processing: false, error: null });
     expect(worker.status().lastCompletedAt).not.toBeNull();
-    await vi.advanceTimersByTimeAsync(30_000);
+    await vi.advanceTimersByTimeAsync(12 * 60 * 60_000 - 1);
+    expect(run).toHaveBeenCalledTimes(4);
+    await vi.advanceTimersByTimeAsync(1);
     expect(run).toHaveBeenCalledTimes(5);
   });
 
@@ -62,17 +64,54 @@ describe("последовательный серверный worker", () => {
     const run = vi.fn().mockResolvedValue(empty)
       .mockResolvedValueOnce({ ...empty, claimed: 1, retrying: 1 })
       .mockResolvedValueOnce({ ...empty, claimed: 1, review: 1 })
-      .mockResolvedValueOnce({ ...empty, claimed: 1, failed: 1 });
+      .mockResolvedValueOnce({ ...empty, claimed: 1, failed: 1 })
+      .mockResolvedValueOnce({ ...empty, nextRunAt: "2026-08-31T12:01:00Z" });
     worker = new AiSeoWorker(run);
     worker.wake();
     await vi.advanceTimersByTimeAsync(750);
     expect(run).toHaveBeenCalledTimes(4);
-    await vi.advanceTimersByTimeAsync(29_999);
+    await vi.advanceTimersByTimeAsync(59_249);
     expect(run).toHaveBeenCalledTimes(4);
     // Имитация новой или отложенной задачи, которая стала доступна в БД.
     run.mockResolvedValueOnce(done);
     await vi.advanceTimersByTimeAsync(251);
     expect(run).toHaveBeenCalledTimes(6);
+  });
+
+  it("проверяет пустую очередь дважды за следующие сутки, без частого опроса", async () => {
+    const run = vi.fn().mockResolvedValue(empty);
+    worker = new AiSeoWorker(run);
+    worker.wake();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(24 * 60 * 60_000);
+    expect(run).toHaveBeenCalledTimes(3);
+  });
+
+  it("не теряет сигнал о новой задаче во время ответа о пустой очереди", async () => {
+    let finish!: (value: typeof empty) => void;
+    const run = vi.fn().mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }))
+      .mockResolvedValueOnce(done).mockResolvedValue(empty);
+    worker = new AiSeoWorker(run);
+    worker.wake();
+    await vi.advanceTimersByTimeAsync(0);
+    worker.wake();
+    finish(empty);
+    await vi.advanceTimersByTimeAsync(500);
+    expect(run).toHaveBeenCalledTimes(3);
+  });
+
+  it("новая задача прерывает ожидание отложенной попытки", async () => {
+    const run = vi.fn().mockResolvedValueOnce({ ...empty, nextRunAt: "2026-08-31T12:05:00Z" })
+      .mockResolvedValue(empty);
+    worker = new AiSeoWorker(run);
+    worker.wake();
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(run).toHaveBeenCalledTimes(1);
+    worker.wake();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(run).toHaveBeenCalledTimes(2);
   });
 
   it("восстанавливается после недоступности сервера и не публикует текст исключения", async () => {

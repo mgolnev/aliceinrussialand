@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { processAiSeoJobs } from "@/lib/ai-seo-jobs";
+import { getNextAiSeoRunAt } from "@/lib/ai-seo-next-run";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -29,7 +30,8 @@ export async function GET(request: Request) {
   // секундами. Обрабатываем ровно одну задачу: workflow вызывает маршрут дважды,
   // поэтому очередь продолжает двигаться без зависших RUNNING-задач.
   const result = await processAiSeoJobs({ limit: 1 });
-  return NextResponse.json({ ok: true, ...result }, { headers });
+  const nextRunAt = result.claimed === 0 ? await getNextAiSeoRunAt() : null;
+  return NextResponse.json({ ok: true, ...result, nextRunAt }, { headers });
 }
 
 /** Внутренний worker использует POST: обработка не должна попадать в HTTP-кеш. */
