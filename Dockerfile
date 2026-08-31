@@ -24,6 +24,8 @@ FROM base AS runner
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+# Только постоянный Node-контейнер; на Vercel фоновый цикл не запускается.
+ENV AI_SEO_WORKER_ENABLED=true
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./

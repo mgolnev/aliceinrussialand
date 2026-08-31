@@ -15,6 +15,7 @@ import { excerptForMetaDescription } from "@/lib/meta-excerpt";
 import { invalidatePublicFeedCache } from "@/lib/cache-tags";
 import { touchPostAfterImageChange } from "@/lib/post-image-change";
 import { notifyIndexNowPaths } from "@/lib/indexnow";
+import { getAiSeoWorkerStatus, type AiSeoWorkerStatus } from "@/lib/ai-seo-worker";
 
 const JOB_TYPE = {
   POST_SEO: "POST_SEO",
@@ -65,6 +66,7 @@ export type AiSeoBackfillStatus = {
   running: number;
   review: number;
   failed: number;
+  worker: AiSeoWorkerStatus;
 };
 
 function hash(value: unknown): string {
@@ -261,10 +263,11 @@ export async function getAiSeoBackfillStatus(): Promise<AiSeoBackfillStatus> {
     running: countByStatus.get(JOB_STATUS.RUNNING) ?? 0,
     review: countByStatus.get(JOB_STATUS.REVIEW) ?? 0,
     failed: countByStatus.get(JOB_STATUS.FAILED) ?? 0,
+    worker: getAiSeoWorkerStatus(),
   };
 }
 
-/** Фоновый исполнитель: `after` вызывает его сразу, а внешний cron подхватывает невыполненные задачи. */
+/** Исполнитель одного прохода: вызывается из after, локального worker или резервного cron. */
 export async function processAiSeoJobs(options?: {
   limit?: number;
   jobIds?: string[];

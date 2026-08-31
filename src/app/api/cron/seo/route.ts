@@ -4,6 +4,9 @@ import { processAiSeoJobs } from "@/lib/ai-seo-jobs";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+
+const headers = { "Cache-Control": "private, no-store" };
 
 function isAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET?.trim();
@@ -20,11 +23,14 @@ function isAuthorized(request: Request): boolean {
 /** Внешний планировщик (Amvera Cron Jobs): страховка для задач, которые не успел выполнить `after`. */
 export async function GET(request: Request) {
   if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers });
   }
   // Один запрос к модели может занять до 45 секунд, а маршрут ограничен 60
   // секундами. Обрабатываем ровно одну задачу: workflow вызывает маршрут дважды,
   // поэтому очередь продолжает двигаться без зависших RUNNING-задач.
   const result = await processAiSeoJobs({ limit: 1 });
-  return NextResponse.json({ ok: true, ...result });
+  return NextResponse.json({ ok: true, ...result }, { headers });
 }
+
+/** Внутренний worker использует POST: обработка не должна попадать в HTTP-кеш. */
+export const POST = GET;
