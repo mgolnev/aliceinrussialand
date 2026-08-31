@@ -321,7 +321,7 @@ export function WebmasterPanel() {
         <div className="mt-4 flex flex-col gap-3 rounded-2xl bg-stone-50 p-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-stone-600">
             Выбрано {selected.size}. Рекомендовано {snapshot.counts.recommended};
-            отправка ограничена остатком суточной квоты.
+            только страницы вне поиска. Отправка ограничена остатком суточной квоты.
           </p>
           <div className="flex flex-wrap gap-2">
             <button

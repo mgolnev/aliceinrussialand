@@ -37,7 +37,7 @@ function data(overrides: Partial<YandexWebmasterData>): YandexWebmasterData {
 }
 
 describe("buildWebmasterSnapshot", () => {
-  it("разбирает дату Яндекса с запятой и рекомендует изменённую после обхода страницу", () => {
+  it("разбирает дату Яндекса с запятой, но не рекомендует уже найденную страницу", () => {
     const snapshot = buildWebmasterSnapshot({
       siteUrl: origin,
       indexNowConfigured: true,
@@ -58,15 +58,16 @@ describe("buildWebmasterSnapshot", () => {
     expect(snapshot.items[0]).toMatchObject({
       status: "IN_SEARCH",
       changedAfterCrawl: true,
-      recommended: true,
+      recommended: false,
       lastAccess: "2026-08-20T10:00:00.000Z",
     });
   });
 
-  it("не предлагает повторно очередь и содержательные причины исключения", () => {
+  it("не рекомендует очередь, исключённые страницы и ошибки", () => {
     const candidates = [
       candidate("/p/queued", "2026-08-21T10:00:00Z"),
       candidate("/p/duplicate", "2026-08-21T10:00:00Z"),
+      candidate("/p/not-found", "2026-08-21T10:00:00Z"),
       candidate("/p/unknown", "2026-08-21T10:00:00Z"),
     ];
     const snapshot = buildWebmasterSnapshot({
@@ -89,6 +90,12 @@ describe("buildWebmasterSnapshot", () => {
             event: "REMOVED_FROM_SEARCH",
             excluded_url_status: "DUPLICATE",
           },
+          {
+            url: `${origin}/p/not-found`,
+            event_date: "2026-08-21T11:00:00Z",
+            event: "REMOVED_FROM_SEARCH",
+            excluded_url_status: "NOTHING_FOUND",
+          },
         ],
       }),
     });
@@ -98,6 +105,10 @@ describe("buildWebmasterSnapshot", () => {
       recommended: false,
     });
     expect(snapshot.items.find((item) => item.url.endsWith("/duplicate"))).toMatchObject({
+      status: "EXCLUDED",
+      recommended: false,
+    });
+    expect(snapshot.items.find((item) => item.url.endsWith("/not-found"))).toMatchObject({
       status: "EXCLUDED",
       recommended: false,
     });

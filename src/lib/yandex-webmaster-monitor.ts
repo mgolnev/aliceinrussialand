@@ -230,20 +230,16 @@ function activeRecrawl(task: YandexRecrawlTask | undefined): boolean {
 function recommendation(args: {
   candidate: SearchCandidate;
   status: WebmasterUrlStatus;
-  changedAfterCrawl: boolean;
-  exclusion: YandexSearchEvent | undefined;
 }): { recommended: boolean; priority: number } {
-  const { candidate, status, changedAfterCrawl, exclusion } = args;
-  if (status === "QUEUED" || status === "ERROR") {
-    return { recommended: false, priority: 0 };
-  }
-  if (changedAfterCrawl && candidate.kind !== "ARCHIVE") {
-    return { recommended: true, priority: candidate.kind === "POST" ? 100 : 85 };
-  }
-  if (status === "IN_SEARCH") return { recommended: false, priority: 0 };
+  const { candidate, status } = args;
+  // «Рекомендуемые» — только страницы, которых ещё нет в поиске. Обновлённые
+  // страницы из выдачи автор при необходимости выбирает вручную во «Все»;
+  // IndexNow уже сообщает Яндексу об их изменении.
   if (
-    status === "EXCLUDED" &&
-    exclusion?.excluded_url_status !== "NOTHING_FOUND"
+    status === "IN_SEARCH" ||
+    status === "QUEUED" ||
+    status === "EXCLUDED" ||
+    status === "ERROR"
   ) {
     return { recommended: false, priority: 0 };
   }
@@ -326,8 +322,6 @@ export function buildWebmasterSnapshot(args: {
     const suggested = recommendation({
       candidate,
       status,
-      changedAfterCrawl,
-      exclusion: event,
     });
 
     return {
