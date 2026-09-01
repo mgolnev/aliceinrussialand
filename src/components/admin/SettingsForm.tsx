@@ -20,6 +20,7 @@ type Props = {
     plausibleDomain: string;
     yandexMetrikaId: string;
     yandexVerification: string;
+    showWanderEntry: boolean;
     defaultLocale: string;
     social: SocialLink[];
     avatarPreviewUrl: string | null;
@@ -63,6 +64,7 @@ export function SettingsForm({ initial }: Props) {
         plausibleDomain: form.plausibleDomain,
         yandexMetrikaId: form.yandexMetrikaId,
         yandexVerification: form.yandexVerification,
+        showWanderEntry: form.showWanderEntry,
         defaultLocale: form.defaultLocale,
         socialLinksJson: JSON.stringify(form.social),
       }),
@@ -281,6 +283,28 @@ export function SettingsForm({ initial }: Props) {
           <p className="text-sm text-red-600">{aboutPhotoError}</p>
         ) : null}
       </div>
+
+      <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
+        <input
+          type="checkbox"
+          checked={form.showWanderEntry}
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              showWanderEntry: event.target.checked,
+            }))
+          }
+          className="mt-0.5 size-5 shrink-0 accent-stone-900"
+        />
+        <span>
+          <span className="block text-sm font-medium text-stone-900">
+            Показывать блок «не выбирай»
+          </span>
+          <span className="mt-1 block text-xs leading-5 text-stone-500">
+            Управляет входом в экспериментальный режим на главной странице. Сам адрес /wander останется доступен.
+          </span>
+        </span>
+      </label>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm font-medium sm:col-span-2">

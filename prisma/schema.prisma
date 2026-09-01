@@ -37,6 +37,8 @@ model SiteSettings {
   plausibleDomain      String  @default("")
   yandexMetrikaId      String  @default("")
   yandexVerification   String  @default("")
+  /// Показывать экспериментальный вход «не выбирай» на главной странице.
+  showWanderEntry      Boolean @default(true)
   updatedAt            DateTime @updatedAt
 }
 

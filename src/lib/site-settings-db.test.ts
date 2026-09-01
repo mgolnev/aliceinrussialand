@@ -28,6 +28,9 @@ describe("querySiteSettingsRow", () => {
     await querySiteSettingsRow();
     expect(findUnique).toHaveBeenCalledTimes(2);
   });
+  it("по умолчанию показывает вход «не выбирай»", () => {
+    expect(defaultSiteSettings().showWanderEntry).toBe(true);
+  });
 
   it("на сборке Next не ходит в БД", async () => {
     process.env.NEXT_PHASE = "phase-production-build";

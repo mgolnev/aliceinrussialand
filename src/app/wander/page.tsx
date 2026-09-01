@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { getSiteSettings } from "@/lib/site";
 import { getWanderCatalogue } from "@/lib/wander-data";
 import { nextWanderStep } from "@/lib/wander";
 import { WanderExperience } from "@/components/wander/WanderExperience";
@@ -14,6 +13,6 @@ export const metadata: Metadata = {
 };
 
 export default async function WanderPage() {
-  const [catalogue, settings] = await Promise.all([getWanderCatalogue(), getSiteSettings()]);
-  return <WanderExperience catalogue={catalogue} initialStep={nextWanderStep(catalogue, [])} displayName={settings.displayName} />;
+  const catalogue = await getWanderCatalogue();
+  return <WanderExperience catalogue={catalogue} initialStep={nextWanderStep(catalogue, [])} />;
 }

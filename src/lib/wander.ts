@@ -80,6 +80,22 @@ export function nextWanderStep(
   return { postId, projectId: project.id };
 }
 
+/** Stay with the current motif without revealing that it is a catalogue filter. */
+export function nextWanderStepInProject(
+  catalogue: WanderCatalogue,
+  visited: WanderStep[],
+  projectId: string,
+  random: () => number = Math.random,
+): WanderStep | null {
+  const seen = new Set(visited.map((step) => step.postId));
+  const posts = new Set(catalogue.posts.map((post) => post.id));
+  const project = catalogue.projects.find((item) => item.id === projectId);
+  if (!project) return null;
+  const candidates = project.postIds.filter((postId) => posts.has(postId) && !seen.has(postId));
+  const postId = sample(candidates, random);
+  return postId ? { postId, projectId } : null;
+}
+
 /** Saved IDs are revalidated against today's public catalogue, never trusted as content. */
 export function restoreWanderJourney(raw: string | null, catalogue: WanderCatalogue): WanderJourney | null {
   if (!raw || raw.length > 200_000) return null;
@@ -138,17 +154,34 @@ export function wanderExhibitionTitle(
   journey: WanderJourney,
   catalogue: WanderCatalogue,
 ): string {
+  const unique = wanderExhibitionTags(journey, catalogue);
+  if (!unique.length) return "Без названия";
+  if (unique.length === 1) return `«${unique[0]}» вне дома`;
+  return `«${unique[0]}» и «${unique.at(-1)}» вышли погулять`;
+}
+
+/** The motifs remain supporting material, never the exhibition title itself. */
+export function wanderExhibitionTags(
+  journey: WanderJourney,
+  catalogue: WanderCatalogue,
+): string[] {
   const projects = new Map(catalogue.projects.map((project) => [project.id, project.title]));
   const viewed = new Set(journey.viewedPostIds);
   const titles = journey.steps
     .filter((step) => viewed.has(step.postId))
     .map((step) => projects.get(step.projectId))
     .filter((title): title is string => Boolean(title));
-  const unique = [...new Set(titles)];
-  if (!unique.length) return "Без названия";
-  if (unique.length === 1) return unique[0]!;
-  const picked = unique.length === 2
-    ? unique
-    : [unique[0]!, unique[Math.floor(unique.length / 2)]!, unique.at(-1)!];
-  return picked.join(" / ");
+  return [...new Set(titles)];
+}
+
+/** A stable, session-specific catalogue number that adds collectability without a backend. */
+export function wanderExhibitionNumber(journey: WanderJourney): string {
+  let hash = 2_166_136_261;
+  for (const id of journey.viewedPostIds) {
+    for (const character of id) {
+      hash ^= character.charCodeAt(0);
+      hash = Math.imul(hash, 16_777_619);
+    }
+  }
+  return String((hash >>> 0) % 100_000).padStart(5, "0");
 }

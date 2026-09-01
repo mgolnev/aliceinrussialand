@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { nextWanderStep, restoreWanderJourney, serializeWanderJourney, wanderExhibitionTitle, type WanderStep } from "./wander";
+import {
+  nextWanderStep,
+  nextWanderStepInProject,
+  restoreWanderJourney,
+  serializeWanderJourney,
+  wanderExhibitionNumber,
+  wanderExhibitionTags,
+  wanderExhibitionTitle,
+  type WanderStep,
+} from "./wander";
 import { wanderFixture } from "@/test/wander-fixture";
 
 describe("прогулка по подборкам", () => {
@@ -35,6 +44,19 @@ describe("прогулка по подборкам", () => {
   });
   it("спокойно обрабатывает пустой каталог", () => {
     expect(nextWanderStep({ posts: [], projects: [] }, [])).toBeNull();
+  });
+  it("остаётся в выбранном мотиве без повторов", () => {
+    expect(nextWanderStepInProject(
+      wanderFixture(),
+      [{ postId: "a", projectId: "portrait" }],
+      "portrait",
+      () => 0,
+    )).toEqual({ postId: "b", projectId: "portrait" });
+    expect(nextWanderStepInProject(
+      wanderFixture(),
+      [{ postId: "a", projectId: "portrait" }, { postId: "b", projectId: "portrait" }],
+      "portrait",
+    )).toBeNull();
   });
   it("без явной связи не остаётся в одной серии дольше двух работ", () => {
     const fixture = wanderFixture();
@@ -110,6 +132,9 @@ describe("название выставки", () => {
       ],
       viewedPostIds: ["a", "d"], cursor: 2, exhibitionSeenAt: 0,
     };
-    expect(wanderExhibitionTitle(journey, catalogue)).toBe("портрет / волк-дурень");
+    expect(wanderExhibitionTitle(journey, catalogue)).toBe("«портрет» и «волк-дурень» вышли погулять");
+    expect(wanderExhibitionTags(journey, catalogue)).toEqual(["портрет", "волк-дурень"]);
+    expect(wanderExhibitionNumber(journey)).toMatch(/^\d{5}$/);
+    expect(wanderExhibitionNumber(journey)).toBe(wanderExhibitionNumber({ ...journey }));
   });
 });

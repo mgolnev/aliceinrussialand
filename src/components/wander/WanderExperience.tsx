@@ -4,9 +4,18 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import {
-  nextWanderStep, restoreWanderJourney, serializeWanderJourney,
-  wanderExhibitionTitle, WANDER_STORAGE_KEY,
-  type WanderCatalogue, type WanderJourney, type WanderPost, type WanderStep,
+  nextWanderStep,
+  nextWanderStepInProject,
+  restoreWanderJourney,
+  serializeWanderJourney,
+  wanderExhibitionNumber,
+  wanderExhibitionTags,
+  wanderExhibitionTitle,
+  WANDER_STORAGE_KEY,
+  type WanderCatalogue,
+  type WanderJourney,
+  type WanderPost,
+  type WanderStep,
 } from "@/lib/wander";
 import styles from "./wander.module.css";
 
@@ -15,16 +24,24 @@ function artworkFrameStyle(post: WanderPost): CSSProperties {
     ? post.image.width / post.image.height
     : 0.8;
   const tidy = (value: number) => Number(value.toFixed(3));
-  const frameWidth = `calc(clamp(${tidy(280 * ratio)}px, calc(${tidy(100 * ratio)}svh - ${tidy(245 * ratio)}px), ${tidy(820 * ratio)}px) + (2 * var(--mat)))`;
+  const frameWidth = `calc(clamp(${tidy(240 * ratio)}px, calc(${tidy(100 * ratio)}svh - ${tidy(330 * ratio)}px), ${tidy(650 * ratio)}px) + (2 * var(--mat)))`;
   return { "--frame-width": frameWidth } as CSSProperties;
 }
 
-function Artwork({
-  post,
-  small = false,
-  onLoad,
-  onError,
-}: {
+function worksLabel(count: number): string {
+  const modulo100 = count % 100;
+  const modulo10 = count % 10;
+  const noun = modulo100 >= 11 && modulo100 <= 14
+    ? "работ"
+    : modulo10 === 1 ? "работа" : modulo10 >= 2 && modulo10 <= 4 ? "работы" : "работ";
+  return `${count} ${noun}`;
+}
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function Artwork({ post, small = false, onLoad, onError }: {
   post: WanderPost;
   small?: boolean;
   onLoad?: () => void;
@@ -55,10 +72,9 @@ function Artwork({
   );
 }
 
-export function WanderExperience({ catalogue, initialStep, displayName }: {
+export function WanderExperience({ catalogue, initialStep }: {
   catalogue: WanderCatalogue;
   initialStep: WanderStep | null;
-  displayName: string;
 }) {
   const [journey, setJourney] = useState<WanderJourney>({
     steps: initialStep ? [initialStep] : [],
@@ -67,7 +83,10 @@ export function WanderExperience({ catalogue, initialStep, displayName }: {
     exhibitionSeenAt: 0,
   });
   const [ready, setReady] = useState(false);
-  const [view, setView] = useState<"work" | "trail">("work");
+  const [view, setView] = useState<"work" | "pause" | "trail">("work");
+  const [introPhase, setIntroPhase] = useState<"blank" | "word" | "done">("blank");
+  const [introRun, setIntroRun] = useState(0);
+  const [stayMessage, setStayMessage] = useState<string | null>(null);
   const [imageAttempt, setImageAttempt] = useState(0);
   const [imageState, setImageState] = useState<{
     postId: string;
@@ -75,11 +94,14 @@ export function WanderExperience({ catalogue, initialStep, displayName }: {
   }>({ postId: "", status: "loading" });
   const heading = useRef<HTMLHeadingElement>(null);
   const primaryButton = useRef<HTMLButtonElement>(null);
+  const finaleTimer = useRef<number | null>(null);
   const posts = new Map(catalogue.posts.map((post) => [post.id, post]));
   const projects = new Map(catalogue.projects.map((project) => [project.id, project]));
   const step = journey.steps[journey.cursor];
   const post = posts.get(step?.postId ?? "");
   const project = projects.get(step?.projectId ?? "");
+  const attempted = new Set(journey.steps.map((item) => item.postId));
+  const canStay = Boolean(project?.postIds.some((postId) => posts.has(postId) && !attempted.has(postId)));
   const exhausted = journey.steps.length >= catalogue.posts.length;
   const viewed = new Set(journey.viewedPostIds);
   const viewedSteps = journey.steps
@@ -87,12 +109,11 @@ export function WanderExperience({ catalogue, initialStep, displayName }: {
     .filter(({ item }) => viewed.has(item.postId));
   const viewedCount = viewedSteps.length;
   const currentViewed = Boolean(post && viewed.has(post.id));
-  const currentImageStatus = imageState.postId === post?.id
-    ? imageState.status
-    : "loading";
+  const currentImageStatus = imageState.postId === post?.id ? imageState.status : "loading";
   const exhibitionMilestone = Math.floor(viewedCount / 7) * 7;
-  const hasNewExhibition = exhibitionMilestone >= 7 &&
-    journey.exhibitionSeenAt < exhibitionMilestone;
+  const isExhibition = viewedCount >= 7 || (exhausted && viewedCount >= 3);
+  const hasNewExhibition = exhibitionMilestone >= 7 && journey.exhibitionSeenAt < exhibitionMilestone;
+  const exhibitionTags = wanderExhibitionTags(journey, catalogue);
 
   useEffect(() => {
     let active = true;
@@ -112,6 +133,33 @@ export function WanderExperience({ catalogue, initialStep, displayName }: {
     try { sessionStorage.setItem(WANDER_STORAGE_KEY, serializeWanderJourney(journey)); } catch { /* optional */ }
   }, [journey, ready]);
 
+  useEffect(() => {
+    let active = true;
+    const timers: number[] = [];
+    setIntroPhase("blank");
+    if (prefersReducedMotion()) {
+      queueMicrotask(() => { if (active) setIntroPhase("done"); });
+    } else {
+      timers.push(window.setTimeout(() => setIntroPhase("word"), 180));
+      timers.push(window.setTimeout(() => setIntroPhase("done"), 760));
+    }
+    return () => {
+      active = false;
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [introRun]);
+
+  useEffect(() => () => {
+    if (finaleTimer.current !== null) window.clearTimeout(finaleTimer.current);
+  }, []);
+
+  function focusTrail() {
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+      heading.current?.focus({ preventScroll: true });
+    });
+  }
+
   function showTrail(markExhibition = false) {
     if (markExhibition) {
       setJourney((previous) => ({
@@ -120,27 +168,55 @@ export function WanderExperience({ catalogue, initialStep, displayName }: {
       }));
     }
     setView("trail");
-    requestAnimationFrame(() => {
-      window.scrollTo(0, 0);
-      heading.current?.focus({ preventScroll: true });
-    });
+    focusTrail();
+  }
+
+  function revealExhibition() {
+    setJourney((previous) => ({
+      ...previous,
+      exhibitionSeenAt: Math.max(previous.exhibitionSeenAt, exhibitionMilestone),
+    }));
+    if (prefersReducedMotion()) {
+      setView("trail");
+      focusTrail();
+      return;
+    }
+    setView("pause");
+    finaleTimer.current = window.setTimeout(() => {
+      setView("trail");
+      focusTrail();
+    }, 680);
   }
 
   function showWork(cursor = journey.cursor) {
     setJourney((previous) => ({ ...previous, cursor }));
+    setStayMessage(null);
     setView("work");
     requestAnimationFrame(() => primaryButton.current?.focus({ preventScroll: true }));
   }
 
+  function appendStep(next: WanderStep) {
+    setJourney((previous) => ({
+      ...previous,
+      steps: [...previous.steps, next],
+      cursor: previous.steps.length,
+    }));
+    setImageAttempt(0);
+  }
+
   function advance() {
     const next = nextWanderStep(catalogue, journey.steps, step);
+    setStayMessage(null);
     if (!next) { showTrail(); return; }
-    setJourney({
-      ...journey,
-      steps: [...journey.steps, next],
-      cursor: journey.steps.length,
-    });
-    setImageAttempt(0);
+    appendStep(next);
+  }
+
+  function stayHere() {
+    if (!project) return;
+    const next = nextWanderStepInProject(catalogue, journey.steps, project.id);
+    if (!next) return;
+    setStayMessage(`остаёмся в ${project.title}`);
+    appendStep(next);
   }
 
   function restart() {
@@ -151,9 +227,10 @@ export function WanderExperience({ catalogue, initialStep, displayName }: {
       cursor: 0,
       exhibitionSeenAt: 0,
     });
+    setStayMessage(null);
     setImageAttempt(0);
     setView("work");
-    requestAnimationFrame(() => primaryButton.current?.focus({ preventScroll: true }));
+    setIntroRun((run) => run + 1);
   }
 
   function continueFromTrail() {
@@ -180,83 +257,88 @@ export function WanderExperience({ catalogue, initialStep, displayName }: {
     setImageAttempt((attempt) => attempt + 1);
   }
 
+  function leaveMode() {
+    try { sessionStorage.removeItem(WANDER_STORAGE_KEY); } catch { /* Storage is optional. */ }
+  }
+
   const currentOrdinal = post
     ? Math.max(1, journey.viewedPostIds.indexOf(post.id) + 1 || viewedCount + 1)
     : 0;
   const primaryLabel = currentImageStatus === "failed"
     ? "пропустить"
-    : hasNewExhibition
-      ? "собрать выставку"
-      : exhausted
-        ? "посмотреть маршрут"
-        : "дальше";
-  const primaryDisabled = !ready ||
-    (!currentViewed && currentImageStatus === "loading");
+    : hasNewExhibition || exhausted ? "хватит" : "дальше";
+  const primaryDisabled = !ready || (!currentViewed && currentImageStatus === "loading");
 
   function primaryAction() {
     if (currentImageStatus === "failed") { advance(); return; }
-    if (hasNewExhibition) { showTrail(true); return; }
+    if (hasNewExhibition) { revealExhibition(); return; }
     if (exhausted) { showTrail(); return; }
     advance();
   }
 
   return (
     <div className={styles.shell}>
-      <header className={styles.header}>
-        <Link href="/" className={styles.brand}>{displayName}</Link>
-        <Link href="/" className={styles.textLink}>выйти к ленте <span aria-hidden>↗</span></Link>
-      </header>
+      <Link href="/" className={styles.modeExit} aria-label="выйти" onClick={leaveMode}>×</Link>
       {!post || !project ? (
         <main className={styles.empty}>
-          <h1>здесь скоро начнётся прогулка</h1>
-          <p>А пока можно посмотреть работы в ленте.</p>
-          <Link href="/" className={styles.primary}>к работам →</Link>
+          <h1>здесь пока пусто</h1>
+          <button type="button" className={styles.textLink} onClick={restart}>попробовать ещё раз</button>
+        </main>
+      ) : introPhase !== "done" ? (
+        <main className={styles.ritual} aria-live="polite">
+          <p className={styles.ritualWord}>{introPhase === "word" ? "это" : "\u00a0"}</p>
+        </main>
+      ) : view === "pause" ? (
+        <main className={styles.ritual} aria-live="polite">
+          <p className={styles.ritualWord}>хватит</p>
         </main>
       ) : view === "trail" ? (
-        <main className={styles.trail}>
+        <main className={`${styles.trail} ${isExhibition ? styles.exhibition : ""}`}>
           <div className={styles.trailHeading}>
-            <div>
+            <div className={styles.trailTitle}>
+              <p className={styles.exhibitionNote}>
+                {isExhibition ? <>кажется,<br />у вас получилась выставка</> : "вот где вы были"}
+              </p>
               <h1 ref={heading} tabIndex={-1}>
-                {viewedCount >= 7
+                {isExhibition
                   ? wanderExhibitionTitle(journey, catalogue)
-                  : viewedCount ? "вот где вы были" : "пока ничего не увидели"}
+                  : viewedCount ? "странный маршрут" : "пока ничего не увидели"}
               </h1>
-              <p className={styles.quiet}>{viewedCount >= 7 ? "кажется, у вас получилась выставка" : "у каждой прогулки своё начало"}</p>
             </div>
-            <button type="button" className={styles.textLink} onClick={() => showWork()}>к работе ↗</button>
+            <div className={styles.trailControls}>
+              <span className={styles.trailCount}>
+                {isExhibition
+                  ? `выставка №${wanderExhibitionNumber(journey)} · ${worksLabel(viewedCount)}`
+                  : worksLabel(viewedCount)}
+              </span>
+              <button type="button" className={styles.textLink} onClick={() => showWork()}>подойти</button>
+            </div>
           </div>
           <ol className={styles.trailGrid}>
             {viewedSteps.map(({ item, journeyIndex }, index) => {
               const work = posts.get(item.postId)!;
-              const collection = projects.get(item.projectId)!;
               return (
-                <li key={item.postId}>
+                <li key={item.postId} style={{ "--trail-index": index } as CSSProperties}>
                   <button type="button" className={styles.trailItem} onClick={() => showWork(journeyIndex)} aria-label={`Вернуться к работе ${index + 1}: ${work.title}`}>
                     <span className={styles.thumbnail}><Artwork post={work} small /></span>
-                    <span className={styles.trailCaption}><span className={styles.number}>{String(index + 1).padStart(2, "0")}</span>{collection.title}</span>
+                    <span className={styles.trailCaption}><span className={styles.number}>{String(index + 1).padStart(2, "0")}</span></span>
                   </button>
                 </li>
               );
             })}
           </ol>
+          {isExhibition ? <p className={styles.exhibitionTags}>{exhibitionTags.join(" · ")}</p> : null}
           <div className={styles.trailFooter}>
-            <button type="button" className={styles.primary} onClick={exhausted ? restart : continueFromTrail}>
-              {exhausted ? "новая прогулка" : "продолжить прогулку"} <span aria-hidden>→</span>
+            <button type="button" className={styles.primary} onClick={isExhibition || exhausted ? restart : continueFromTrail}>
+              {isExhibition || exhausted ? "пройти ещё раз" : "продолжить прогулку"}
             </button>
-            <p className={styles.quiet}>маршрут остаётся в этой вкладке</p>
           </div>
         </main>
       ) : (
         <main className={styles.stage}>
           <h1 className="sr-only">Прогулка по работам</h1>
           <figure className={styles.artwork}>
-            <Link
-              href={`/p/${post.slug}`}
-              prefetch={false}
-              className={styles.artLink}
-              style={artworkFrameStyle(post)}
-              aria-label={`Открыть публикацию: ${post.title}`}
-            >
+            <div data-testid="wander-artwork" className={styles.artFrame} style={artworkFrameStyle(post)}>
               {ready ? (
                 <Artwork
                   key={`${post.id}-${imageAttempt}`}
@@ -264,22 +346,24 @@ export function WanderExperience({ catalogue, initialStep, displayName }: {
                   onLoad={confirmCurrentImage}
                   onError={failCurrentImage}
                 />
-              ) : <span className={styles.quiet}>сейчас найдётся что-нибудь</span>}
-            </Link>
+              ) : <span className={styles.quiet}>&nbsp;</span>}
+            </div>
             <figcaption key={`${post.id}-caption`} className={styles.caption}>
               {ready && currentImageStatus === "failed" ? (
                 <button type="button" className={styles.textLink} onClick={retryCurrentImage}>попробовать ещё раз ↻</button>
-              ) : ready ? <Link href={`/projects/${project.slug}`} prefetch={false}>{project.title}</Link> : "\u00a0"}
+              ) : stayMessage ?? "\u00a0"}
             </figcaption>
           </figure>
           <nav className={styles.actions} aria-label="Продолжить прогулку">
-            <Link href={`/projects/${project.slug}`} prefetch={false} className={styles.textLink}>вся подборка <span aria-hidden>↗</span></Link>
+            {canStay && currentImageStatus !== "failed" ? (
+              <button type="button" disabled={primaryDisabled} onClick={stayHere} className={styles.textLink}>остаться</button>
+            ) : <span aria-hidden />}
             <button ref={primaryButton} type="button" disabled={primaryDisabled} onClick={primaryAction} className={styles.primary}>
-              {primaryLabel} <span aria-hidden>→</span>
+              {primaryLabel} {primaryLabel === "дальше" ? <span aria-hidden>→</span> : null}
             </button>
           </nav>
-          <p role="status" className="sr-only">{ready ? `Работа ${currentOrdinal}: ${post.title} Подборка: ${project.title}.` : "Загружается прогулка"}</p>
-          <noscript><p className={styles.quiet}>Для прогулки нужен JavaScript. Подборку можно открыть по ссылке выше.</p></noscript>
+          <p role="status" className="sr-only">{ready ? `Работа ${currentOrdinal}: ${post.title}.` : "Начинается прогулка"}</p>
+          <noscript><p className={styles.quiet}>Для прогулки нужен JavaScript.</p></noscript>
         </main>
       )}
     </div>

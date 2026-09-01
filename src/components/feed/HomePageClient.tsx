@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { QuickComposer } from "@/components/site/QuickComposer";
+import { WanderEntry } from "@/components/wander/WanderEntry";
 import { FeedScrollLinkCapture } from "./FeedScrollLinkCapture";
 import { FeedCategoryBar } from "./FeedCategoryBar";
 import { FeedPostsBody } from "./FeedPostsBody";
@@ -19,6 +19,7 @@ type Props = {
   initialNext: string | null;
   initialCategorySlug: string | null;
   categories: FeedCategory[];
+  showWanderEntry: boolean;
   plausibleDomain?: string;
   yandexMetrikaId?: string;
   siteUrl: string;
@@ -34,6 +35,7 @@ export function HomePageClient({
   initialNext,
   initialCategorySlug,
   categories,
+  showWanderEntry,
   plausibleDomain,
   yandexMetrikaId,
   siteUrl,
@@ -65,15 +67,7 @@ export function HomePageClient({
         }
       />
       <div className={siteContentClass()}>
-        <div className="mb-5 flex justify-end sm:mb-8">
-          <Link
-            href="/wander"
-            prefetch={false}
-            className="group inline-flex min-h-11 items-center gap-3 text-sm tracking-tight text-stone-600 transition-colors hover:text-stone-950 focus-visible:outline-2 focus-visible:outline-offset-4"
-          >
-            не выбирай <span aria-hidden className="transition-transform group-hover:translate-x-1 motion-reduce:transform-none motion-reduce:transition-none">→</span>
-          </Link>
-        </div>
+        {showWanderEntry ? <WanderEntry /> : null}
         {canManage ? <QuickComposer categories={categories} /> : null}
         <FeedPostsBody
           items={feed.items}

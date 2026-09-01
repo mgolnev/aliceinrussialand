@@ -26,6 +26,7 @@ export function defaultSiteSettings(): SiteSettingsRow {
     plausibleDomain: "",
     yandexMetrikaId: "",
     yandexVerification: "",
+    showWanderEntry: true,
     updatedAt: new Date(0),
   };
 }
