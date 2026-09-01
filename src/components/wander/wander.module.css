@@ -1,0 +1,83 @@
+.shell {
+  min-height: 100svh;
+  background: #faf8f5;
+  color: #292622;
+  padding: 0 clamp(20px, 5vw, 80px);
+}
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #faf8f5;
+  min-height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.brand { font-size: 17px; font-weight: 700; letter-spacing: -.04em; }
+.textLink, .primary { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+.textLink { font-size: 13px; color: #696158; }
+.textLink:disabled { cursor: default; opacity: .45; }
+.textLink:hover, .caption a:hover { color: #25201a; text-decoration: underline; text-underline-offset: 5px; }
+.primary { font-size: clamp(23px, 3vw, 32px); letter-spacing: -.045em; }
+.primary span { display: inline-block; transition: transform 180ms ease; }
+.primary:hover span { transform: translateX(5px); }
+.primary:disabled { cursor: wait; opacity: .5; }
+.shell a:focus-visible, .shell button:focus-visible { outline: 2px solid #736454; outline-offset: 6px; border-radius: 2px; }
+.stage { max-width: 1160px; margin: 0 auto; min-height: calc(100svh - 88px); display: flex; flex-direction: column; }
+.number { color: #766e65; font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: .06em; }
+.artwork { margin: clamp(28px, 5vh, 56px) 0 0; }
+.artLink {
+  --mat: clamp(16px, 2.6vw, 36px);
+  width: min(100%, var(--frame-width));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-inline: auto;
+  padding: var(--mat);
+  box-sizing: border-box;
+  border: 1px solid #5d5851;
+  background: #fffefa;
+  animation: arrive 420ms ease both;
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+.artLink:hover { border-color: #24211d; background: #fff; }
+.image { display: block; width: 100%; height: auto; object-fit: contain; }
+.caption { margin-top: 18px; text-align: center; font-size: 13px; color: #696158; animation: arrive 320ms ease both; }
+.caption a { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
+.actions { width: min(100%, 580px); margin: 14px auto max(24px, env(safe-area-inset-bottom)); display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.quiet { color: #756c62; font-size: 11px; line-height: 1.6; }
+.trail { max-width: 1160px; margin: 0 auto; padding: 46px 0 32px; animation: arrive 300ms ease both; }
+.trailHeading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.trailHeading h1, .empty h1 { font-size: clamp(28px, 5vw, 52px); letter-spacing: -.055em; line-height: 1.15; margin: 12px 0; font-weight: 400; }
+.trailHeading h1:focus { outline: none; }
+.trailGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 44px 30px; margin: 48px 0; padding: 0; list-style: none; }
+.trailItem { display: block; width: 100%; text-align: left; cursor: pointer; }
+.thumbnail { height: 260px; display: flex; align-items: center; justify-content: center; transition: transform 220ms ease; }
+.trailItem:hover .thumbnail { transform: translateY(-4px); }
+.trailCaption { display: flex; align-items: baseline; gap: 14px; margin-top: 16px; font-size: 12px; overflow-wrap: anywhere; }
+.trailFooter { border-top: 1px solid #e4dfd7; padding-top: 24px; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.empty { min-height: calc(100svh - 88px); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 18px; max-width: 640px; margin: auto; }
+.empty p { color: #696158; }
+.imageFallback { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 30px; text-align: center; }
+@keyframes arrive { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 640px) {
+  .header { min-height: 72px; gap: 14px; }
+  .brand { font-size: 14px; max-width: 58%; overflow-wrap: anywhere; }
+  .header .textLink { font-size: 11px; flex-shrink: 0; }
+  .stage { min-height: calc(100svh - 72px); }
+  .artwork { margin-top: 24px; }
+  .artLink { --mat: 14px; }
+  .actions { margin-top: 10px; }
+  .trail { padding-top: 30px; }
+  .trailHeading { align-items: flex-start; }
+  .trailHeading .textLink { flex-shrink: 0; }
+  .trailGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px 18px; margin: 32px 0; }
+  .thumbnail { height: 180px; }
+  .trailCaption { gap: 8px; font-size: 11px; }
+  .trailFooter { align-items: flex-start; flex-direction: column; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shell *, .shell *::before, .shell *::after { animation: none !important; transition: none !important; }
+}
