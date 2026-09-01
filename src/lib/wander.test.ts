@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   nextWanderStep,
-  nextWanderStepInProject,
+  pickWanderImage,
+  rememberWanderImage,
+  restoreWanderRecentImages,
   restoreWanderJourney,
   serializeWanderJourney,
   wanderExhibitionNumber,
@@ -13,19 +15,19 @@ import { wanderFixture } from "@/test/wander-fixture";
 
 describe("прогулка по подборкам", () => {
   it("первым выбирает подборку, а не взвешивает её по количеству работ", () => {
-    expect(nextWanderStep(wanderFixture(), [], undefined, () => .99)).toEqual({ postId: "d", projectId: "wolf" });
+    expect(nextWanderStep(wanderFixture(), [], undefined, () => .99)).toEqual({ postId: "d", projectId: "wolf", imageId: "d-1" });
   });
   it("находит работу-мост внутри текущей подборки", () => {
     const start = { postId: "a", projectId: "portrait" };
-    expect(nextWanderStep(wanderFixture(), [start], start, () => 0)).toEqual({ postId: "b", projectId: "portrait" });
+    expect(nextWanderStep(wanderFixture(), [start], start, () => 0)).toEqual({ postId: "b", projectId: "portrait", imageId: "b-1" });
   });
   it("через мост уходит в другую подборку вместо повтора той же", () => {
     const bridge = { postId: "b", projectId: "portrait" };
-    expect(nextWanderStep(wanderFixture(), [bridge], bridge, () => 0)).toEqual({ postId: "c", projectId: "pen" });
+    expect(nextWanderStep(wanderFixture(), [bridge], bridge, () => 0)).toEqual({ postId: "c", projectId: "pen", imageId: "c-1" });
   });
   it("в тупике выбирает другую непосмотренную работу", () => {
     const visited = [{ postId: "b", projectId: "portrait" }, { postId: "c", projectId: "pen" }];
-    expect(nextWanderStep(wanderFixture(), visited, visited[1], () => .99)).toEqual({ postId: "d", projectId: "wolf" });
+    expect(nextWanderStep(wanderFixture(), visited, visited[1], () => .99)).toEqual({ postId: "d", projectId: "wolf", imageId: "d-1" });
   });
   it("обходит весь каталог без повторов и завершает прогулку", () => {
     const visited: WanderStep[] = [];
@@ -45,19 +47,6 @@ describe("прогулка по подборкам", () => {
   it("спокойно обрабатывает пустой каталог", () => {
     expect(nextWanderStep({ posts: [], projects: [] }, [])).toBeNull();
   });
-  it("остаётся в выбранном мотиве без повторов", () => {
-    expect(nextWanderStepInProject(
-      wanderFixture(),
-      [{ postId: "a", projectId: "portrait" }],
-      "portrait",
-      () => 0,
-    )).toEqual({ postId: "b", projectId: "portrait" });
-    expect(nextWanderStepInProject(
-      wanderFixture(),
-      [{ postId: "a", projectId: "portrait" }, { postId: "b", projectId: "portrait" }],
-      "portrait",
-    )).toBeNull();
-  });
   it("без явной связи не остаётся в одной серии дольше двух работ", () => {
     const fixture = wanderFixture();
     const first = { postId: "a", projectId: "portrait" };
@@ -69,7 +58,7 @@ describe("прогулка по подборкам", () => {
     const fixture = wanderFixture();
     fixture.posts.push({
       id: "e", slug: "second-portrait", title: "Другой портрет",
-      image: { src: "/e.webp", thumbnail: "/e-small.webp", alt: "Другой портрет", width: 800, height: 1000 },
+      images: [{ id: "e-1", src: "/e.webp", thumbnail: "/e-small.webp", alt: "Другой портрет", width: 800, height: 1000 }],
       projectIds: ["portrait"],
     });
     fixture.projects[0].postIds.push("e");
@@ -83,9 +72,34 @@ describe("прогулка по подборкам", () => {
   });
 });
 
+describe("выбор изображения внутри публикации", () => {
+  const images = [
+    { id: "cover", src: "/cover.webp", thumbnail: "/cover-small.webp", alt: "Обложка", width: 800, height: 1000 },
+    { id: "page-1", src: "/page-1.webp", thumbnail: "/page-1-small.webp", alt: "Страница 1", width: 800, height: 1000 },
+    { id: "page-2", src: "/page-2.webp", thumbnail: "/page-2-small.webp", alt: "Страница 2", width: 800, height: 1000 },
+  ];
+
+  it("оставляет обложке небольшой шанс, но обычно выбирает внутреннюю работу", () => {
+    expect(pickWanderImage(images, [], () => .04)?.id).toBe("cover");
+    expect(pickWanderImage(images, [], () => .05)?.id).toBe("page-1");
+    expect(pickWanderImage(images, [], () => .99)?.id).toBe("page-2");
+  });
+
+  it("исключает недавно показанные изображения, пока есть свежие", () => {
+    expect(pickWanderImage(images, ["page-1"], () => .1)?.id).toBe("page-2");
+    expect(pickWanderImage(images, ["cover", "page-1"], () => 0)?.id).toBe("page-2");
+  });
+
+  it("хранит ограниченную очередь и очищает её от отсутствующих изображений", () => {
+    expect(rememberWanderImage(["page-1", "cover"], "cover")).toEqual(["cover", "page-1"]);
+    const catalogue = wanderFixture();
+    expect(restoreWanderRecentImages('["a-1","missing","a-1","b-1"]', catalogue)).toEqual(["a-1", "b-1"]);
+  });
+});
+
 describe("маршрут в пределах вкладки", () => {
   const journey = {
-    steps: [{ postId: "a", projectId: "portrait" }, { postId: "b", projectId: "portrait" }],
+    steps: [{ postId: "a", projectId: "portrait", imageId: "a-1" }, { postId: "b", projectId: "portrait", imageId: "b-1" }],
     viewedPostIds: ["a", "b"],
     cursor: 0,
     exhibitionSeenAt: 0,
@@ -105,15 +119,18 @@ describe("маршрут в пределах вкладки", () => {
     catalogue.projects = catalogue.projects.filter((project) => project.id !== "portrait");
     catalogue.posts = catalogue.posts.filter((post) => post.id !== "a").map((post) => ({ ...post, projectIds: post.projectIds.filter((id) => id !== "portrait") }));
     expect(restoreWanderJourney(serializeWanderJourney(journey), catalogue)).toEqual({
-      steps: [{ postId: "b", projectId: "pen" }],
+      steps: [{ postId: "b", projectId: "pen", imageId: "b-1" }],
       viewedPostIds: ["b"],
       cursor: 0,
       exhibitionSeenAt: 0,
     });
   });
   it("читает старый маршрут как уже просмотренный", () => {
-    const legacy = JSON.stringify({ version: 1, steps: journey.steps, cursor: 1 });
-    expect(restoreWanderJourney(legacy, wanderFixture())?.viewedPostIds).toEqual(["a", "b"]);
+    const legacySteps = journey.steps.map(({ postId, projectId }) => ({ postId, projectId }));
+    const legacy = JSON.stringify({ version: 1, steps: legacySteps, cursor: 1 });
+    const restored = restoreWanderJourney(legacy, wanderFixture());
+    expect(restored?.viewedPostIds).toEqual(["a", "b"]);
+    expect(restored?.steps.map((step) => step.imageId)).toEqual(["a-1", "b-1"]);
   });
   it("оставляет непоказанную работу вне выставки", () => {
     const saved = serializeWanderJourney({ ...journey, viewedPostIds: ["a"] });

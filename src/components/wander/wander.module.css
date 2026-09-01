@@ -1,6 +1,6 @@
 .shell {
   min-height: 100svh;
-  background: #faf8f5;
+  background: var(--background);
   color: #292622;
   padding: 0 clamp(20px, 5vw, 80px);
 }
@@ -76,7 +76,31 @@
   background: #fffefa;
   animation: arrive 420ms ease both;
 }
-.image { display: block; width: 100%; height: auto; object-fit: contain; }
+.imageStage {
+  position: relative;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  background: #e9e3da;
+}
+.skeleton {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, #e7e0d7 25%, #f1ece5 42%, #e7e0d7 59%);
+  background-size: 220% 100%;
+  animation: skeletonShift 1.25s ease-in-out infinite;
+}
+.image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.imageLoaded { opacity: 1; }
 .caption {
   min-height: 44px;
   padding-top: 14px;
@@ -91,7 +115,7 @@
   margin: 0 auto;
   align-items: center;
   align-self: end;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 24px;
 }
 .quiet { color: #756c62; font-size: 11px; line-height: 1.6; }
@@ -114,7 +138,7 @@
   font-size: 12px;
   letter-spacing: .035em;
 }
-.trailHeading h1 {
+.trailName {
   max-width: 16ch;
   margin: 0;
   font-size: clamp(42px, 8vw, 94px);
@@ -176,18 +200,11 @@
   font-size: 12px;
 }
 .exhibition .exhibitionNote {
-  margin-bottom: clamp(44px, 7vw, 92px);
+  margin: 0;
   color: #292622;
   font-size: clamp(23px, 3.4vw, 42px);
   letter-spacing: -.045em;
   line-height: 1.02;
-}
-.exhibition .trailHeading h1 {
-  max-width: 11ch;
-  font-size: clamp(58px, 11vw, 142px);
-  letter-spacing: -.075em;
-  line-height: .84;
-  text-transform: uppercase;
 }
 .exhibitionTags {
   margin-top: clamp(84px, 13vw, 170px);
@@ -221,6 +238,8 @@
   line-height: 1.15;
 }
 .imageFallback {
+  position: absolute;
+  inset: 0;
   display: flex;
   padding: 30px;
   flex-direction: column;
@@ -232,6 +251,7 @@
 @keyframes wordIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes arrive { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes exhibitIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes skeletonShift { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (max-width: 640px) {
   .shell { padding-inline: 18px; }
   .stage { padding-top: 54px; }
@@ -240,10 +260,9 @@
   .actions { margin-top: 0; }
   .trail { padding-top: 64px; }
   .trailHeading { flex-direction: column; gap: 28px; }
-  .trailHeading h1 { max-width: 12ch; font-size: clamp(40px, 13vw, 58px); }
+  .trailName { max-width: 12ch; font-size: clamp(40px, 13vw, 58px); }
   .exhibitionNote { margin-bottom: 14px; font-size: 11px; }
-  .exhibition .exhibitionNote { margin-bottom: 42px; font-size: clamp(23px, 8vw, 34px); }
-  .exhibition .trailHeading h1 { max-width: 100%; font-size: clamp(44px, 13vw, 64px); overflow-wrap: anywhere; }
+  .exhibition .exhibitionNote { margin: 0; font-size: clamp(23px, 8vw, 34px); }
   .trailControls { width: 100%; padding-top: 0; flex-direction: row; align-items: center; justify-content: space-between; }
   .trailGrid { display: flex; margin-top: 78px; flex-direction: column; gap: 72px; }
   .trailGrid > li { width: 88%; margin-top: 0 !important; }

@@ -31,8 +31,8 @@ export async function getWanderCatalogue(): Promise<WanderCatalogue> {
             select: {
               id: true, slug: true, title: true,
               images: {
-                orderBy: { sortOrder: "asc" }, take: 1,
-                select: { variantsJson: true, alt: true, width: true, height: true },
+                orderBy: { sortOrder: "asc" },
+                select: { id: true, variantsJson: true, alt: true, width: true, height: true },
               },
             },
           },
@@ -47,17 +47,25 @@ export async function getWanderCatalogue(): Promise<WanderCatalogue> {
     if (row._count.posts < 2) continue;
     const postIds: string[] = [];
     for (const { post } of row.posts) {
-      const image = post.images[0];
-      const urls = image && imageUrls(image.variantsJson);
-      if (!urls) continue;
-      const title = plainPostPreview(isSystemPostTitle(post.title) ? image.alt || row.title : post.title).slice(0, 160);
+      const images = post.images.flatMap((image) => {
+        const urls = imageUrls(image.variantsJson);
+        return urls ? [{
+          id: image.id,
+          ...urls,
+          alt: image.alt.trim(),
+          width: image.width,
+          height: image.height,
+        }] : [];
+      });
+      if (!images.length) continue;
+      const title = plainPostPreview(isSystemPostTitle(post.title) ? images[0]!.alt || row.title : post.title).slice(0, 160);
       const existing = posts.get(post.id);
       if (existing) {
         existing.projectIds.push(row.id);
       } else {
         posts.set(post.id, {
           id: post.id, slug: post.slug, title: title || row.title,
-          image: { ...urls, alt: image.alt.trim() || title || row.title, width: image.width, height: image.height },
+          images: images.map((image) => ({ ...image, alt: image.alt || title || row.title })),
           projectIds: [row.id],
         });
       }

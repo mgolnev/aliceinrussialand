@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import type { AnchorHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WanderExperience } from "./WanderExperience";
-import { serializeWanderJourney, WANDER_STORAGE_KEY } from "@/lib/wander";
+import { serializeWanderJourney, WANDER_RECENT_IMAGES_KEY, WANDER_STORAGE_KEY } from "@/lib/wander";
 import { wanderFixture } from "@/test/wander-fixture";
 import type { WanderCatalogue } from "@/lib/wander";
 
@@ -17,7 +17,7 @@ vi.mock("next/link", () => ({
 }));
 
 function mount() {
-  return render(<WanderExperience catalogue={wanderFixture()} initialStep={{ postId: "a", projectId: "portrait" }} />);
+  return render(<WanderExperience catalogue={wanderFixture()} initialStep={{ postId: "a", projectId: "portrait", imageId: "a-1" }} />);
 }
 async function ready() {
   await waitFor(() => expect(screen.getByRole("img")).toBeInTheDocument());
@@ -39,7 +39,7 @@ function longWalkFixture(): WanderCatalogue {
     project.postIds.push(id);
     return {
       id, slug: id, title: `Работа ${index + 1}`,
-      image: { src: `/${id}.webp`, thumbnail: `/${id}-small.webp`, alt: `Работа ${index + 1}`, width: 800, height: 1000 },
+      images: [{ id: `${id}-1`, src: `/${id}.webp`, thumbnail: `/${id}-small.webp`, alt: `Работа ${index + 1}`, width: 800, height: 1000 }],
       projectIds: [project.id],
     };
   });
@@ -47,6 +47,7 @@ function longWalkFixture(): WanderCatalogue {
 }
 beforeEach(() => {
   sessionStorage.clear();
+  localStorage.clear();
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: true })));
 });
@@ -58,25 +59,14 @@ afterEach(async () => {
 });
 
 describe("интерфейс прогулки", () => {
-  it("перед первой работой оставляет паузу и на мгновение говорит «это»", async () => {
-    vi.mocked(window.matchMedia).mockReturnValue({ matches: false } as MediaQueryList);
-    vi.useFakeTimers();
-    mount();
-    await act(async () => {});
-    expect(screen.queryByRole("img")).not.toBeInTheDocument();
-    await act(async () => { vi.advanceTimersByTime(180); });
-    expect(screen.getByText("это")).toBeInTheDocument();
-    await act(async () => { vi.advanceTimersByTime(580); });
-    expect(screen.getByRole("img")).toBeInTheDocument();
-    vi.useRealTimers();
-  });
   it("показывает работу как отдельный режим без каталожного интерфейса", async () => {
     mount(); await ready();
     expect(screen.getAllByRole("img")).toHaveLength(1);
     expect(screen.queryByText("Alice in Russialand")).not.toBeInTheDocument();
     expect(screen.queryByText("вся подборка")).not.toBeInTheDocument();
     expect(screen.queryByText("портрет")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "остаться" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "остаться" })).not.toBeInTheDocument();
+    expect(screen.queryByText("это")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "выйти" })).toHaveAttribute("href", "/");
   });
   it("завершает текущую сессию при выходе через крестик", async () => {
@@ -95,12 +85,14 @@ describe("интерфейс прогулки", () => {
       .style.getPropertyValue("--frame-width");
     expect(portraitWidth).not.toBe(landscapeWidth);
   });
-  it("даёт остаться в мотиве, но не называет его до этого выбора", async () => {
-    mount(); await ready();
-    expect(screen.queryByText(/остаёмся в/)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "остаться" }));
-    await loadCurrent();
-    expect(screen.getByText("остаёмся в портрет")).toBeInTheDocument();
+  it("держит место под работу скелетоном до загрузки изображения", async () => {
+    mount();
+    await waitFor(() => expect(screen.getByRole("img")).toBeInTheDocument());
+    expect(screen.getByTestId("wander-skeleton")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "дальше" })).toBeDisabled();
+    fireEvent.load(screen.getByRole("img"));
+    expect(screen.queryByTestId("wander-skeleton")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "дальше" })).toBeEnabled();
   });
   it("проходит мост, сохраняет маршрут и возвращается из его просмотра", async () => {
     mount(); await ready();
@@ -116,7 +108,8 @@ describe("интерфейс прогулки", () => {
     expect(JSON.parse(sessionStorage.getItem(WANDER_STORAGE_KEY)!).steps).toHaveLength(4);
     fireEvent.click(screen.getByRole("button", { name: "хватит" }));
     expect(screen.getByText(/кажется,/)).toBeInTheDocument();
-    expect(screen.getByRole("heading").textContent).toMatch(/вышли погулять/);
+    expect(screen.getByRole("heading")).toHaveTextContent(/кажется,/);
+    expect(screen.queryByText(/вышли погулять/)).not.toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(4);
     fireEvent.click(screen.getByRole("button", { name: "Вернуться к работе 1: Первый портрет" }));
     expect(screen.getByRole("status")).toHaveTextContent("Работа 1");
@@ -130,12 +123,34 @@ describe("интерфейс прогулки", () => {
     }
     fireEvent.click(screen.getByRole("button", { name: "хватит" }));
     fireEvent.click(screen.getByRole("button", { name: "пройти ещё раз" }));
+    expect(screen.getByRole("button", { name: "дальше" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "дальше" })).toBeDisabled();
+    expect(screen.getByTestId("wander-skeleton")).toBeInTheDocument();
     await loadCurrent();
     expect(screen.getByRole("button", { name: "дальше" })).toBeEnabled();
   });
+  it("в повторной прогулке не показывает только что просмотренную обложку", async () => {
+    const catalogue: WanderCatalogue = {
+      posts: [{
+        id: "comic", slug: "comic", title: "Комикс", projectIds: ["comic"],
+        images: [
+          { id: "comic-cover", src: "/comic-cover.webp", thumbnail: "/comic-cover-small.webp", alt: "Обложка", width: 800, height: 1000 },
+          { id: "comic-page", src: "/comic-page.webp", thumbnail: "/comic-page-small.webp", alt: "Страница комикса", width: 800, height: 1000 },
+        ],
+      }],
+      projects: [{ id: "comic", slug: "comic", title: "комикс", postIds: ["comic"] }],
+    };
+    render(<WanderExperience catalogue={catalogue} initialStep={{ postId: "comic", projectId: "comic", imageId: "comic-cover" }} />);
+    await waitFor(() => expect(screen.getByRole("img")).toHaveAttribute("src", "/comic-cover.webp"));
+    fireEvent.load(screen.getByRole("img"));
+    expect(JSON.parse(localStorage.getItem(WANDER_RECENT_IMAGES_KEY)!)).toEqual(["comic-cover"]);
+    fireEvent.click(screen.getByRole("button", { name: "хватит" }));
+    fireEvent.click(screen.getByRole("button", { name: "пройти ещё раз" }));
+    await waitFor(() => expect(screen.getByRole("img")).toHaveAttribute("src", "/comic-page.webp"));
+  });
   it("возвращает сессию после открытия публикации или перезагрузки", async () => {
     sessionStorage.setItem(WANDER_STORAGE_KEY, serializeWanderJourney({
-      steps: [{ postId: "b", projectId: "portrait" }, { postId: "c", projectId: "pen" }],
+      steps: [{ postId: "b", projectId: "portrait", imageId: "b-1" }, { postId: "c", projectId: "pen", imageId: "c-1" }],
       viewedPostIds: ["b", "c"], cursor: 1, exhibitionSeenAt: 0,
     }));
     mount(); await ready();
@@ -174,7 +189,7 @@ describe("интерфейс прогулки", () => {
   });
   it("после семи загруженных работ собирает выставку с названием", async () => {
     const catalogue = longWalkFixture();
-    render(<WanderExperience catalogue={catalogue} initialStep={{ postId: "long-0", projectId: "a" }} />);
+    render(<WanderExperience catalogue={catalogue} initialStep={{ postId: "long-0", projectId: "a", imageId: "long-0-1" }} />);
     await ready();
     for (let viewed = 1; viewed < 7; viewed++) {
       fireEvent.click(screen.getByRole("button", { name: "дальше" }));
@@ -185,7 +200,8 @@ describe("интерфейс прогулки", () => {
     expect(screen.getByText(/кажется,/)).toBeInTheDocument();
     expect(screen.getByText(/выставка №\d{5} · 7 работ/)).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(7);
-    expect(screen.getByRole("heading").textContent).toMatch(/вышли погулять/);
+    expect(screen.getByRole("heading")).toHaveTextContent(/кажется,/);
+    expect(screen.queryByText(/вышли погулять/)).not.toBeInTheDocument();
     expect(screen.getByText(/^серия [abc] · серия [abc] · серия [abc]$/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "пройти ещё раз" })).toBeEnabled();
   });

@@ -1,15 +1,24 @@
 /** Small, public-only catalogue. No post bodies or admin fields reach the client. */
+export type WanderImage = {
+  id: string;
+  src: string;
+  thumbnail: string;
+  alt: string;
+  width: number | null;
+  height: number | null;
+};
+
 export type WanderPost = {
   id: string;
   slug: string;
   title: string;
-  image: { src: string; thumbnail: string; alt: string; width: number | null; height: number | null };
+  images: WanderImage[];
   projectIds: string[];
 };
 
 export type WanderProject = { id: string; slug: string; title: string; postIds: string[] };
 export type WanderCatalogue = { posts: WanderPost[]; projects: WanderProject[] };
-export type WanderStep = { postId: string; projectId: string };
+export type WanderStep = { postId: string; projectId: string; imageId?: string };
 export type WanderJourney = {
   /** Все предложенные работы: они не повторяются, даже если картинка сломана. */
   steps: WanderStep[];
@@ -20,9 +29,56 @@ export type WanderJourney = {
   exhibitionSeenAt: number;
 };
 export const WANDER_STORAGE_KEY = "alice:wander:v1";
+export const WANDER_RECENT_IMAGES_KEY = "alice:wander:recent-images:v1";
+export const WANDER_RECENT_IMAGES_LIMIT = 24;
 
 function sample<T>(items: T[], random: () => number): T | undefined {
   return items[Math.min(items.length - 1, Math.floor(random() * items.length))];
+}
+
+/** The first image is usually a cover: keep it possible, but deliberately rare. */
+export function pickWanderImage(
+  images: WanderImage[],
+  recentImageIds: readonly string[] = [],
+  random: () => number = Math.random,
+): WanderImage | undefined {
+  if (!images.length) return undefined;
+  const recent = new Set(recentImageIds);
+  const fresh = images.filter((image) => !recent.has(image.id));
+  const candidates = fresh.length ? fresh : images;
+  if (candidates.length === 1) return candidates[0];
+
+  const weights = candidates.map((image) => image.id === images[0]?.id ? 0.1 : 1);
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  let cursor = random() * total;
+  for (let index = 0; index < candidates.length; index++) {
+    cursor -= weights[index]!;
+    if (cursor < 0) return candidates[index];
+  }
+  return candidates.at(-1);
+}
+
+export function restoreWanderRecentImages(raw: string | null, catalogue: WanderCatalogue): string[] {
+  if (!raw || raw.length > 20_000) return [];
+  try {
+    const saved = JSON.parse(raw);
+    if (!Array.isArray(saved)) return [];
+    const available = new Set(catalogue.posts.flatMap((post) => post.images.map((image) => image.id)));
+    const restored: string[] = [];
+    for (const value of saved) {
+      if (typeof value !== "string" || !available.has(value) || restored.includes(value)) continue;
+      restored.push(value);
+      if (restored.length >= WANDER_RECENT_IMAGES_LIMIT) break;
+    }
+    return restored;
+  } catch {
+    return [];
+  }
+}
+
+export function rememberWanderImage(recentImageIds: readonly string[], imageId: string): string[] {
+  return [imageId, ...recentImageIds.filter((id) => id !== imageId)]
+    .slice(0, WANDER_RECENT_IMAGES_LIMIT);
 }
 
 /** Cross a shared work into another collection; only jump randomly at a dead end. */
@@ -31,6 +87,7 @@ export function nextWanderStep(
   visited: WanderStep[],
   current?: WanderStep,
   random: () => number = Math.random,
+  recentImageIds: readonly string[] = [],
 ): WanderStep | null {
   const seen = new Set(visited.map((step) => step.postId));
   const posts = new Map(catalogue.posts.map((post) => [post.id, post]));
@@ -77,23 +134,8 @@ export function nextWanderStep(
     availableById.get(projectId)?.postIds.some((candidateId) => candidateId !== id),
   ));
   const postId = sample(bridges.length ? bridges : project.postIds, random)!;
-  return { postId, projectId: project.id };
-}
-
-/** Stay with the current motif without revealing that it is a catalogue filter. */
-export function nextWanderStepInProject(
-  catalogue: WanderCatalogue,
-  visited: WanderStep[],
-  projectId: string,
-  random: () => number = Math.random,
-): WanderStep | null {
-  const seen = new Set(visited.map((step) => step.postId));
-  const posts = new Set(catalogue.posts.map((post) => post.id));
-  const project = catalogue.projects.find((item) => item.id === projectId);
-  if (!project) return null;
-  const candidates = project.postIds.filter((postId) => posts.has(postId) && !seen.has(postId));
-  const postId = sample(candidates, random);
-  return postId ? { postId, projectId } : null;
+  const image = pickWanderImage(posts.get(postId)?.images ?? [], recentImageIds, random);
+  return image ? { postId, projectId: project.id, imageId: image.id } : null;
 }
 
 /** Saved IDs are revalidated against today's public catalogue, never trusted as content. */
@@ -101,7 +143,7 @@ export function restoreWanderJourney(raw: string | null, catalogue: WanderCatalo
   if (!raw || raw.length > 200_000) return null;
   try {
     const saved = JSON.parse(raw);
-    if ((saved?.version !== 1 && saved?.version !== 2) || !Array.isArray(saved.steps)) return null;
+    if (![1, 2, 3].includes(saved?.version) || !Array.isArray(saved.steps)) return null;
     const posts = new Map(catalogue.posts.map((post) => [post.id, post]));
     const projects = new Map(catalogue.projects.map((project) => [project.id, project]));
     const seen = new Set<string>();
@@ -114,8 +156,11 @@ export function restoreWanderJourney(raw: string | null, catalogue: WanderCatalo
       const projectId = post.projectIds.includes(step.projectId)
         ? step.projectId : post.projectIds.find((id) => projects.has(id));
       if (!projectId || !projects.get(projectId)?.postIds.includes(post.id)) continue;
+      const imageId = typeof step.imageId === "string" && post.images.some((image) => image.id === step.imageId)
+        ? step.imageId : post.images[0]?.id;
+      if (!imageId) continue;
       seen.add(post.id);
-      steps.push({ postId: post.id, projectId });
+      steps.push({ postId: post.id, projectId, imageId });
     }
     if (!steps.length) return null;
     const index = steps.findIndex((step) => step.postId === selected);
@@ -146,7 +191,7 @@ export function restoreWanderJourney(raw: string | null, catalogue: WanderCatalo
 }
 
 export function serializeWanderJourney(journey: WanderJourney): string {
-  return JSON.stringify({ version: 2, ...journey });
+  return JSON.stringify({ version: 3, ...journey });
 }
 
 /** Небуквальное название: достаточно странное, но не притворяется AI-куратором. */
