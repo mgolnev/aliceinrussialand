@@ -141,6 +141,11 @@ export function WanderExperience({ catalogue, initialStep }: {
   const hasNewExhibition = exhibitionMilestone >= 7 && journey.exhibitionSeenAt < exhibitionMilestone;
   const exhibitionTags = wanderExhibitionTags(journey, catalogue);
 
+  useLayoutEffect(() => {
+    document.body.classList.add("wander-mode");
+    return () => document.body.classList.remove("wander-mode");
+  }, []);
+
   useEffect(() => {
     let active = true;
     queueMicrotask(() => {
@@ -304,16 +309,16 @@ export function WanderExperience({ catalogue, initialStep }: {
     <div className={styles.shell}>
       <Link href="/" className={styles.modeExit} aria-label="выйти" onClick={leaveMode}>×</Link>
       {!post || !image ? (
-        <main className={styles.empty}>
+        <main key="empty" className={styles.empty}>
           <h1>здесь пока пусто</h1>
           <button type="button" className={styles.textLink} onClick={restart}>попробовать ещё раз</button>
         </main>
       ) : view === "pause" ? (
-        <main className={styles.ritual} aria-live="polite">
+        <main key="pause" className={styles.ritual} aria-live="polite">
           <p className={styles.ritualWord}>хватит</p>
         </main>
       ) : view === "trail" ? (
-        <main className={`${styles.trail} ${isExhibition ? styles.exhibition : ""}`}>
+        <main key="trail" className={`${styles.trail} ${isExhibition ? styles.exhibition : ""}`}>
           <div className={styles.trailHeading}>
             <div className={styles.trailTitle}>
               {isExhibition ? (
@@ -365,7 +370,7 @@ export function WanderExperience({ catalogue, initialStep }: {
           </div>
         </main>
       ) : (
-        <main className={styles.stage}>
+        <main key="work" className={styles.stage}>
           <h1 className="sr-only">Прогулка по работам</h1>
           <figure className={styles.artwork}>
             <div data-testid="wander-artwork" className={styles.artFrame} style={artworkFrameStyle(image)}>

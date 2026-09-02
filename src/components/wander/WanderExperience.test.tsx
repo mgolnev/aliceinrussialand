@@ -88,6 +88,12 @@ describe("интерфейс прогулки", () => {
     fireEvent.click(screen.getByRole("link", { name: "выйти" }));
     expect(sessionStorage.getItem(WANDER_STORAGE_KEY)).toBeNull();
   });
+  it("возвращает глобальный фон после выхода из режима", async () => {
+    const view = mount(); await ready();
+    expect(document.body).toHaveClass("wander-mode");
+    view.unmount();
+    expect(document.body).not.toHaveClass("wander-mode");
+  });
   it("подстраивает ширину паспарту под пропорции каждой работы", async () => {
     const catalogue: WanderCatalogue = {
       posts: [
@@ -138,15 +144,18 @@ describe("интерфейс прогулки", () => {
   });
   it("после конца можно начать новую прогулку", async () => {
     mount(); await ready();
+    expect(document.body).toHaveClass("wander-mode");
     for (let i = 0; i < 3; i++) {
       fireEvent.click(screen.getByRole("button", { name: "дальше" }));
       await loadCurrent();
     }
     fireEvent.click(screen.getByRole("button", { name: "хватит" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "пройти ещё раз" })).toBeEnabled());
+    const exhibitionMain = screen.getByRole("main");
     vi.mocked(window.scrollTo).mockClear();
     fireEvent.click(screen.getByRole("button", { name: "пройти ещё раз" }));
     expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
+    expect(screen.getByRole("main")).not.toBe(exhibitionMain);
     const nextButton = screen.getByRole("button", { name: "дальше" });
     expect(nextButton).toBeVisible();
     expect(nextButton).toBeDisabled();

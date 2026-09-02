@@ -1,8 +1,34 @@
 .shell {
   min-height: 100svh;
-  background: transparent;
+  /*
+    The site background normally lives on a fixed body pseudo-element. Mobile
+    Safari can keep that compositor layer above this screen after the long
+    exhibition is replaced by a short work view. Paint the same atmosphere as
+    a normal, non-fixed layer here so it cannot cover the frame and controls.
+  */
+  background-color: #f5eee5;
+  background-image:
+    radial-gradient(
+      ellipse 140% 85% at 50% -18%,
+      rgb(255 255 255 / 0.94) 0%,
+      rgb(255 255 255 / 0.5) 50%,
+      rgb(255 255 255 / 0) 100%
+    ),
+    linear-gradient(180deg, #fcfbf8 0%, #faf6ef 55%, #f5eee5 100%);
+  background-position: top center;
+  background-repeat: no-repeat;
+  background-size: 100% 100svh;
   color: #292622;
   padding: 0 clamp(20px, 5vw, 80px);
+}
+
+/*
+  The component owns this body class only while the wander route is mounted.
+  Keep the override in the route chunk so it arrives and leaves with the mode.
+*/
+:global(body.wander-mode)::before {
+  content: none;
+  display: none;
 }
 .modeExit {
   position: fixed;
