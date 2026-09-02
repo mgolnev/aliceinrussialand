@@ -1,10 +1,11 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { AnchorHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WanderExperience } from "./WanderExperience";
 import { serializeWanderJourney, WANDER_RECENT_IMAGES_KEY, WANDER_STORAGE_KEY } from "@/lib/wander";
 import { wanderFixture } from "@/test/wander-fixture";
 import type { WanderCatalogue } from "@/lib/wander";
+import { WANDER_LABELS_STORAGE_KEY, WANDER_NEXT_LABELS } from "@/lib/wander-labels";
 
 vi.mock("next/link", () => ({
   default: ({ href, prefetch, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & {
@@ -19,10 +20,13 @@ vi.mock("next/link", () => ({
 function mount() {
   return render(<WanderExperience catalogue={wanderFixture()} initialStep={{ postId: "a", projectId: "portrait", imageId: "a-1" }} />);
 }
+function primary() {
+  return within(screen.getByRole("navigation", { name: "Продолжить прогулку" })).getByRole("button");
+}
 async function ready() {
   await waitFor(() => expect(screen.getByRole("img")).toBeInTheDocument());
   fireEvent.load(screen.getByRole("img"));
-  await waitFor(() => expect(screen.getByRole("button", { name: "дальше" })).toBeEnabled());
+  await waitFor(() => expect(primary()).toBeEnabled());
 }
 async function loadCurrent() {
   await waitFor(() => expect(screen.getByRole("img")).toBeInTheDocument());
@@ -123,12 +127,12 @@ describe("интерфейс прогулки", () => {
   });
   it("сохраняет контрастный маршрут и возвращается из его просмотра", async () => {
     mount(); await ready();
-    fireEvent.click(screen.getByRole("button", { name: "дальше" }));
-    expect(screen.getByRole("button", { name: "дальше" })).toBeDisabled();
+    fireEvent.click(primary());
+    expect(primary()).toBeDisabled();
     await loadCurrent();
-    fireEvent.click(screen.getByRole("button", { name: "дальше" }));
+    fireEvent.click(primary());
     await loadCurrent();
-    fireEvent.click(screen.getByRole("button", { name: "дальше" }));
+    fireEvent.click(primary());
     await loadCurrent();
     expect(JSON.parse(sessionStorage.getItem(WANDER_STORAGE_KEY)!).steps).toHaveLength(4);
     fireEvent.click(screen.getByRole("button", { name: "хватит" }));
@@ -146,7 +150,7 @@ describe("интерфейс прогулки", () => {
     mount(); await ready();
     expect(document.body).toHaveClass("wander-mode");
     for (let i = 0; i < 3; i++) {
-      fireEvent.click(screen.getByRole("button", { name: "дальше" }));
+      fireEvent.click(primary());
       await loadCurrent();
     }
     fireEvent.click(screen.getByRole("button", { name: "хватит" }));
@@ -227,7 +231,7 @@ describe("интерфейс прогулки", () => {
     render(<WanderExperience catalogue={catalogue} initialStep={{ postId: "long-0", projectId: "a", imageId: "long-0-1" }} />);
     await ready();
     for (let viewed = 1; viewed < 7; viewed++) {
-      fireEvent.click(screen.getByRole("button", { name: "дальше" }));
+      fireEvent.click(primary());
       await loadCurrent();
     }
     expect(screen.getByRole("button", { name: "хватит" })).toBeEnabled();
@@ -248,5 +252,55 @@ describe("интерфейс прогулки", () => {
     expect(screen.getByRole("heading", { name: "здесь пока пусто" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "дальше" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "выйти" })).toHaveAttribute("href", "/");
+  });
+
+  it("начинает с «дальше», затем меняет реплику вместе с работой и сохраняет стрелку", async () => {
+    const catalogue = longWalkFixture();
+    const view = render(<WanderExperience catalogue={catalogue} initialStep={{ postId: "long-0", imageId: "long-0-1" }} />);
+    await ready();
+    expect(primary()).toHaveAccessibleName("дальше");
+    const seen: string[] = [];
+    for (let index = 0; index < 5; index++) {
+      fireEvent.click(primary());
+      const label = primary().querySelector("span")!.textContent!;
+      expect(WANDER_NEXT_LABELS).toContain(label);
+      expect(seen).not.toContain(label);
+      seen.push(label);
+      expect(within(primary()).getByText("→")).toHaveAttribute("aria-hidden");
+      await loadCurrent();
+      expect(primary()).toHaveAccessibleName(label);
+      fireEvent.load(screen.getByRole("img"));
+      expect(primary()).toHaveAccessibleName(label);
+    }
+    const savedDeck = localStorage.getItem(WANDER_LABELS_STORAGE_KEY);
+    view.unmount();
+    render(<WanderExperience catalogue={catalogue} initialStep={{ postId: "long-0", imageId: "long-0-1" }} />);
+    await ready();
+    expect(primary()).toHaveAccessibleName(seen.at(-1)!);
+    expect(localStorage.getItem(WANDER_LABELS_STORAGE_KEY)).toBe(savedDeck);
+  });
+
+  it("помнит использованные реплики после нового входа, но первая кнопка всегда «дальше»", async () => {
+    const firstView = mount(); await ready();
+    fireEvent.click(primary()); await loadCurrent();
+    const firstLabel = primary().querySelector("span")!.textContent!;
+    firstView.unmount();
+    sessionStorage.removeItem(WANDER_STORAGE_KEY);
+    mount(); await ready();
+    expect(primary()).toHaveAccessibleName("дальше");
+    fireEvent.click(primary()); await loadCurrent();
+    expect(primary()).not.toHaveAccessibleName(firstLabel);
+    expect(JSON.parse(localStorage.getItem(WANDER_LABELS_STORAGE_KEY)!).remaining).toHaveLength(118);
+  });
+
+  it("не повторяет реплики, если сохранение истории заблокировано", async () => {
+    localStorage.setItem(WANDER_LABELS_STORAGE_KEY, JSON.stringify({ version: 1, remaining: ["шмыг", "прыг"], recent: [] }));
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("quota"); });
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    mount(); await ready();
+    fireEvent.click(primary()); await loadCurrent();
+    expect(primary()).toHaveAccessibleName("шмыг");
+    fireEvent.click(primary()); await loadCurrent();
+    expect(primary()).toHaveAccessibleName("прыг");
   });
 });

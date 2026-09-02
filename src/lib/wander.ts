@@ -1,3 +1,5 @@
+import { isWanderNextLabel, type WanderNextLabel } from "./wander-labels";
+
 /** Small, public-only catalogue. No post bodies or admin fields reach the client. */
 export type WanderImage = {
   id: string;
@@ -18,7 +20,7 @@ export type WanderPost = {
 
 export type WanderProject = { id: string; slug: string; title: string; postIds: string[] };
 export type WanderCatalogue = { posts: WanderPost[]; projects: WanderProject[] };
-export type WanderStep = { postId: string; projectId?: string; imageId?: string };
+export type WanderStep = { postId: string; projectId?: string; imageId?: string; nextLabel?: WanderNextLabel };
 export type WanderJourney = {
   /** Все предложенные работы: они не повторяются, даже если картинка сломана. */
   steps: WanderStep[];
@@ -306,7 +308,12 @@ export function restoreWanderJourney(raw: string | null, catalogue: WanderCatalo
         ? step.imageId : post.images[0]?.id;
       if (!imageId) continue;
       seen.add(post.id);
-      steps.push({ postId: post.id, ...(projectId ? { projectId } : {}), imageId });
+      steps.push({
+        postId: post.id,
+        ...(projectId ? { projectId } : {}),
+        imageId,
+        ...(isWanderNextLabel(step.nextLabel) ? { nextLabel: step.nextLabel } : {}),
+      });
     }
     if (!steps.length) return null;
     const index = steps.findIndex((step) => step.postId === selected);

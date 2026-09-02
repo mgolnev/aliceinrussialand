@@ -145,6 +145,12 @@ describe("маршрут в пределах вкладки", () => {
   it("восстанавливает последовательность и выбранную работу", () => {
     expect(restoreWanderJourney(serializeWanderJourney(journey), wanderFixture())).toEqual(journey);
   });
+  it("восстанавливает реплику только из разрешённого набора", () => {
+    const saved = { ...journey, steps: journey.steps.map((step) => ({ ...step, nextLabel: "шмыг" as const })) };
+    expect(restoreWanderJourney(serializeWanderJourney(saved), wanderFixture())).toEqual(saved);
+    const invalid = JSON.stringify({ version: 4, ...journey, steps: journey.steps.map((step) => ({ ...step, nextLabel: "купить" })) });
+    expect(restoreWanderJourney(invalid, wanderFixture())).toEqual(journey);
+  });
   it.each([null, "broken", "null", "{}", '{"version":2,"steps":[]}', "x".repeat(200_001)])("отбрасывает повреждённые данные", (raw) => {
     expect(restoreWanderJourney(raw, wanderFixture())).toBeNull();
   });

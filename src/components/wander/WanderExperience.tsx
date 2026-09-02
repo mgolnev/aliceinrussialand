@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import {
   nextWanderStep,
@@ -19,6 +19,12 @@ import {
   type WanderPost,
   type WanderStep,
 } from "@/lib/wander";
+import {
+  drawWanderLabel,
+  restoreWanderLabelDeck,
+  WANDER_LABELS_STORAGE_KEY,
+  type WanderLabelDeck,
+} from "@/lib/wander-labels";
 import styles from "./wander.module.css";
 
 function artworkFrameStyle(image: WanderImage): CSSProperties {
@@ -123,6 +129,17 @@ export function WanderExperience({ catalogue, initialStep }: {
   const heading = useRef<HTMLHeadingElement>(null);
   const primaryButton = useRef<HTMLButtonElement>(null);
   const finaleTimer = useRef<number | null>(null);
+  const labelDeck = useRef<WanderLabelDeck | null>(null);
+  const drawNextLabel = useCallback(() => {
+    let deck = labelDeck.current;
+    if (!deck) {
+      try { deck = restoreWanderLabelDeck(localStorage.getItem(WANDER_LABELS_STORAGE_KEY)); } catch { /* optional */ }
+    }
+    const next = drawWanderLabel(deck ?? { remaining: [], recent: [] });
+    labelDeck.current = next.deck;
+    try { localStorage.setItem(WANDER_LABELS_STORAGE_KEY, JSON.stringify({ version: 1, ...next.deck })); } catch { /* In-memory deck still prevents repeats within this visit. */ }
+    return next.label;
+  }, []);
   const posts = useMemo(
     () => new Map(catalogue.posts.map((post) => [post.id, post])),
     [catalogue.posts],
@@ -152,13 +169,19 @@ export function WanderExperience({ catalogue, initialStep }: {
       if (!active) return;
       try {
         const saved = restoreWanderJourney(sessionStorage.getItem(WANDER_STORAGE_KEY), catalogue);
-        if (saved) setJourney(saved);
+        if (saved) {
+          // Old sessions have no labels yet. Assign once, outside render/updaters.
+          if (saved.cursor > 0 && !saved.steps[saved.cursor].nextLabel) {
+            saved.steps[saved.cursor] = { ...saved.steps[saved.cursor], nextLabel: drawNextLabel() };
+          }
+          setJourney(saved);
+        }
         setRecentImageIds(restoreWanderRecentImages(localStorage.getItem(WANDER_RECENT_IMAGES_KEY), catalogue));
       } catch { /* Storage is optional (private mode / blocked cookies). */ }
       setReady(true);
     });
     return () => { active = false; };
-  }, [catalogue]);
+  }, [catalogue, drawNextLabel]);
 
   useEffect(() => {
     if (!ready) return;
@@ -232,9 +255,10 @@ export function WanderExperience({ catalogue, initialStep }: {
   }
 
   function appendStep(next: WanderStep) {
+    const labelledStep = { ...next, nextLabel: drawNextLabel() };
     setJourney((previous) => ({
       ...previous,
-      steps: [...previous.steps, next],
+      steps: [...previous.steps, labelledStep],
       cursor: previous.steps.length,
     }));
     setImageAttempt(0);
@@ -295,7 +319,9 @@ export function WanderExperience({ catalogue, initialStep }: {
     : 0;
   const primaryLabel = currentImageStatus === "failed"
     ? "пропустить"
-    : hasNewExhibition || exhausted ? "хватит" : "дальше";
+    : hasNewExhibition || exhausted ? "хватит"
+    : journey.cursor === 0 ? "дальше" : step?.nextLabel ?? "дальше";
+  const isForwardAction = currentImageStatus !== "failed" && !hasNewExhibition && !exhausted;
   const primaryDisabled = !ready || (!currentViewed && currentImageStatus === "loading");
 
   function primaryAction() {
@@ -393,7 +419,7 @@ export function WanderExperience({ catalogue, initialStep }: {
           <nav className={styles.actions} aria-label="Продолжить прогулку">
             <button ref={primaryButton} type="button" disabled={primaryDisabled} onClick={primaryAction} className={styles.primary}>
               <span className={styles.primaryLabel}>{primaryLabel}</span>
-              {primaryLabel === "дальше" ? <span className={styles.primaryArrow} aria-hidden>→</span> : null}
+              {isForwardAction ? <span className={styles.primaryArrow} aria-hidden>→</span> : null}
             </button>
           </nav>
           <p role="status" className="sr-only">{ready ? `Работа ${currentOrdinal}: ${post.title}.` : "Начинается прогулка"}</p>

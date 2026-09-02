@@ -145,6 +145,12 @@
   justify-content: flex-end;
   gap: 24px;
 }
+/* The whole control strip is the button, regardless of the current phrase. */
+.actions > .primary {
+  width: 100%;
+  min-height: 56px;
+  justify-content: flex-end;
+}
 .quiet { color: #756c62; font-size: 11px; line-height: 1.6; }
 .trail {
   max-width: 1160px;
