@@ -17,11 +17,11 @@ describe("прогулка по подборкам", () => {
   it("первым выбирает подборку, а не взвешивает её по количеству работ", () => {
     expect(nextWanderStep(wanderFixture(), [], undefined, () => .99)).toEqual({ postId: "d", projectId: "wolf", imageId: "d-1" });
   });
-  it("находит работу-мост внутри текущей подборки", () => {
+  it("сразу выходит из текущей подборки, если есть другой путь", () => {
     const start = { postId: "a", projectId: "portrait" };
-    expect(nextWanderStep(wanderFixture(), [start], start, () => 0)).toEqual({ postId: "b", projectId: "portrait", imageId: "b-1" });
+    expect(nextWanderStep(wanderFixture(), [start], start, () => 0)).toEqual({ postId: "b", projectId: "pen", imageId: "b-1" });
   });
-  it("через мост уходит в другую подборку вместо повтора той же", () => {
+  it("предпочитает явную смену формата варианту с неизвестной геометрией", () => {
     const bridge = { postId: "b", projectId: "portrait" };
     expect(nextWanderStep(wanderFixture(), [bridge], bridge, () => 0)).toEqual({ postId: "c", projectId: "pen", imageId: "c-1" });
   });
@@ -47,28 +47,57 @@ describe("прогулка по подборкам", () => {
   it("спокойно обрабатывает пустой каталог", () => {
     expect(nextWanderStep({ posts: [], projects: [] }, [])).toBeNull();
   });
-  it("без явной связи не остаётся в одной серии дольше двух работ", () => {
+  it("проходит самостоятельные публикации без фиктивной подборки", () => {
+    const catalogue = {
+      posts: [
+        { id: "solo-a", slug: "solo-a", title: "Один", images: [{ id: "solo-a-1", src: "/solo-a.webp", thumbnail: "/solo-a-small.webp", alt: "Один", width: 800, height: 1000 }], projectIds: [] },
+        { id: "solo-b", slug: "solo-b", title: "Два", images: [{ id: "solo-b-1", src: "/solo-b.webp", thumbnail: "/solo-b-small.webp", alt: "Два", width: 1200, height: 800 }], projectIds: [] },
+      ],
+      projects: [],
+    };
+    const first = nextWanderStep(catalogue, [], undefined, () => 0);
+    expect(first).toEqual({ postId: "solo-a", imageId: "solo-a-1" });
+    expect(nextWanderStep(catalogue, [first!], first!, () => 0)).toEqual({ postId: "solo-b", imageId: "solo-b-1" });
+  });
+  it("не выбирает тот же формат, пока доступен противоположный", () => {
+    const catalogue = {
+      posts: [
+        { id: "start", slug: "start", title: "Старт", images: [{ id: "start-1", src: "/start.webp", thumbnail: "/start-small.webp", alt: "Старт", width: 800, height: 1200 }], projectIds: [] },
+        { id: "same", slug: "same", title: "Та же форма", images: [{ id: "same-1", src: "/same.webp", thumbnail: "/same-small.webp", alt: "Та же форма", width: 800, height: 1200 }], projectIds: [] },
+        { id: "opposite", slug: "opposite", title: "Другая форма", images: [{ id: "opposite-1", src: "/opposite.webp", thumbnail: "/opposite-small.webp", alt: "Другая форма", width: 1200, height: 800 }], projectIds: [] },
+      ],
+      projects: [],
+    };
+    const start = { postId: "start", imageId: "start-1" };
+    expect(nextWanderStep(catalogue, [start], start, () => .99)?.postId).toBe("opposite");
+  });
+  it("не остаётся в одной серии даже на второй шаг, пока есть альтернатива", () => {
     const fixture = wanderFixture();
     const first = { postId: "a", projectId: "portrait" };
     const second = { postId: "b", projectId: "portrait" };
     const next = nextWanderStep(fixture, [first, second], second, () => .99);
     expect(next?.projectId).not.toBe("portrait");
   });
-  it("после ухода по возможности возвращает первый мотив", () => {
-    const fixture = wanderFixture();
-    fixture.posts.push({
-      id: "e", slug: "second-portrait", title: "Другой портрет",
-      images: [{ id: "e-1", src: "/e.webp", thumbnail: "/e-small.webp", alt: "Другой портрет", width: 800, height: 1000 }],
-      projectIds: ["portrait"],
-    });
-    fixture.projects[0].postIds.push("e");
-    const visited = [
-      { postId: "a", projectId: "portrait" },
-      { postId: "b", projectId: "portrait" },
-      { postId: "c", projectId: "pen" },
-      { postId: "d", projectId: "wolf" },
-    ];
-    expect(nextWanderStep(fixture, visited, visited.at(-1), () => .99)?.projectId).toBe("portrait");
+  it("оставляет хаосу выбор между равно контрастными работами", () => {
+    const fixture: Parameters<typeof nextWanderStep>[0] = {
+      posts: [
+        { id: "a", slug: "a", title: "Портрет", images: [{ id: "a-1", src: "/a.webp", thumbnail: "/a-small.webp", alt: "Портрет", width: 800, height: 1000 }], projectIds: ["portrait"] },
+        { id: "x", slug: "x", title: "Поле", images: [{ id: "x-1", src: "/x.webp", thumbnail: "/x-small.webp", alt: "Поле", width: 1200, height: 800 }], projectIds: ["outside"] },
+        { id: "y", slug: "y", title: "Река", images: [{ id: "y-1", src: "/y.webp", thumbnail: "/y-small.webp", alt: "Река", width: 1200, height: 800 }], projectIds: ["outside"] },
+      ],
+      projects: [
+        { id: "portrait", slug: "portrait", title: "портрет", postIds: ["a"] },
+        { id: "outside", slug: "outside", title: "снаружи", postIds: ["x", "y"] },
+      ],
+    };
+    const start = { postId: "a", projectId: "portrait", imageId: "a-1" };
+    expect(nextWanderStep(fixture, [start], start, () => 0)?.postId).toBe("x");
+    expect(nextWanderStep(fixture, [start], start, () => .99)?.postId).toBe("y");
+  });
+  it("учитывает историю предыдущего запуска и не начинает с той же серии", () => {
+    const next = nextWanderStep(wanderFixture(), [], undefined, () => 0, ["a-1"]);
+    expect(next?.postId).not.toBe("a");
+    expect(next?.projectId).not.toBe("portrait");
   });
 });
 
@@ -88,6 +117,15 @@ describe("выбор изображения внутри публикации", 
   it("исключает недавно показанные изображения, пока есть свежие", () => {
     expect(pickWanderImage(images, ["page-1"], () => .1)?.id).toBe("page-2");
     expect(pickWanderImage(images, ["cover", "page-1"], () => 0)?.id).toBe("page-2");
+  });
+
+  it("при наличии выбора меняет вертикальный формат на горизонтальный", () => {
+    expect(pickWanderImage(images, [], () => .99, images[1])?.id).toBe("page-2");
+    const mixed = [
+      images[1],
+      { id: "landscape", src: "/landscape.webp", thumbnail: "/landscape-small.webp", alt: "Горизонтальная работа", width: 1200, height: 800 },
+    ];
+    expect(pickWanderImage(mixed, [], () => 0, images[1])?.id).toBe("landscape");
   });
 
   it("хранит ограниченную очередь и очищает её от отсутствующих изображений", () => {
@@ -135,6 +173,16 @@ describe("маршрут в пределах вкладки", () => {
   it("оставляет непоказанную работу вне выставки", () => {
     const saved = serializeWanderJourney({ ...journey, viewedPostIds: ["a"] });
     expect(restoreWanderJourney(saved, wanderFixture())?.viewedPostIds).toEqual(["a"]);
+  });
+  it("сохраняет опубликованную работу, даже если она больше не состоит в подборке", () => {
+    const catalogue = wanderFixture();
+    catalogue.posts = catalogue.posts.map((post) => post.id === "a" ? { ...post, projectIds: [] } : post);
+    catalogue.projects = catalogue.projects.filter((project) => project.id !== "portrait");
+    const restored = restoreWanderJourney(serializeWanderJourney({
+      steps: [{ postId: "a", projectId: "portrait", imageId: "a-1" }],
+      viewedPostIds: ["a"], cursor: 0, exhibitionSeenAt: 0,
+    }), catalogue);
+    expect(restored?.steps).toEqual([{ postId: "a", imageId: "a-1" }]);
   });
 });
 

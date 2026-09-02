@@ -29,8 +29,9 @@
 .textLink:disabled { cursor: default; opacity: .4; }
 .textLink:hover { color: #25201a; text-decoration: underline; text-underline-offset: 5px; }
 .primary { font-size: clamp(23px, 3vw, 32px); letter-spacing: -.045em; }
-.primary span { display: inline-block; transition: transform 180ms ease; }
-.primary:hover span { transform: translateX(5px); }
+.primaryLabel { display: inline-block; white-space: nowrap; }
+.primaryArrow { display: inline-block; flex: 0 0 auto; transition: transform 180ms ease; }
+.primary:hover .primaryArrow { transform: translateX(5px); }
 .primary:disabled { cursor: wait; opacity: .45; }
 .shell a:focus-visible, .shell button:focus-visible {
   border-radius: 2px;

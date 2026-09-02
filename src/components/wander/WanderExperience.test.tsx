@@ -69,6 +69,19 @@ describe("интерфейс прогулки", () => {
     expect(screen.queryByText("это")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "выйти" })).toHaveAttribute("href", "/");
   });
+  it("показывает самостоятельную публикацию без подборки", async () => {
+    const catalogue: WanderCatalogue = {
+      posts: [{
+        id: "solo", slug: "solo", title: "Самостоятельная работа", projectIds: [],
+        images: [{ id: "solo-1", src: "/solo.webp", thumbnail: "/solo-small.webp", alt: "Самостоятельная работа", width: 800, height: 1000 }],
+      }],
+      projects: [],
+    };
+    render(<WanderExperience catalogue={catalogue} initialStep={{ postId: "solo", imageId: "solo-1" }} />);
+    await waitFor(() => expect(screen.getByRole("img", { name: "Самостоятельная работа" })).toBeInTheDocument());
+    fireEvent.load(screen.getByRole("img"));
+    expect(screen.getByRole("button", { name: "хватит" })).toBeEnabled();
+  });
   it("завершает текущую сессию при выходе через крестик", async () => {
     mount(); await ready();
     expect(sessionStorage.getItem(WANDER_STORAGE_KEY)).not.toBeNull();
@@ -76,7 +89,15 @@ describe("интерфейс прогулки", () => {
     expect(sessionStorage.getItem(WANDER_STORAGE_KEY)).toBeNull();
   });
   it("подстраивает ширину паспарту под пропорции каждой работы", async () => {
-    mount(); await ready();
+    const catalogue: WanderCatalogue = {
+      posts: [
+        { id: "portrait", slug: "portrait", title: "Портрет", images: [{ id: "portrait-1", src: "/portrait.webp", thumbnail: "/portrait-small.webp", alt: "Портрет", width: 800, height: 1000 }], projectIds: ["shape"] },
+        { id: "landscape", slug: "landscape", title: "Пейзаж", images: [{ id: "landscape-1", src: "/landscape.webp", thumbnail: "/landscape-small.webp", alt: "Пейзаж", width: 1200, height: 800 }], projectIds: ["shape"] },
+      ],
+      projects: [{ id: "shape", slug: "shape", title: "форма", postIds: ["portrait", "landscape"] }],
+    };
+    render(<WanderExperience catalogue={catalogue} initialStep={{ postId: "portrait", projectId: "shape", imageId: "portrait-1" }} />);
+    await ready();
     const portraitWidth = screen.getByTestId("wander-artwork")
       .style.getPropertyValue("--frame-width");
     fireEvent.click(screen.getByRole("button", { name: "дальше" }));
@@ -94,16 +115,14 @@ describe("интерфейс прогулки", () => {
     expect(screen.queryByTestId("wander-skeleton")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "дальше" })).toBeEnabled();
   });
-  it("проходит мост, сохраняет маршрут и возвращается из его просмотра", async () => {
+  it("сохраняет контрастный маршрут и возвращается из его просмотра", async () => {
     mount(); await ready();
     fireEvent.click(screen.getByRole("button", { name: "дальше" }));
-    expect(screen.getByRole("status")).toHaveTextContent("Портрет ручкой");
     expect(screen.getByRole("button", { name: "дальше" })).toBeDisabled();
     await loadCurrent();
     fireEvent.click(screen.getByRole("button", { name: "дальше" }));
     await loadCurrent();
     fireEvent.click(screen.getByRole("button", { name: "дальше" }));
-    expect(screen.getByRole("status")).toHaveTextContent("Волк-дурень");
     await loadCurrent();
     expect(JSON.parse(sessionStorage.getItem(WANDER_STORAGE_KEY)!).steps).toHaveLength(4);
     fireEvent.click(screen.getByRole("button", { name: "хватит" }));
@@ -123,8 +142,10 @@ describe("интерфейс прогулки", () => {
     }
     fireEvent.click(screen.getByRole("button", { name: "хватит" }));
     fireEvent.click(screen.getByRole("button", { name: "пройти ещё раз" }));
-    expect(screen.getByRole("button", { name: "дальше" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "дальше" })).toBeDisabled();
+    const nextButton = screen.getByRole("button", { name: "дальше" });
+    expect(nextButton).toBeVisible();
+    expect(nextButton).toBeDisabled();
+    expect(screen.getByText("дальше", { selector: "span" })).toBeVisible();
     expect(screen.getByTestId("wander-skeleton")).toBeInTheDocument();
     await loadCurrent();
     expect(screen.getByRole("button", { name: "дальше" })).toBeEnabled();
@@ -162,7 +183,7 @@ describe("интерфейс прогулки", () => {
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("blocked"); });
     mount(); await ready();
     fireEvent.click(screen.getByRole("button", { name: "дальше" }));
-    expect(screen.getByRole("status")).toHaveTextContent("Портрет ручкой");
+    expect(screen.getByRole("status")).toHaveTextContent("Работа 2");
   });
   it("при ошибке картинки оставляет рабочие переходы", async () => {
     mount();
@@ -174,7 +195,7 @@ describe("интерфейс прогулки", () => {
     expect(screen.getByRole("button", { name: "попробовать ещё раз ↻" })).toBeEnabled();
     expect(screen.queryByText("вся подборка")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "пропустить" }));
-    expect(screen.getByRole("img")).toHaveAttribute("src", "/b.webp");
+    expect(screen.getByRole("img")).not.toHaveAttribute("src", "/a.webp");
     expect(JSON.parse(sessionStorage.getItem(WANDER_STORAGE_KEY)!).viewedPostIds).toEqual([]);
   });
   it("повторно загружает сломанное изображение и только потом засчитывает работу", async () => {
@@ -200,6 +221,7 @@ describe("интерфейс прогулки", () => {
     expect(screen.getByText(/кажется,/)).toBeInTheDocument();
     expect(screen.getByText(/выставка №\d{5} · 7 работ/)).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(7);
+    expect(screen.getByRole("button", { name: "вернуться к работе" })).toBeEnabled();
     expect(screen.getByRole("heading")).toHaveTextContent(/кажется,/);
     expect(screen.queryByText(/вышли погулять/)).not.toBeInTheDocument();
     expect(screen.getByText(/^серия [abc] · серия [abc] · серия [abc]$/)).toBeInTheDocument();

@@ -124,11 +124,9 @@ export function WanderExperience({ catalogue, initialStep }: {
   const primaryButton = useRef<HTMLButtonElement>(null);
   const finaleTimer = useRef<number | null>(null);
   const posts = new Map(catalogue.posts.map((post) => [post.id, post]));
-  const projects = new Map(catalogue.projects.map((project) => [project.id, project]));
   const step = journey.steps[journey.cursor];
   const post = posts.get(step?.postId ?? "");
   const image = post?.images.find((item) => item.id === step?.imageId) ?? post?.images[0];
-  const project = projects.get(step?.projectId ?? "");
   const exhausted = journey.steps.length >= catalogue.posts.length;
   const viewed = new Set(journey.viewedPostIds);
   const viewedSteps = journey.steps
@@ -288,7 +286,7 @@ export function WanderExperience({ catalogue, initialStep }: {
   return (
     <div className={styles.shell}>
       <Link href="/" className={styles.modeExit} aria-label="выйти" onClick={leaveMode}>×</Link>
-      {!post || !image || !project ? (
+      {!post || !image ? (
         <main className={styles.empty}>
           <h1>здесь пока пусто</h1>
           <button type="button" className={styles.textLink} onClick={restart}>попробовать ещё раз</button>
@@ -320,7 +318,7 @@ export function WanderExperience({ catalogue, initialStep }: {
                   ? `выставка №${wanderExhibitionNumber(journey)} · ${worksLabel(viewedCount)}`
                   : worksLabel(viewedCount)}
               </span>
-              <button type="button" className={styles.textLink} onClick={() => showWork()}>подойти</button>
+              <button type="button" className={styles.textLink} onClick={() => showWork()}>вернуться к работе</button>
             </div>
           </div>
           <ol className={styles.trailGrid}>
@@ -337,7 +335,7 @@ export function WanderExperience({ catalogue, initialStep }: {
               );
             })}
           </ol>
-          {isExhibition ? <p className={styles.exhibitionTags}>{exhibitionTags.join(" · ")}</p> : null}
+          {isExhibition && exhibitionTags.length ? <p className={styles.exhibitionTags}>{exhibitionTags.join(" · ")}</p> : null}
           <div className={styles.trailFooter}>
             <button type="button" className={styles.primary} onClick={isExhibition || exhausted ? restart : continueFromTrail}>
               {isExhibition || exhausted ? "пройти ещё раз" : "продолжить прогулку"}
@@ -367,7 +365,8 @@ export function WanderExperience({ catalogue, initialStep }: {
           </figure>
           <nav className={styles.actions} aria-label="Продолжить прогулку">
             <button ref={primaryButton} type="button" disabled={primaryDisabled} onClick={primaryAction} className={styles.primary}>
-              {primaryLabel} {primaryLabel === "дальше" ? <span aria-hidden>→</span> : null}
+              <span className={styles.primaryLabel}>{primaryLabel}</span>
+              {primaryLabel === "дальше" ? <span className={styles.primaryArrow} aria-hidden>→</span> : null}
             </button>
           </nav>
           <p role="status" className="sr-only">{ready ? `Работа ${currentOrdinal}: ${post.title}.` : "Начинается прогулка"}</p>
