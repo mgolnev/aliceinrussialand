@@ -30,6 +30,7 @@ describe("querySiteSettingsRow", () => {
   });
   it("по умолчанию показывает вход «не выбирай»", () => {
     expect(defaultSiteSettings().showWanderEntry).toBe(true);
+    expect(defaultSiteSettings().wanderEntryLabel).toBe("не жми сюда");
   });
 
   it("на сборке Next не ходит в БД", async () => {

@@ -5,7 +5,7 @@ import { WanderExperience } from "@/components/wander/WanderExperience";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Не выбирай — прогулка по работам",
+  title: "Прогулка по работам",
   description: "Одна работа ведёт к другой. Случайная прогулка по визуальному архиву.",
   // Session-specific experience; original posts and collections remain the indexed pages.
   robots: { index: false, follow: true },

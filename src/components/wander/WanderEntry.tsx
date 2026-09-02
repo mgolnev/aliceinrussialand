@@ -3,11 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WANDER_STORAGE_KEY } from "@/lib/wander";
+import { DEFAULT_WANDER_ENTRY_LABEL } from "@/lib/wander-settings";
+import styles from "./WanderEntry.module.css";
 
-export function WanderEntry() {
+export function WanderEntry({ label }: { label?: string }) {
   const router = useRouter();
   const timer = useRef<number | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const entryLabel = label?.trim() || DEFAULT_WANDER_ENTRY_LABEL;
+  const usesAuthorHandwriting = leaving || (
+    entryLabel.toLocaleLowerCase("ru-RU") === DEFAULT_WANDER_ENTRY_LABEL
+  );
 
   useEffect(() => {
     return () => {
@@ -20,19 +26,31 @@ export function WanderEntry() {
     setLeaving(true);
     try { sessionStorage.removeItem(WANDER_STORAGE_KEY); } catch { /* A new walk still starts when storage is blocked. */ }
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    timer.current = window.setTimeout(() => router.push("/wander"), reducedMotion ? 0 : 420);
+    timer.current = window.setTimeout(() => router.push("/wander"), reducedMotion ? 0 : 560);
   }
 
   return (
-    <div className="mb-8 border-y border-stone-300/70 py-5 text-center sm:mb-12 sm:py-7">
+    <div className={styles.entry}>
       <button
         type="button"
         onClick={enter}
         disabled={leaving}
-        className="min-h-11 min-w-32 text-sm tracking-[0.08em] text-stone-600 transition-[color,letter-spacing] duration-300 hover:tracking-[0.12em] hover:text-stone-950 focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-default disabled:text-stone-900"
+        className={`${styles.note} ${leaving ? styles.confirmation : styles.invitation}`}
+        data-paper={leaving ? "lined" : "grid"}
+        data-author-handwriting={usesAuthorHandwriting ? "true" : "false"}
         aria-live="polite"
       >
-        {leaving ? "точно?" : "не выбирай"}
+        {usesAuthorHandwriting ? (
+          <>
+            <span
+              aria-hidden="true"
+              className={`${styles.vectorMark} ${leaving ? styles.confirmVector : styles.entryVector}`}
+            />
+            <span className="sr-only">{leaving ? "точно?" : entryLabel}</span>
+          </>
+        ) : (
+          <span className={styles.label}>{entryLabel}</span>
+        )}
       </button>
     </div>
   );

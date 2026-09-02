@@ -1,6 +1,16 @@
 const MAX_WANDER_CATEGORY_EXCLUSIONS = 500;
 const MAX_CATEGORY_ID_LENGTH = 100;
 
+export const DEFAULT_WANDER_ENTRY_LABEL = "не жми сюда";
+export const WANDER_ENTRY_LABEL_MAX_LENGTH = 60;
+
+export function normalizeWanderEntryLabel(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const label = value.trim();
+  if (!label || label.length > WANDER_ENTRY_LABEL_MAX_LENGTH) return null;
+  return label;
+}
+
 export function normalizeWanderExcludedCategoryIds(value: unknown): string[] | null {
   if (!Array.isArray(value) || value.length > MAX_WANDER_CATEGORY_EXCLUSIONS) return null;
 

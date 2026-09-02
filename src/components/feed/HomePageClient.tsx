@@ -20,6 +20,7 @@ type Props = {
   initialCategorySlug: string | null;
   categories: FeedCategory[];
   showWanderEntry: boolean;
+  wanderEntryLabel: string;
   plausibleDomain?: string;
   yandexMetrikaId?: string;
   siteUrl: string;
@@ -36,6 +37,7 @@ export function HomePageClient({
   initialCategorySlug,
   categories,
   showWanderEntry,
+  wanderEntryLabel,
   plausibleDomain,
   yandexMetrikaId,
   siteUrl,
@@ -67,7 +69,7 @@ export function HomePageClient({
         }
       />
       <div className={siteContentClass()}>
-        {showWanderEntry ? <WanderEntry /> : null}
+        {showWanderEntry ? <WanderEntry label={wanderEntryLabel} /> : null}
         {canManage ? <QuickComposer categories={categories} /> : null}
         <FeedPostsBody
           items={feed.items}

@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  normalizeWanderEntryLabel,
   normalizeWanderExcludedCategoryIds,
 } from "./wander-settings";
 
 describe("настройки категорий прогулки", () => {
+  it("нормализует надпись входа", () => {
+    expect(normalizeWanderEntryLabel("  не жми сюда  ")).toBe("не жми сюда");
+    expect(normalizeWanderEntryLabel(" ")).toBeNull();
+    expect(normalizeWanderEntryLabel("x".repeat(61))).toBeNull();
+  });
+
   it("нормализует уникальные исключения в сохранённом порядке", () => {
     expect(normalizeWanderExcludedCategoryIds(["seen", "seen", "ceramics"]))
       .toEqual(["seen", "ceramics"]);

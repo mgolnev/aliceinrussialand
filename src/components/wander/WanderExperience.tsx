@@ -335,7 +335,7 @@ export function WanderExperience({ catalogue, initialStep }: {
                   ? `выставка №${wanderExhibitionNumber(journey)} · ${worksLabel(viewedCount)}`
                   : worksLabel(viewedCount)}
               </span>
-              <button type="button" className={styles.textLink} onClick={() => showWork()}>вернуться к работе</button>
+              <button type="button" className={styles.textLink} onClick={() => showWork()}>Ещё!</button>
             </div>
           </div>
           <ol className={styles.trailGrid}>

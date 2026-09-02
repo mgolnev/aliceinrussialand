@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { adminCredentials, readAdminResponseJson } from "@/lib/admin-fetch";
+import { WANDER_ENTRY_LABEL_MAX_LENGTH } from "@/lib/wander-settings";
 
 export type WanderCategoryOption = {
   id: string;
@@ -21,14 +22,17 @@ function postsLabel(count: number): string {
 
 export function WanderSettingsForm({
   initialShowWanderEntry,
+  initialEntryLabel,
   initialExcludedCategoryIds,
   categories,
 }: {
   initialShowWanderEntry: boolean;
+  initialEntryLabel: string;
   initialExcludedCategoryIds: string[];
   categories: WanderCategoryOption[];
 }) {
   const [showWanderEntry, setShowWanderEntry] = useState(initialShowWanderEntry);
+  const [entryLabel, setEntryLabel] = useState(initialEntryLabel);
   const [excludedCategoryIds, setExcludedCategoryIds] = useState(initialExcludedCategoryIds);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -49,7 +53,7 @@ export function WanderSettingsForm({
         ...adminCredentials,
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ showWanderEntry, excludedCategoryIds }),
+        body: JSON.stringify({ showWanderEntry, entryLabel, excludedCategoryIds }),
       });
       const result = await readAdminResponseJson(response) as { error?: string } | null;
       if (!response.ok) {
@@ -72,11 +76,11 @@ export function WanderSettingsForm({
         void save();
       }}
     >
-      <section className="border-b border-stone-200/80 p-5 sm:p-6">
+      <section className="space-y-6 border-b border-stone-200/80 p-5 sm:p-6">
         <label className="flex cursor-pointer items-start justify-between gap-5">
           <span>
             <span className="block text-base font-medium text-stone-900">
-              Показывать «не выбирай»
+              Показывать вход в прогулку
             </span>
             <span className="mt-1 block max-w-2xl text-sm leading-6 text-stone-500">
               Управляет входом на главной странице. Прямой адрес /wander останется доступен.
@@ -92,6 +96,29 @@ export function WanderSettingsForm({
             className="mt-1 size-5 shrink-0 accent-stone-900"
           />
         </label>
+
+        <div className="block max-w-2xl">
+          <label htmlFor="wander-entry-label" className="block text-sm font-medium text-stone-900">
+            Надпись на главной
+          </label>
+          <input
+            id="wander-entry-label"
+            type="text"
+            value={entryLabel}
+            maxLength={WANDER_ENTRY_LABEL_MAX_LENGTH}
+            required
+            aria-describedby="wander-entry-label-hint"
+            onChange={(event) => {
+              setMessage(null);
+              setEntryLabel(event.target.value);
+            }}
+            className="mt-2 w-full border-b border-stone-300 bg-transparent px-0 py-2.5 text-lg text-stone-950 outline-none transition-colors placeholder:text-stone-300 focus:border-stone-900"
+            placeholder="не жми сюда"
+          />
+          <span id="wander-entry-label-hint" className="mt-2 block text-xs leading-5 text-stone-500">
+            Для «не жми сюда» используется ваш почерк. Другой текст появится рукописным шрифтом. После нажатия лист сменится на авторское «Точно?».
+          </span>
+        </div>
       </section>
 
       <section aria-labelledby="wander-categories-heading">

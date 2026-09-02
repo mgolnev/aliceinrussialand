@@ -1,5 +1,6 @@
 import type { SiteSettings as SiteSettingsRow } from "@prisma/client";
 import { prisma } from "./prisma";
+import { DEFAULT_WANDER_ENTRY_LABEL } from "./wander-settings";
 
 export function isNextProductionBuild(): boolean {
   return process.env.NEXT_PHASE === "phase-production-build";
@@ -27,6 +28,7 @@ export function defaultSiteSettings(): SiteSettingsRow {
     yandexMetrikaId: "",
     yandexVerification: "",
     showWanderEntry: true,
+    wanderEntryLabel: DEFAULT_WANDER_ENTRY_LABEL,
     updatedAt: new Date(0),
   };
 }

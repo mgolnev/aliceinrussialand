@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope } from "next/font/google";
+import { Caveat, Manrope } from "next/font/google";
 import "./globals.css";
 import { getAuthorName, getSiteSettings } from "@/lib/site";
 import { Analytics } from "@/components/site/Analytics";
@@ -13,6 +13,13 @@ export const dynamic = "force-dynamic";
 const sans = Manrope({
   subsets: ["latin", "cyrillic"],
   variable: "--font-body",
+  display: "swap",
+});
+
+const handwriting = Caveat({
+  subsets: ["latin", "cyrillic"],
+  weight: "variable",
+  variable: "--font-handwriting",
   display: "swap",
 });
 
@@ -69,7 +76,7 @@ export default async function RootLayout({
   const lang = s.defaultLocale === "en" ? "en" : "ru";
 
   return (
-    <html lang={lang} className={`${sans.variable} h-full antialiased`}>
+    <html lang={lang} className={`${sans.variable} ${handwriting.variable} h-full antialiased`}>
       <body className="min-h-full bg-[#faf8f5] font-[family-name:var(--font-body)] text-stone-900">
         <script
           dangerouslySetInnerHTML={{

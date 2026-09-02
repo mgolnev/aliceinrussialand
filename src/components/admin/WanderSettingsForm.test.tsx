@@ -7,7 +7,7 @@ const categories = [
   { id: "drawn", name: "Нарисовала", isArchived: false, eligiblePostCount: 4 },
 ];
 
-describe("настройки «не выбирай»", () => {
+describe("настройки прогулки", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", {
       status: 200,
@@ -24,12 +24,16 @@ describe("настройки «не выбирай»", () => {
     render(
       <WanderSettingsForm
         initialShowWanderEntry
+        initialEntryLabel="не жми сюда"
         initialExcludedCategoryIds={[]}
         categories={categories}
       />,
     );
     const seen = screen.getByRole("checkbox", { name: "Показывать категорию «Увидела»" });
     expect(seen).toBeChecked();
+    fireEvent.change(screen.getByRole("textbox", { name: "Надпись на главной" }), {
+      target: { value: "не трогай" },
+    });
     fireEvent.click(seen);
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
@@ -37,6 +41,7 @@ describe("настройки «не выбирай»", () => {
     const [, request] = vi.mocked(fetch).mock.calls[0]!;
     expect(JSON.parse(String(request?.body))).toEqual({
       showWanderEntry: true,
+      entryLabel: "не трогай",
       excludedCategoryIds: ["seen"],
     });
     expect(await screen.findByRole("status")).toHaveTextContent("Сохранено");
@@ -46,6 +51,7 @@ describe("настройки «не выбирай»", () => {
     render(
       <WanderSettingsForm
         initialShowWanderEntry={false}
+        initialEntryLabel="не жми сюда"
         initialExcludedCategoryIds={["seen"]}
         categories={categories}
       />,

@@ -58,7 +58,7 @@ export function AdminFolderNav() {
         prefetch
         className={`relative ${pillTabClass(wanderActive)}`}
       >
-        Не выбирай
+        Прогулка
         <LinkPendingBackdrop />
       </Link>
       <Link
