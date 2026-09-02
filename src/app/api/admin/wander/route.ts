@@ -5,6 +5,7 @@ import { ensureSiteSettings } from "@/lib/site";
 import { invalidateWanderCatalogueCache } from "@/lib/cache-tags";
 import {
   normalizeWanderEntryLabel,
+  normalizeWanderEntrySubtitle,
   normalizeWanderExcludedCategoryIds,
 } from "@/lib/wander-settings";
 
@@ -12,10 +13,15 @@ export async function PATCH(req: Request) {
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   const excludedCategoryIds = normalizeWanderExcludedCategoryIds(body?.excludedCategoryIds);
   const entryLabel = normalizeWanderEntryLabel(body?.entryLabel);
+  // Older open admin forms do not send a subtitle; preserve it in that case.
+  const entrySubtitle = body?.entrySubtitle === undefined
+    ? undefined
+    : normalizeWanderEntrySubtitle(body.entrySubtitle);
   if (
     !body ||
     typeof body.showWanderEntry !== "boolean" ||
     entryLabel === null ||
+    entrySubtitle === null ||
     excludedCategoryIds === null
   ) {
     return NextResponse.json({ error: "Некорректные настройки" }, { status: 400 });
@@ -37,8 +43,9 @@ export async function PATCH(req: Request) {
       data: {
         showWanderEntry: body.showWanderEntry,
         wanderEntryLabel: entryLabel,
+        ...(entrySubtitle !== undefined ? { wanderEntrySubtitle: entrySubtitle } : {}),
       },
-      select: { showWanderEntry: true, wanderEntryLabel: true },
+      select: { showWanderEntry: true, wanderEntryLabel: true, wanderEntrySubtitle: true },
     }),
     prisma.postCategory.updateMany({
       data: { includeInWander: true },
@@ -57,6 +64,7 @@ export async function PATCH(req: Request) {
   return NextResponse.json({
     showWanderEntry: updated.showWanderEntry,
     entryLabel: updated.wanderEntryLabel,
+    entrySubtitle: updated.wanderEntrySubtitle,
     excludedCategoryIds: validExcludedCategoryIds,
   });
 }

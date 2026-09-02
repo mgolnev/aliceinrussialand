@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   normalizeWanderEntryLabel,
+  DEFAULT_WANDER_ENTRY_SUBTITLE,
+  normalizeWanderEntrySubtitle,
   normalizeWanderExcludedCategoryIds,
 } from "./wander-settings";
 
@@ -14,6 +16,15 @@ describe("настройки категорий прогулки", () => {
   it("нормализует уникальные исключения в сохранённом порядке", () => {
     expect(normalizeWanderExcludedCategoryIds(["seen", "seen", "ceramics"]))
       .toEqual(["seen", "ceramics"]);
+  });
+
+  it("нормализует подпись и ограничивает её длину", () => {
+    expect(normalizeWanderEntrySubtitle(`  ${DEFAULT_WANDER_ENTRY_SUBTITLE}  `))
+      .toBe(DEFAULT_WANDER_ENTRY_SUBTITLE);
+    expect(normalizeWanderEntrySubtitle("x".repeat(160))).toHaveLength(160);
+    for (const value of [" ", "x".repeat(161), null, 42, {}, undefined]) {
+      expect(normalizeWanderEntrySubtitle(value)).toBeNull();
+    }
   });
 
   it("не принимает пустые и повреждённые ID", () => {

@@ -140,6 +140,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
         categories={categories}
         showWanderEntry={settings.showWanderEntry}
         wanderEntryLabel={settings.wanderEntryLabel}
+        wanderEntrySubtitle={settings.wanderEntrySubtitle}
         plausibleDomain={plausible}
         yandexMetrikaId={yandexMetrikaId}
         siteUrl={siteUrl}

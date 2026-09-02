@@ -3,6 +3,17 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("миграция настроек «не выбирай»", () => {
+  it("добавляет подпись, не меняя сохранённый заголовок", () => {
+    const sql = readFileSync(
+      path.join(process.cwd(), "prisma/migrations/20260902210000_wander_entry_subtitle/migration.sql"),
+      "utf8",
+    );
+    expect(sql).toContain('ALTER TABLE "SiteSettings"');
+    expect(sql).toContain('ADD COLUMN "wanderEntrySubtitle" TEXT NOT NULL');
+    expect(sql).toContain("DEFAULT 'серьёзно. неизвестно, куда попадёшь'");
+    expect(sql).not.toMatch(/UPDATE|DELETE|DROP/i);
+  });
+
   it("добавляет категориям признак участия с безопасным дефолтом", () => {
     const sql = readFileSync(
       path.join(

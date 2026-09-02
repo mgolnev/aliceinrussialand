@@ -37,6 +37,7 @@ export default async function AdminWanderPage() {
       <WanderSettingsForm
         initialShowWanderEntry={settings.showWanderEntry}
         initialEntryLabel={settings.wanderEntryLabel}
+        initialEntrySubtitle={settings.wanderEntrySubtitle}
         initialExcludedCategoryIds={excludedCategoryIds}
         categories={categories.map((category) => ({
           id: category.id,

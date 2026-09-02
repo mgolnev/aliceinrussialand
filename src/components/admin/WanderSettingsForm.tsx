@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { adminCredentials, readAdminResponseJson } from "@/lib/admin-fetch";
-import { WANDER_ENTRY_LABEL_MAX_LENGTH } from "@/lib/wander-settings";
+import { DEFAULT_WANDER_ENTRY_SUBTITLE, WANDER_ENTRY_LABEL_MAX_LENGTH, WANDER_ENTRY_SUBTITLE_MAX_LENGTH } from "@/lib/wander-settings";
 
 export type WanderCategoryOption = {
   id: string;
@@ -23,16 +23,19 @@ function postsLabel(count: number): string {
 export function WanderSettingsForm({
   initialShowWanderEntry,
   initialEntryLabel,
+  initialEntrySubtitle,
   initialExcludedCategoryIds,
   categories,
 }: {
   initialShowWanderEntry: boolean;
   initialEntryLabel: string;
+  initialEntrySubtitle: string;
   initialExcludedCategoryIds: string[];
   categories: WanderCategoryOption[];
 }) {
   const [showWanderEntry, setShowWanderEntry] = useState(initialShowWanderEntry);
   const [entryLabel, setEntryLabel] = useState(initialEntryLabel);
+  const [entrySubtitle, setEntrySubtitle] = useState(initialEntrySubtitle);
   const [excludedCategoryIds, setExcludedCategoryIds] = useState(initialExcludedCategoryIds);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -53,7 +56,7 @@ export function WanderSettingsForm({
         ...adminCredentials,
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ showWanderEntry, entryLabel, excludedCategoryIds }),
+        body: JSON.stringify({ showWanderEntry, entryLabel, entrySubtitle, excludedCategoryIds }),
       });
       const result = await readAdminResponseJson(response) as { error?: string } | null;
       if (!response.ok) {
@@ -116,7 +119,30 @@ export function WanderSettingsForm({
             placeholder="не жми сюда"
           />
           <span id="wander-entry-label-hint" className="mt-2 block text-xs leading-5 text-stone-500">
-            Для «не жми сюда» используется ваш почерк. Другой текст появится рукописным шрифтом. После нажатия лист сменится на авторское «Точно?».
+            Крупный заголовок входа в прогулку, обычным шрифтом сайта.
+          </span>
+        </div>
+
+        <div className="block max-w-2xl">
+          <label htmlFor="wander-entry-subtitle" className="block text-sm font-medium text-stone-900">
+            Подпись под надписью
+          </label>
+          <textarea
+            id="wander-entry-subtitle"
+            value={entrySubtitle}
+            maxLength={WANDER_ENTRY_SUBTITLE_MAX_LENGTH}
+            rows={2}
+            required
+            aria-describedby="wander-entry-subtitle-hint"
+            onChange={(event) => {
+              setMessage(null);
+              setEntrySubtitle(event.target.value);
+            }}
+            className="mt-2 w-full resize-y border-b border-stone-300 bg-transparent px-0 py-2.5 text-base text-stone-950 outline-none transition-colors placeholder:text-stone-300 focus:border-stone-900"
+            placeholder={DEFAULT_WANDER_ENTRY_SUBTITLE}
+          />
+          <span id="wander-entry-subtitle-hint" className="mt-2 block text-xs leading-5 text-stone-500">
+            Оба текста видны сразу. Нажатие открывает прогулку без промежуточного вопроса.
           </span>
         </div>
       </section>

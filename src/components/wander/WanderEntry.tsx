@@ -1,56 +1,41 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WANDER_STORAGE_KEY } from "@/lib/wander";
-import { DEFAULT_WANDER_ENTRY_LABEL } from "@/lib/wander-settings";
-import styles from "./WanderEntry.module.css";
+import { DEFAULT_WANDER_ENTRY_LABEL, DEFAULT_WANDER_ENTRY_SUBTITLE } from "@/lib/wander-settings";
 
-export function WanderEntry({ label }: { label?: string }) {
+export function WanderEntry({ label, subtitle }: { label?: string; subtitle?: string }) {
   const router = useRouter();
-  const timer = useRef<number | null>(null);
+  const id = useId();
   const [leaving, setLeaving] = useState(false);
   const entryLabel = label?.trim() || DEFAULT_WANDER_ENTRY_LABEL;
-  const usesAuthorHandwriting = leaving || (
-    entryLabel.toLocaleLowerCase("ru-RU") === DEFAULT_WANDER_ENTRY_LABEL
-  );
-
-  useEffect(() => {
-    return () => {
-      if (timer.current !== null) window.clearTimeout(timer.current);
-    };
-  }, []);
+  const entrySubtitle = subtitle?.trim() || DEFAULT_WANDER_ENTRY_SUBTITLE;
 
   function enter() {
     if (leaving) return;
     setLeaving(true);
     try { sessionStorage.removeItem(WANDER_STORAGE_KEY); } catch { /* A new walk still starts when storage is blocked. */ }
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    timer.current = window.setTimeout(() => router.push("/wander"), reducedMotion ? 0 : 560);
+    router.push("/wander");
   }
 
   return (
-    <div className={styles.entry}>
+    <div className="mb-3 text-center sm:mb-4">
       <button
         type="button"
         onClick={enter}
         disabled={leaving}
-        className={`${styles.note} ${leaving ? styles.confirmation : styles.invitation}`}
-        data-paper={leaving ? "lined" : "grid"}
-        data-author-handwriting={usesAuthorHandwriting ? "true" : "false"}
-        aria-live="polite"
+        className="flex w-full cursor-pointer flex-col items-center gap-1.5 border-0 bg-transparent px-2 py-4 text-center shadow-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-stone-500 disabled:cursor-wait sm:py-5"
+        aria-labelledby={`${id}-label`}
+        aria-describedby={`${id}-subtitle`}
+        aria-busy={leaving}
       >
-        {usesAuthorHandwriting ? (
-          <>
-            <span
-              aria-hidden="true"
-              className={`${styles.vectorMark} ${leaving ? styles.confirmVector : styles.entryVector}`}
-            />
-            <span className="sr-only">{leaving ? "точно?" : entryLabel}</span>
-          </>
-        ) : (
-          <span className={styles.label}>{entryLabel}</span>
-        )}
+        <span id={`${id}-label`} className="max-w-full text-lg leading-snug font-normal text-stone-600 [overflow-wrap:anywhere] sm:text-xl">
+          {entryLabel}
+        </span>
+        <span id={`${id}-subtitle`} className="max-w-full text-[13px] leading-relaxed font-normal text-stone-500 [overflow-wrap:anywhere] sm:text-sm">
+          {entrySubtitle}
+        </span>
       </button>
     </div>
   );

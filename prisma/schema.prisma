@@ -39,8 +39,9 @@ model SiteSettings {
   yandexVerification   String  @default("")
   /// Показывать экспериментальный вход в прогулку на главной странице.
   showWanderEntry      Boolean @default(true)
-  /// Редактируемая надпись на бумажном входе в прогулку.
+  /// Редактируемые заголовок и подпись входа в прогулку.
   wanderEntryLabel     String  @default("не жми сюда")
+  wanderEntrySubtitle  String  @default("серьёзно. неизвестно, куда попадёшь")
   updatedAt            DateTime @updatedAt
 }
 

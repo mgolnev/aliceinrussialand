@@ -25,16 +25,22 @@ describe("настройки прогулки", () => {
       <WanderSettingsForm
         initialShowWanderEntry
         initialEntryLabel="не жми сюда"
+        initialEntrySubtitle="серьёзно. неизвестно, куда попадёшь"
         initialExcludedCategoryIds={[]}
         categories={categories}
       />,
     );
     const seen = screen.getByRole("checkbox", { name: "Показывать категорию «Увидела»" });
     expect(seen).toBeChecked();
+    expect(screen.getByRole("textbox", { name: "Подпись под надписью" }))
+      .toHaveValue("серьёзно. неизвестно, куда попадёшь");
     fireEvent.change(screen.getByRole("textbox", { name: "Надпись на главной" }), {
       target: { value: "не трогай" },
     });
     fireEvent.click(seen);
+    fireEvent.change(screen.getByRole("textbox", { name: "Подпись под надписью" }), {
+      target: { value: "посмотрим, что будет" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
@@ -42,6 +48,7 @@ describe("настройки прогулки", () => {
     expect(JSON.parse(String(request?.body))).toEqual({
       showWanderEntry: true,
       entryLabel: "не трогай",
+      entrySubtitle: "посмотрим, что будет",
       excludedCategoryIds: ["seen"],
     });
     expect(await screen.findByRole("status")).toHaveTextContent("Сохранено");
@@ -52,6 +59,7 @@ describe("настройки прогулки", () => {
       <WanderSettingsForm
         initialShowWanderEntry={false}
         initialEntryLabel="не жми сюда"
+        initialEntrySubtitle="серьёзно. неизвестно, куда попадёшь"
         initialExcludedCategoryIds={["seen"]}
         categories={categories}
       />,
