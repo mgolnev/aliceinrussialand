@@ -130,8 +130,10 @@ describe("интерфейс прогулки", () => {
     expect(screen.getByRole("heading")).toHaveTextContent(/кажется,/);
     expect(screen.queryByText(/вышли погулять/)).not.toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(4);
-    fireEvent.click(screen.getByRole("button", { name: "Вернуться к работе 1: Первый портрет" }));
-    expect(screen.getByRole("status")).toHaveTextContent("Работа 1");
+    expect(screen.getByRole("link", { name: "Открыть публикацию 1: Первый портрет" }))
+      .toHaveAttribute("href", "/p/portret");
+    fireEvent.click(screen.getByRole("button", { name: "вернуться к работе" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Работа 4");
     expect(screen.getByRole("button", { name: "хватит" })).toBeEnabled();
   });
   it("после конца можно начать новую прогулку", async () => {
@@ -224,6 +226,7 @@ describe("интерфейс прогулки", () => {
     expect(screen.getByText(/кажется,/)).toBeInTheDocument();
     expect(screen.getByText(/выставка №\d{5} · 7 работ/)).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(7);
+    expect(screen.getAllByRole("link", { name: /Открыть публикацию/ })).toHaveLength(7);
     expect(screen.getByRole("button", { name: "вернуться к работе" })).toBeEnabled();
     expect(screen.getByRole("heading")).toHaveTextContent(/кажется,/);
     expect(screen.queryByText(/вышли погулять/)).not.toBeInTheDocument();

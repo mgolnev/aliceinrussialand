@@ -27,25 +27,25 @@ describe("PATCH /api/admin/settings", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.ensureSiteSettings.mockResolvedValue({ id: 1 });
-    mocks.update.mockResolvedValue({ id: 1, showWanderEntry: false });
+    mocks.update.mockResolvedValue({ id: 1, displayName: "Новое имя" });
   });
 
-  it("сохраняет видимость входа «не выбирай» как boolean", async () => {
+  it("сохраняет общую настройку сайта", async () => {
     const { PATCH } = await import("./route");
     const response = await PATCH(new Request("http://localhost/api/admin/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ showWanderEntry: false }),
+      body: JSON.stringify({ displayName: "Новое имя" }),
     }));
 
     expect(response.status).toBe(200);
     expect(mocks.update).toHaveBeenCalledWith({
       where: { id: 1 },
-      data: { showWanderEntry: false },
+      data: { displayName: "Новое имя" },
     });
   });
 
-  it("не принимает строку вместо checkbox-значения", async () => {
+  it("не меняет «не выбирай» через старый раздел настроек", async () => {
     const { PATCH } = await import("./route");
     const response = await PATCH(new Request("http://localhost/api/admin/settings", {
       method: "PATCH",

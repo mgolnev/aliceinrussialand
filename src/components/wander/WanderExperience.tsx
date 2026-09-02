@@ -132,9 +132,7 @@ export function WanderExperience({ catalogue, initialStep }: {
   const image = post?.images.find((item) => item.id === step?.imageId) ?? post?.images[0];
   const exhausted = journey.steps.length >= catalogue.posts.length;
   const viewed = new Set(journey.viewedPostIds);
-  const viewedSteps = journey.steps
-    .map((item, journeyIndex) => ({ item, journeyIndex }))
-    .filter(({ item }) => viewed.has(item.postId));
+  const viewedSteps = journey.steps.filter((item) => viewed.has(item.postId));
   const viewedCount = viewedSteps.length;
   const currentViewed = Boolean(post && viewed.has(post.id));
   const currentImageStatus = imageState.imageId === image?.id ? imageState.status : "loading";
@@ -341,15 +339,20 @@ export function WanderExperience({ catalogue, initialStep }: {
             </div>
           </div>
           <ol className={styles.trailGrid}>
-            {viewedSteps.map(({ item, journeyIndex }, index) => {
+            {viewedSteps.map((item, index) => {
               const work = posts.get(item.postId)!;
               const workImage = work.images.find((candidate) => candidate.id === item.imageId) ?? work.images[0]!;
               return (
                 <li key={`${item.postId}-${workImage.id}`} style={{ "--trail-index": index } as CSSProperties}>
-                  <button type="button" className={styles.trailItem} onClick={() => showWork(journeyIndex)} aria-label={`Вернуться к работе ${index + 1}: ${work.title}`}>
+                  <Link
+                    href={`/p/${work.slug}`}
+                    prefetch={false}
+                    className={styles.trailItem}
+                    aria-label={`Открыть публикацию ${index + 1}: ${work.title}`}
+                  >
                     <span className={styles.thumbnail}><Artwork post={work} image={workImage} small /></span>
                     <span className={styles.trailCaption}><span className={styles.number}>{String(index + 1).padStart(2, "0")}</span></span>
-                  </button>
+                  </Link>
                 </li>
               );
             })}

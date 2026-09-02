@@ -59,10 +59,6 @@ export async function PATCH(req: Request) {
   if (str("yandexVerification") !== undefined) {
     data.yandexVerification = (str("yandexVerification") ?? "").trim();
   }
-  if (typeof body.showWanderEntry === "boolean") {
-    data.showWanderEntry = body.showWanderEntry;
-  }
-
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "Нет полей" }, { status: 400 });
   }

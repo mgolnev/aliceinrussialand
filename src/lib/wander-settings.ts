@@ -1,0 +1,19 @@
+const MAX_WANDER_CATEGORY_EXCLUSIONS = 500;
+const MAX_CATEGORY_ID_LENGTH = 100;
+
+export function normalizeWanderExcludedCategoryIds(value: unknown): string[] | null {
+  if (!Array.isArray(value) || value.length > MAX_WANDER_CATEGORY_EXCLUSIONS) return null;
+
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== "string") return null;
+    const id = item.trim();
+    if (!id || id.length > MAX_CATEGORY_ID_LENGTH) return null;
+    if (!seen.has(id)) {
+      seen.add(id);
+      ids.push(id);
+    }
+  }
+  return ids;
+}

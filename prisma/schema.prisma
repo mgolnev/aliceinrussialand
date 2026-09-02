@@ -48,6 +48,8 @@ model PostCategory {
   name      String
   description String @default("")
   isArchived Boolean  @default(false)
+  /// Участвуют ли публикации категории в режиме «не выбирай».
+  includeInWander Boolean @default(true)
   oldSlugs   String[] @default([])
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())

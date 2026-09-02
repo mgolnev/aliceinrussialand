@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { findMany } = vi.hoisted(() => ({ findMany: vi.fn() }));
-vi.mock("@/lib/prisma", () => ({ prisma: { post: { findMany } } }));
+const { findMany } = vi.hoisted(() => ({
+  findMany: vi.fn(),
+}));
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    post: { findMany },
+  },
+}));
 vi.mock("next/cache", () => ({
   unstable_cache: <T extends (...args: never[]) => unknown>(callback: T) => callback,
 }));
@@ -24,12 +30,21 @@ function post(
 }
 
 describe("публичный каталог прогулки", () => {
-  beforeEach(() => { findMany.mockResolvedValue([]); });
+  beforeEach(() => {
+    findMany.mockResolvedValue([]);
+  });
 
   it("запрашивает все опубликованные публикации с изображениями", async () => {
     await getWanderCatalogue();
     expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { status: "PUBLISHED", images: { some: {} } },
+      where: {
+        status: "PUBLISHED",
+        images: { some: {} },
+        OR: [
+          { categoryId: null },
+          { category: { is: { includeInWander: true } } },
+        ],
+      },
       orderBy: { id: "asc" },
     }));
     const select = findMany.mock.calls[0][0].select;

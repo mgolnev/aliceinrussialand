@@ -16,7 +16,6 @@ const initial = {
   plausibleDomain: "",
   yandexMetrikaId: "",
   yandexVerification: "",
-  showWanderEntry: true,
   defaultLocale: "ru",
   social: [],
   avatarPreviewUrl: null,
@@ -33,17 +32,19 @@ describe("настройки сайта", () => {
     vi.unstubAllGlobals();
   });
 
-  it("отправляет состояние чекбокса «не выбирай» при сохранении", async () => {
+  it("сохраняет общие настройки без полей режима «не выбирай»", async () => {
     render(<SettingsForm initial={initial} />);
-    const checkbox = screen.getByRole("checkbox", { name: /Показывать блок «не выбирай»/ });
-    expect(checkbox).toBeChecked();
-
-    fireEvent.click(checkbox);
+    fireEvent.change(screen.getByRole("textbox", { name: "Имя / псевдоним" }), {
+      target: { value: "Новое имя" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить настройки" }));
 
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
     const [, request] = vi.mocked(fetch).mock.calls[0]!;
-    expect(JSON.parse(String(request?.body))).toMatchObject({ showWanderEntry: false });
+    const body = JSON.parse(String(request?.body));
+    expect(body).toMatchObject({ displayName: "Новое имя" });
+    expect(body).not.toHaveProperty("showWanderEntry");
+    expect(screen.queryByRole("checkbox", { name: /не выбирай/i })).not.toBeInTheDocument();
     expect(await screen.findByRole("status")).toHaveTextContent("Сохранено");
   });
 });

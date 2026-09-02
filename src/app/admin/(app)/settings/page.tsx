@@ -34,7 +34,6 @@ export default async function AdminSettingsPage() {
           plausibleDomain: s.plausibleDomain,
           yandexMetrikaId: s.yandexMetrikaId,
           yandexVerification: s.yandexVerification,
-          showWanderEntry: s.showWanderEntry,
           defaultLocale: s.defaultLocale,
           social,
           avatarPreviewUrl: parseAvatarUrl(s.avatarMediaPath),
