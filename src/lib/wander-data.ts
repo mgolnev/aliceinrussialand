@@ -1,4 +1,6 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { CACHE_TAG_PUBLIC_FEED } from "@/lib/cache-tags";
 import { isSystemPostTitle, plainPostPreview } from "@/lib/post-text";
 import type { WanderCatalogue, WanderPost } from "@/lib/wander";
 
@@ -16,7 +18,7 @@ function imageUrls(json: string): { src: string; thumbnail: string } | null {
   }
 }
 
-export async function getWanderCatalogue(): Promise<WanderCatalogue> {
+async function getWanderCatalogueUncached(): Promise<WanderCatalogue> {
   const rows = await prisma.post.findMany({
     where: { status: "PUBLISHED", images: { some: {} } },
     orderBy: { id: "asc" },
@@ -64,4 +66,14 @@ export async function getWanderCatalogue(): Promise<WanderCatalogue> {
     }
   }
   return { posts, projects: [...projects.values()] };
+}
+
+const getCachedWanderCatalogue = unstable_cache(
+  getWanderCatalogueUncached,
+  ["wander-catalogue-v2"],
+  { tags: [CACHE_TAG_PUBLIC_FEED], revalidate: 120 },
+);
+
+export async function getWanderCatalogue(): Promise<WanderCatalogue> {
+  return getCachedWanderCatalogue();
 }

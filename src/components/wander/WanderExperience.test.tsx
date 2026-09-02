@@ -141,7 +141,10 @@ describe("интерфейс прогулки", () => {
       await loadCurrent();
     }
     fireEvent.click(screen.getByRole("button", { name: "хватит" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "пройти ещё раз" })).toBeEnabled());
+    vi.mocked(window.scrollTo).mockClear();
     fireEvent.click(screen.getByRole("button", { name: "пройти ещё раз" }));
+    expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
     const nextButton = screen.getByRole("button", { name: "дальше" });
     expect(nextButton).toBeVisible();
     expect(nextButton).toBeDisabled();

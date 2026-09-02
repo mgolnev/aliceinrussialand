@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { findMany } = vi.hoisted(() => ({ findMany: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({ prisma: { post: { findMany } } }));
+vi.mock("next/cache", () => ({
+  unstable_cache: <T extends (...args: never[]) => unknown>(callback: T) => callback,
+}));
 import { getWanderCatalogue } from "./wander-data";
 
 function project(id: string) {

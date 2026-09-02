@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import {
   nextWanderStep,
@@ -123,7 +123,10 @@ export function WanderExperience({ catalogue, initialStep }: {
   const heading = useRef<HTMLHeadingElement>(null);
   const primaryButton = useRef<HTMLButtonElement>(null);
   const finaleTimer = useRef<number | null>(null);
-  const posts = new Map(catalogue.posts.map((post) => [post.id, post]));
+  const posts = useMemo(
+    () => new Map(catalogue.posts.map((post) => [post.id, post])),
+    [catalogue.posts],
+  );
   const step = journey.steps[journey.cursor];
   const post = posts.get(step?.postId ?? "");
   const image = post?.images.find((item) => item.id === step?.imageId) ?? post?.images[0];
@@ -167,6 +170,22 @@ export function WanderExperience({ catalogue, initialStep }: {
   useEffect(() => () => {
     if (finaleTimer.current !== null) window.clearTimeout(finaleTimer.current);
   }, []);
+
+  useLayoutEffect(() => {
+    if (view !== "work") return;
+
+    const resetScroll = () => {
+      window.scrollTo(0, 0);
+      document.scrollingElement?.scrollTo(0, 0);
+    };
+
+    // Exhibition is a long document. Some mobile browsers preserve its scroll
+    // layer for one frame after React replaces it with the short work screen.
+    // Reset before paint and once more after the compositor receives new bounds.
+    resetScroll();
+    const frame = requestAnimationFrame(resetScroll);
+    return () => cancelAnimationFrame(frame);
+  }, [journey.cursor, view]);
 
   function focusTrail() {
     requestAnimationFrame(() => {
