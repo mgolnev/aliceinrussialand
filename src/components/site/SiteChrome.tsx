@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { chromePlaqueButtonClass } from "@/lib/pill-tab-styles";
@@ -32,7 +32,27 @@ export function SiteChrome({
 }: Props) {
   const pathname = usePathname();
   const isAboutPage = pathname === "/about";
-  const onHomeTap = () => {
+  const [homeNoticeVisible, setHomeNoticeVisible] = useState(false);
+  const homeNoticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showHomeNotice = pathname === "/" && homeNoticeVisible;
+
+  useEffect(() => () => {
+    if (homeNoticeTimer.current !== null) clearTimeout(homeNoticeTimer.current);
+  }, []);
+
+  const onHomeTap = (event: { preventDefault: () => void }) => {
+    if (pathname === "/") {
+      event.preventDefault();
+      if (homeNoticeTimer.current !== null) clearTimeout(homeNoticeTimer.current);
+      setHomeNoticeVisible(true);
+      // Первый показ: 200 мс на затухание + 200 мс на появление, затем 2 секунды текста.
+      homeNoticeTimer.current = setTimeout(() => {
+        setHomeNoticeVisible(false);
+        homeNoticeTimer.current = null;
+      }, homeNoticeVisible ? 2000 : 2400);
+      return;
+    }
+
     // Очищаем старое состояние ленты
     removeFeedBackNavigationFromStorage();
     removeRestoreInFlightFromStorage();
@@ -54,7 +74,8 @@ export function SiteChrome({
           href="/"
           prefetch
           scroll={false}
-          onClick={onHomeTap}
+          onNavigate={onHomeTap}
+          aria-label={`${displayName} — на главную`}
           className="group relative flex min-w-0 flex-1 items-center gap-3 transition-transform active:scale-[0.98]"
         >
           {avatarUrl ? (
@@ -73,23 +94,39 @@ export function SiteChrome({
               </span>
             </div>
           )}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-lg font-bold tracking-tight text-stone-900 sm:text-xl">
-              {displayName}
-            </p>
-            {tagline ? (
-              <p className="truncate text-xs text-stone-500 sm:text-sm">{tagline}</p>
-            ) : null}
+          <div className="relative min-w-0 flex-1">
+            <div
+              aria-hidden={showHomeNotice}
+              className={`transition-opacity duration-200 motion-reduce:transition-none ${showHomeNotice ? "opacity-0" : "opacity-100 delay-200"}`}
+            >
+              <p className="truncate text-lg font-bold tracking-tight text-stone-900 sm:text-xl">
+                {displayName}
+              </p>
+              {tagline ? (
+                <p className="truncate text-xs text-stone-500 sm:text-sm">{tagline}</p>
+              ) : null}
+            </div>
+            <div
+              aria-hidden="true"
+              className={`pointer-events-none absolute inset-0 flex items-center transition-opacity duration-200 motion-reduce:transition-none ${showHomeNotice ? "opacity-100 delay-200" : "opacity-0"}`}
+            >
+              <p className="truncate text-lg font-bold tracking-tight text-stone-900 sm:text-xl">
+                Вы уже на главной
+              </p>
+            </div>
           </div>
           <LinkPendingBackdrop />
         </Link>
+        <span role="status" className="sr-only">
+          {showHomeNotice ? "Вы уже на главной" : ""}
+        </span>
 
         {isAboutPage ? (
           <Link
             href="/"
             prefetch
             scroll={false}
-            onClick={onHomeTap}
+            onNavigate={onHomeTap}
             className={`relative ${chromePlaqueButtonClass()}`}
             aria-label="К ленте работ"
           >

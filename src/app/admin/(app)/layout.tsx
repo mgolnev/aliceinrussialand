@@ -1,8 +1,10 @@
 import type { Viewport } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
 import { getSiteSettings, parseAvatarUrl } from "@/lib/site";
 import { AdminFolderNav } from "@/components/admin/AdminFolderNav";
 import { AdminSiteExitLink } from "@/components/admin/AdminSiteExitLink";
+import { LinkPendingBackdrop } from "@/components/ui/LinkPendingBackdrop";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +36,13 @@ export default async function AdminAppLayout({
       <header className="sticky top-0 z-30 border-b border-stone-200/70 bg-[#fffdf9]/92 backdrop-blur-xl">
         <div className="mx-auto max-w-5xl px-3 pt-3 sm:px-6 sm:pt-4">
           <div className="flex min-w-0 items-center justify-between gap-3 pb-2">
-            <div className="flex min-w-0 items-center gap-3">
+            <Link
+              href="/"
+              prefetch
+              scroll={false}
+              aria-label="На ленту сайта"
+              className="relative flex min-w-0 items-center gap-3 rounded-lg transition-transform focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-stone-500 active:scale-[0.98]"
+            >
               {avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -57,7 +65,8 @@ export default async function AdminAppLayout({
                   только то, чего нет в ленте
                 </p>
               </div>
-            </div>
+              <LinkPendingBackdrop />
+            </Link>
             <AdminSiteExitLink />
           </div>
           <div className="pb-2.5 pt-0">
