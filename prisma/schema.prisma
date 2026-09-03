@@ -42,6 +42,8 @@ model SiteSettings {
   /// Редактируемые заголовок и подпись входа в прогулку.
   wanderEntryLabel     String  @default("не жми сюда")
   wanderEntrySubtitle  String  @default("серьёзно. неизвестно, куда попадёшь")
+  /// Количество успешно просмотренных изображений до предложения выставки.
+  wanderImageCount     Int     @default(7)
   updatedAt            DateTime @updatedAt
 }
 

@@ -1,0 +1,2 @@
+ALTER TABLE "SiteSettings"
+ADD COLUMN "wanderImageCount" INTEGER NOT NULL DEFAULT 7;

@@ -26,6 +26,7 @@ import {
   type WanderLabelDeck,
 } from "@/lib/wander-labels";
 import styles from "./wander.module.css";
+import { DEFAULT_WANDER_IMAGE_COUNT, normalizeWanderImageCount } from "@/lib/wander-settings";
 
 function artworkFrameStyle(image: WanderImage): CSSProperties {
   const ratio = image.width && image.height
@@ -108,9 +109,10 @@ function Artwork({ post, image, small = false, onLoad, onError }: {
   );
 }
 
-export function WanderExperience({ catalogue, initialStep }: {
+export function WanderExperience({ catalogue, initialStep, imageCount = DEFAULT_WANDER_IMAGE_COUNT }: {
   catalogue: WanderCatalogue;
   initialStep: WanderStep | null;
+  imageCount?: number;
 }) {
   const [journey, setJourney] = useState<WanderJourney>({
     steps: initialStep ? [initialStep] : [],
@@ -153,9 +155,10 @@ export function WanderExperience({ catalogue, initialStep }: {
   const viewedCount = viewedSteps.length;
   const currentViewed = Boolean(post && viewed.has(post.id));
   const currentImageStatus = imageState.imageId === image?.id ? imageState.status : "loading";
-  const exhibitionMilestone = Math.floor(viewedCount / 7) * 7;
-  const isExhibition = viewedCount >= 7 || (exhausted && viewedCount >= 3);
-  const hasNewExhibition = exhibitionMilestone >= 7 && journey.exhibitionSeenAt < exhibitionMilestone;
+  const exhibitionSize = normalizeWanderImageCount(imageCount) ?? DEFAULT_WANDER_IMAGE_COUNT;
+  const exhibitionMilestone = Math.floor(viewedCount / exhibitionSize) * exhibitionSize;
+  const isExhibition = viewedCount >= exhibitionSize || (exhausted && viewedCount >= 3);
+  const hasNewExhibition = exhibitionMilestone >= exhibitionSize && journey.exhibitionSeenAt < exhibitionMilestone;
   const exhibitionTags = wanderExhibitionTags(journey, catalogue);
 
   useLayoutEffect(() => {

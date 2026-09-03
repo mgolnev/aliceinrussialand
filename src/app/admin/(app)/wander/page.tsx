@@ -31,13 +31,14 @@ export default async function AdminWanderPage() {
       <header className="rounded-[28px] border border-stone-200/80 bg-white/90 p-6">
         <h1 className="text-3xl font-semibold tracking-tight">Прогулка</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600">
-          Управляйте входом в режим и тем, из каких категорий он может выбирать публикации.
+          Управляйте входом в режим, длиной прогулки и категориями участвующих публикаций.
         </p>
       </header>
       <WanderSettingsForm
         initialShowWanderEntry={settings.showWanderEntry}
         initialEntryLabel={settings.wanderEntryLabel}
         initialEntrySubtitle={settings.wanderEntrySubtitle}
+        initialImageCount={settings.wanderImageCount}
         initialExcludedCategoryIds={excludedCategoryIds}
         categories={categories.map((category) => ({
           id: category.id,

@@ -63,6 +63,61 @@ afterEach(async () => {
 });
 
 describe("интерфейс прогулки", () => {
+  it.each([1, 3, 9])("предлагает выставку после настроенных %s изображений и сохраняет длину при перезапуске", async (imageCount) => {
+    const catalogue = longWalkFixture();
+    render(<WanderExperience catalogue={catalogue} initialStep={{ postId: "long-0", imageId: "long-0-1" }} imageCount={imageCount} />);
+    for (let walk = 0; walk < 2; walk++) {
+      await ready();
+      for (let count = 1; count < imageCount; count++) {
+        expect(primary()).not.toHaveAccessibleName("хватит");
+        fireEvent.click(primary());
+        await loadCurrent();
+      }
+      expect(primary()).toHaveAccessibleName("хватит");
+      fireEvent.click(primary());
+      expect(screen.getByRole("heading")).toHaveTextContent("у вас получилась выставка");
+      expect(screen.getAllByRole("listitem")).toHaveLength(imageCount);
+      if (walk === 0) fireEvent.click(screen.getByRole("button", { name: "пройти ещё раз" }));
+    }
+  });
+
+  it("не засчитывает не загрузившееся изображение в настроенную длину", async () => {
+    render(<WanderExperience catalogue={longWalkFixture()} initialStep={{ postId: "long-0", imageId: "long-0-1" }} imageCount={3} />);
+    await waitFor(() => expect(screen.getByRole("img")).toBeInTheDocument());
+    fireEvent.error(screen.getByRole("img"));
+    fireEvent.click(screen.getByRole("button", { name: "пропустить" }));
+    await loadCurrent();
+    for (let count = 1; count < 3; count++) {
+      expect(primary()).not.toHaveAccessibleName("хватит");
+      fireEvent.click(primary());
+      await loadCurrent();
+    }
+    fireEvent.click(screen.getByRole("button", { name: "хватит" }));
+    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+  });
+
+  it("заканчивает раньше, если доступных работ меньше настроенного количества", async () => {
+    render(<WanderExperience catalogue={wanderFixture()} initialStep={{ postId: "a", imageId: "a-1" }} imageCount={100} />);
+    await ready();
+    for (let count = 1; count < 4; count++) {
+      fireEvent.click(primary());
+      await loadCurrent();
+    }
+    fireEvent.click(screen.getByRole("button", { name: "хватит" }));
+    expect(screen.getAllByRole("listitem")).toHaveLength(4);
+  });
+
+  it("учитывает новое количество при восстановлении незавершённой прогулки", async () => {
+    const catalogue = longWalkFixture();
+    const steps = catalogue.posts.slice(0, 3).map((post) => ({ postId: post.id, imageId: post.images[0].id }));
+    sessionStorage.setItem(WANDER_STORAGE_KEY, serializeWanderJourney({ steps, viewedPostIds: steps.map((step) => step.postId), cursor: 2, exhibitionSeenAt: 0 }));
+    render(<WanderExperience catalogue={catalogue} initialStep={steps[0]} imageCount={3} />);
+    await ready();
+    expect(primary()).toHaveAccessibleName("хватит");
+    fireEvent.click(primary());
+    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+  });
+
   it("показывает работу как отдельный режим без каталожного интерфейса", async () => {
     mount(); await ready();
     expect(screen.getAllByRole("img")).toHaveLength(1);

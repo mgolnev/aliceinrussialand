@@ -32,6 +32,7 @@ describe("querySiteSettingsRow", () => {
     expect(defaultSiteSettings().showWanderEntry).toBe(true);
     expect(defaultSiteSettings().wanderEntryLabel).toBe("не жми сюда");
     expect(defaultSiteSettings().wanderEntrySubtitle).toBe("серьёзно. неизвестно, куда попадёшь");
+    expect(defaultSiteSettings().wanderImageCount).toBe(7);
   });
 
   it("на сборке Next не ходит в БД", async () => {

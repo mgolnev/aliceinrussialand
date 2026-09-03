@@ -27,7 +27,7 @@ export type WanderJourney = {
   /** Только работы, изображение которых действительно загрузилось. */
   viewedPostIds: string[];
   cursor: number;
-  /** Последний отмеченный рубеж 7 / 14 / 21… работ. */
+  /** Число просмотренных работ на последнем отмеченном рубеже выставки. */
   exhibitionSeenAt: number;
 };
 export const WANDER_STORAGE_KEY = "alice:wander:v1";

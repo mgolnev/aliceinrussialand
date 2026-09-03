@@ -36,6 +36,7 @@ describe("PATCH /api/admin/wander", () => {
       showWanderEntry: false,
       wanderEntryLabel: "не трогай",
       wanderEntrySubtitle: "посмотрим, что будет",
+      wanderImageCount: 12,
     });
     mocks.transaction.mockImplementation((operations: Array<Promise<unknown>>) => Promise.all(operations));
   });
@@ -49,6 +50,7 @@ describe("PATCH /api/admin/wander", () => {
         showWanderEntry: false,
         entryLabel: "  не трогай  ",
         entrySubtitle: "  посмотрим, что будет  ",
+        imageCount: 12,
         excludedCategoryIds: ["seen", "deleted-category"],
       }),
     }));
@@ -60,8 +62,9 @@ describe("PATCH /api/admin/wander", () => {
         showWanderEntry: false,
         wanderEntryLabel: "не трогай",
         wanderEntrySubtitle: "посмотрим, что будет",
+        wanderImageCount: 12,
       },
-      select: { showWanderEntry: true, wanderEntryLabel: true, wanderEntrySubtitle: true },
+      select: { showWanderEntry: true, wanderEntryLabel: true, wanderEntrySubtitle: true, wanderImageCount: true },
     });
     expect(mocks.categoryUpdateMany).toHaveBeenNthCalledWith(1, {
       data: { includeInWander: true },
@@ -77,6 +80,7 @@ describe("PATCH /api/admin/wander", () => {
       showWanderEntry: false,
       entryLabel: "не трогай",
       entrySubtitle: "посмотрим, что будет",
+      imageCount: 12,
       excludedCategoryIds: ["seen"],
     });
   });
@@ -118,7 +122,8 @@ describe("PATCH /api/admin/wander", () => {
     }));
     expect(response.status).toBe(200);
     expect(mocks.update.mock.calls[0][0].data).not.toHaveProperty("wanderEntrySubtitle");
-    expect((await response.json()).entrySubtitle).toBe("посмотрим, что будет");
+    expect(mocks.update.mock.calls[0][0].data).not.toHaveProperty("wanderImageCount");
+    expect(await response.json()).toMatchObject({ entrySubtitle: "посмотрим, что будет", imageCount: 12 });
   });
 
   it("отклоняет пустую надпись", async () => {
@@ -135,5 +140,28 @@ describe("PATCH /api/admin/wander", () => {
 
     expect(response.status).toBe(400);
     expect(mocks.update).not.toHaveBeenCalled();
+  });
+
+  it.each([0, -1, 101, 2.5, "7", "", null, true, {}])("отклоняет некорректное количество %j", async (imageCount) => {
+    const { PATCH } = await import("./route");
+    const response = await PATCH(new Request("http://localhost/api/admin/wander", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ showWanderEntry: true, entryLabel: "не жми сюда", imageCount, excludedCategoryIds: [] }),
+    }));
+    expect(response.status).toBe(400);
+    expect(mocks.ensureSiteSettings).not.toHaveBeenCalled();
+    expect(mocks.transaction).not.toHaveBeenCalled();
+  });
+
+  it.each([1, 100])("принимает граничное количество %s", async (imageCount) => {
+    const { PATCH } = await import("./route");
+    const response = await PATCH(new Request("http://localhost/api/admin/wander", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ showWanderEntry: true, entryLabel: "не жми сюда", imageCount, excludedCategoryIds: [] }),
+    }));
+    expect(response.status).toBe(200);
+    expect(mocks.update.mock.calls[0][0].data.wanderImageCount).toBe(imageCount);
   });
 });

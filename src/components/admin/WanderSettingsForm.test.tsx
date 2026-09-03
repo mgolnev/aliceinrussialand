@@ -26,12 +26,18 @@ describe("настройки прогулки", () => {
         initialShowWanderEntry
         initialEntryLabel="не жми сюда"
         initialEntrySubtitle="серьёзно. неизвестно, куда попадёшь"
+        initialImageCount={7}
         initialExcludedCategoryIds={[]}
         categories={categories}
       />,
     );
     const seen = screen.getByRole("checkbox", { name: "Показывать категорию «Увидела»" });
     expect(seen).toBeChecked();
+    const count = screen.getByRole("spinbutton", { name: "Изображений до выставки" });
+    expect(count).toHaveValue(7);
+    expect(count).toHaveAttribute("min", "1");
+    expect(count).toHaveAttribute("max", "100");
+    fireEvent.change(count, { target: { value: "12" } });
     expect(screen.getByRole("textbox", { name: "Подпись под надписью" }))
       .toHaveValue("серьёзно. неизвестно, куда попадёшь");
     fireEvent.change(screen.getByRole("textbox", { name: "Надпись на главной" }), {
@@ -49,6 +55,7 @@ describe("настройки прогулки", () => {
       showWanderEntry: true,
       entryLabel: "не трогай",
       entrySubtitle: "посмотрим, что будет",
+      imageCount: 12,
       excludedCategoryIds: ["seen"],
     });
     expect(await screen.findByRole("status")).toHaveTextContent("Сохранено");
@@ -60,6 +67,7 @@ describe("настройки прогулки", () => {
         initialShowWanderEntry={false}
         initialEntryLabel="не жми сюда"
         initialEntrySubtitle="серьёзно. неизвестно, куда попадёшь"
+        initialImageCount={12}
         initialExcludedCategoryIds={["seen"]}
         categories={categories}
       />,
@@ -67,5 +75,13 @@ describe("настройки прогулки", () => {
     expect(screen.getByRole("checkbox", { name: "Показывать категорию «Увидела»" })).not.toBeChecked();
     fireEvent.click(screen.getByRole("button", { name: "Включить все" }));
     expect(screen.getByRole("checkbox", { name: "Показывать категорию «Увидела»" })).toBeChecked();
+  });
+
+  it.each(["", "0", "101", "2.5"])("не отправляет некорректное количество %s", (value) => {
+    const view = render(<WanderSettingsForm initialShowWanderEntry initialEntryLabel="не жми сюда" initialEntrySubtitle="а вдруг" initialImageCount={7} initialExcludedCategoryIds={[]} categories={categories} />);
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Изображений до выставки" }), { target: { value } });
+    fireEvent.submit(view.container.querySelector("form")!);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("Укажите целое число от 1 до 100");
   });
 });

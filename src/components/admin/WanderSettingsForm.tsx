@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { adminCredentials, readAdminResponseJson } from "@/lib/admin-fetch";
-import { DEFAULT_WANDER_ENTRY_SUBTITLE, WANDER_ENTRY_LABEL_MAX_LENGTH, WANDER_ENTRY_SUBTITLE_MAX_LENGTH } from "@/lib/wander-settings";
+import {
+  DEFAULT_WANDER_ENTRY_SUBTITLE,
+  WANDER_ENTRY_LABEL_MAX_LENGTH,
+  WANDER_ENTRY_SUBTITLE_MAX_LENGTH,
+  WANDER_IMAGE_COUNT_MIN,
+  WANDER_IMAGE_COUNT_MAX,
+  normalizeWanderImageCount,
+} from "@/lib/wander-settings";
 
 export type WanderCategoryOption = {
   id: string;
@@ -24,18 +31,21 @@ export function WanderSettingsForm({
   initialShowWanderEntry,
   initialEntryLabel,
   initialEntrySubtitle,
+  initialImageCount,
   initialExcludedCategoryIds,
   categories,
 }: {
   initialShowWanderEntry: boolean;
   initialEntryLabel: string;
   initialEntrySubtitle: string;
+  initialImageCount: number;
   initialExcludedCategoryIds: string[];
   categories: WanderCategoryOption[];
 }) {
   const [showWanderEntry, setShowWanderEntry] = useState(initialShowWanderEntry);
   const [entryLabel, setEntryLabel] = useState(initialEntryLabel);
   const [entrySubtitle, setEntrySubtitle] = useState(initialEntrySubtitle);
+  const [imageCount, setImageCount] = useState(String(initialImageCount));
   const [excludedCategoryIds, setExcludedCategoryIds] = useState(initialExcludedCategoryIds);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -49,6 +59,11 @@ export function WanderSettingsForm({
   }
 
   async function save() {
+    const validImageCount = normalizeWanderImageCount(Number(imageCount));
+    if (validImageCount === null) {
+      setMessage(`Укажите целое число от ${WANDER_IMAGE_COUNT_MIN} до ${WANDER_IMAGE_COUNT_MAX}`);
+      return;
+    }
     setBusy(true);
     setMessage(null);
     try {
@@ -56,7 +71,7 @@ export function WanderSettingsForm({
         ...adminCredentials,
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ showWanderEntry, entryLabel, entrySubtitle, excludedCategoryIds }),
+        body: JSON.stringify({ showWanderEntry, entryLabel, entrySubtitle, imageCount: validImageCount, excludedCategoryIds }),
       });
       const result = await readAdminResponseJson(response) as { error?: string } | null;
       if (!response.ok) {
@@ -145,6 +160,31 @@ export function WanderSettingsForm({
             Оба текста видны сразу. Нажатие открывает прогулку без промежуточного вопроса.
           </span>
         </div>
+      </section>
+
+      <section className="border-b border-stone-200/80 p-5 sm:p-6">
+        <label htmlFor="wander-image-count" className="block text-sm font-medium text-stone-900">
+          Изображений до выставки
+        </label>
+        <input
+          id="wander-image-count"
+          type="number"
+          inputMode="numeric"
+          min={WANDER_IMAGE_COUNT_MIN}
+          max={WANDER_IMAGE_COUNT_MAX}
+          step={1}
+          required
+          value={imageCount}
+          aria-describedby="wander-image-count-hint"
+          onChange={(event) => {
+            setMessage(null);
+            setImageCount(event.target.value);
+          }}
+          className="mt-2 w-24 border-b border-stone-300 bg-transparent px-0 py-2.5 text-lg text-stone-950 outline-none focus:border-stone-900"
+        />
+        <p id="wander-image-count-hint" className="mt-2 max-w-2xl text-xs leading-5 text-stone-500">
+          От {WANDER_IMAGE_COUNT_MIN} до {WANDER_IMAGE_COUNT_MAX}. После этого числа загруженных изображений появится «хватит» и можно будет открыть выставку. Если работ меньше, прогулка закончится раньше. Изменение применяется при следующем открытии или обновлении страницы прогулки.
+        </p>
       </section>
 
       <section aria-labelledby="wander-categories-heading">

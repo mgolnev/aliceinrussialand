@@ -5,6 +5,15 @@ export const DEFAULT_WANDER_ENTRY_LABEL = "не жми сюда";
 export const WANDER_ENTRY_LABEL_MAX_LENGTH = 60;
 export const DEFAULT_WANDER_ENTRY_SUBTITLE = "серьёзно. неизвестно, куда попадёшь";
 export const WANDER_ENTRY_SUBTITLE_MAX_LENGTH = 160;
+export const DEFAULT_WANDER_IMAGE_COUNT = 7;
+export const WANDER_IMAGE_COUNT_MIN = 1;
+export const WANDER_IMAGE_COUNT_MAX = 100;
+
+export function normalizeWanderImageCount(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value)
+    && value >= WANDER_IMAGE_COUNT_MIN && value <= WANDER_IMAGE_COUNT_MAX
+    ? value : null;
+}
 
 export function normalizeWanderEntryLabel(value: unknown): string | null {
   if (typeof value !== "string") return null;

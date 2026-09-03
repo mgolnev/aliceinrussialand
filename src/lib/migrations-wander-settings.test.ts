@@ -3,6 +3,16 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("миграция настроек «не выбирай»", () => {
+  it("добавляет количество изображений с прежним значением по умолчанию", () => {
+    const sql = readFileSync(
+      path.join(process.cwd(), "prisma/migrations/20260903090000_wander_image_count/migration.sql"),
+      "utf8",
+    );
+    expect(sql).toContain('ALTER TABLE "SiteSettings"');
+    expect(sql).toContain('ADD COLUMN "wanderImageCount" INTEGER NOT NULL DEFAULT 7');
+    expect(sql).not.toMatch(/UPDATE|DELETE|DROP/i);
+  });
+
   it("добавляет подпись, не меняя сохранённый заголовок", () => {
     const sql = readFileSync(
       path.join(process.cwd(), "prisma/migrations/20260902210000_wander_entry_subtitle/migration.sql"),

@@ -4,9 +4,19 @@ import {
   DEFAULT_WANDER_ENTRY_SUBTITLE,
   normalizeWanderEntrySubtitle,
   normalizeWanderExcludedCategoryIds,
+  normalizeWanderImageCount,
+  DEFAULT_WANDER_IMAGE_COUNT,
 } from "./wander-settings";
 
 describe("настройки категорий прогулки", () => {
+  it("принимает только целое количество изображений от 1 до 100", () => {
+    expect(DEFAULT_WANDER_IMAGE_COUNT).toBe(7);
+    for (const value of [1, 7, 12, 100]) expect(normalizeWanderImageCount(value)).toBe(value);
+    for (const value of [0, -1, 101, 2.5, NaN, Infinity, "7", "", null, undefined, true, {}]) {
+      expect(normalizeWanderImageCount(value)).toBeNull();
+    }
+  });
+
   it("нормализует надпись входа", () => {
     expect(normalizeWanderEntryLabel("  не жми сюда  ")).toBe("не жми сюда");
     expect(normalizeWanderEntryLabel(" ")).toBeNull();

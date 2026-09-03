@@ -6,6 +6,7 @@ import { invalidateWanderCatalogueCache } from "@/lib/cache-tags";
 import {
   normalizeWanderEntryLabel,
   normalizeWanderEntrySubtitle,
+  normalizeWanderImageCount,
   normalizeWanderExcludedCategoryIds,
 } from "@/lib/wander-settings";
 
@@ -17,11 +18,15 @@ export async function PATCH(req: Request) {
   const entrySubtitle = body?.entrySubtitle === undefined
     ? undefined
     : normalizeWanderEntrySubtitle(body.entrySubtitle);
+  const imageCount = body?.imageCount === undefined
+    ? undefined
+    : normalizeWanderImageCount(body.imageCount);
   if (
     !body ||
     typeof body.showWanderEntry !== "boolean" ||
     entryLabel === null ||
     entrySubtitle === null ||
+    imageCount === null ||
     excludedCategoryIds === null
   ) {
     return NextResponse.json({ error: "Некорректные настройки" }, { status: 400 });
@@ -44,8 +49,9 @@ export async function PATCH(req: Request) {
         showWanderEntry: body.showWanderEntry,
         wanderEntryLabel: entryLabel,
         ...(entrySubtitle !== undefined ? { wanderEntrySubtitle: entrySubtitle } : {}),
+        ...(imageCount !== undefined ? { wanderImageCount: imageCount } : {}),
       },
-      select: { showWanderEntry: true, wanderEntryLabel: true, wanderEntrySubtitle: true },
+      select: { showWanderEntry: true, wanderEntryLabel: true, wanderEntrySubtitle: true, wanderImageCount: true },
     }),
     prisma.postCategory.updateMany({
       data: { includeInWander: true },
@@ -65,6 +71,7 @@ export async function PATCH(req: Request) {
     showWanderEntry: updated.showWanderEntry,
     entryLabel: updated.wanderEntryLabel,
     entrySubtitle: updated.wanderEntrySubtitle,
+    imageCount: updated.wanderImageCount,
     excludedCategoryIds: validExcludedCategoryIds,
   });
 }
